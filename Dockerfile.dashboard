@@ -10,6 +10,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy dashboard
 COPY dashboard.py .
 
+# Copy trade logger
+COPY trade_logger.py .
+
 # Copy config directory
 COPY config/ ./config/
 
