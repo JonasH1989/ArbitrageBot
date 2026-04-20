@@ -485,14 +485,14 @@ else:
                 profit_mk_total = profit_mk * vol_mk
                 show_direction = "K→M" if profit_km_total >= profit_mk_total else "M→K"
                 show_volume = vol_km if show_direction == "K→M" else vol_mk
-                show_profit_txt = f"${abs(profit_km if show_direction == "K→M" else profit_mk):.6f}"
+                show_profit_txt = f"${abs(profit_km if show_direction == 'K→M' else profit_mk):.6f}"
             else:
                 # Coins strategy
                 coins_km = (vol_km * k_bid) / m_ask - vol_km if m_ask > 0 else 0
                 coins_mk = (vol_mk * m_bid) / k_ask - vol_mk if k_ask > 0 else 0
                 show_direction = "K→M" if coins_km >= coins_mk else "M→K"
                 show_volume = vol_km if show_direction == "K→M" else vol_mk
-                show_profit_txt = f"{abs(coins_km if show_direction == "K→M" else coins_mk):.2f} MPC"
+                show_profit_txt = f"{abs(coins_km if show_direction == 'K→M' else coins_mk):.2f} MPC"
             
             # Direction header
             direction_color = "🟢"
