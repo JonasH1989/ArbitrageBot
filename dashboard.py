@@ -482,9 +482,12 @@ else:
         trade_possible_km = km_meets_threshold
         trade_possible_mk = mk_meets_threshold
         
-        # Calculate coin profit for coins strategy (always, for display)
-        coins_km = (vol_km * k_bid) / m_ask - vol_km if m_ask > 0 else 0
-        coins_mk = (vol_mk * m_bid) / k_ask - vol_mk if k_ask > 0 else 0
+        # Calculate coin profit for coins strategy
+        # Profit per coin in MPC = spread_USDT / ask_price
+        # coins_km = vol_km * (m_bid - k_ask) / k_ask = vol_km * profit_km / k_ask
+        # coins_mk = vol_mk * (k_bid - m_ask) / m_ask = vol_mk * profit_mk / m_ask
+        coins_km = (vol_km * profit_km / k_ask) if k_ask > 0 else 0
+        coins_mk = (vol_mk * profit_mk / m_ask) if m_ask > 0 else 0
         
         if trade_possible_km or trade_possible_mk:
             # Determine best direction based on strategy
