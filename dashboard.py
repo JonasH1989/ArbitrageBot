@@ -380,6 +380,37 @@ else:
         vol_km = min(kucoin['ask_size'], mexc['bid_size'])
         vol_mk = min(mexc['ask_size'], kucoin['bid_size'])
         
+        # Get wallet balances for the pair
+        base_coin = pair.split('-')[0]  # e.g., "MPC"
+        quote_coin = pair.split('-')[1]  # e.g., "USDT"
+        
+        # KuCoin balances
+        kucoin_balances = {}
+        if kucoin_key and kucoin_secret and kucoin_pass:
+            kw = get_kucoin_balances(kucoin_key, kucoin_secret, kucoin_pass)
+            if kw.get('ok'):
+                kucoin_balances = kw.get('balances', {})
+        
+        # MEXC balances
+        mexc_balances = {}
+        if mexc_key and mexc_secret:
+            mw = get_mexc_balances(mexc_key, mexc_secret)
+            if mw.get('ok'):
+                # Dedupe MEXC
+                mexc_balances_raw = mw.get('balances', {})
+                mexc_balances = {}
+                for sym, bal in mexc_balances_raw.items():
+                    if sym not in mexc_balances:
+                        mexc_balances[sym] = bal
+                    else:
+                        mexc_balances[sym]['available'] += bal['available']
+                        mexc_balances[sym]['total'] += bal['total']
+        
+        k_usdt = kucoin_balances.get('USDT', {}).get('available', 0)
+        k_mpc = kucoin_balances.get(base_coin, {}).get('available', 0)
+        m_usdt = mexc_balances.get('USDT', {}).get('available', 0)
+        m_mpc = mexc_balances.get(base_coin, {}).get('available', 0)
+        
         # Three column layout
         c1, c2, c3 = st.columns(3)
         
@@ -418,66 +449,136 @@ else:
             st.metric("Ask", f"${m_ask:.6f}", f"Vol: {mexc['ask_size']:.0f}")
         
         # =========================================================================
-        # OPPORTUNITY SUMMARY
+        # OPPORTUNITY SUMMARY - CLEAR TABLE VIEW
         # =========================================================================
         
         st.divider()
         st.subheader("🎯 Zusammenfassung")
         
         current_strategy = pair_data.get('strategy', 'usdt')
+        threshold_start = pair_data.get('threshold_start', thresholds['start'])
+        threshold_stop = pair_data.get('threshold_stop', thresholds['stop'])
         
-        col_left, col_right = st.columns(2)
+        # Calculate profit percentage for threshold comparison
+        # profit_km = m_bid - k_ask (buy on KuCoin, sell on MEXC)
+        # profit_mk = k_bid - m_ask (buy on MEXC, sell on KuCoin)
+        profit_pct_km = (profit_km / k_ask * 100) if k_ask > 0 else 0  # % profit on KuCoin Ask
+        profit_pct_mk = (profit_mk / m_ask * 100) if m_ask > 0 else 0  # % profit on MEXC Ask
         
+        # Check if spread is large enough to meet threshold
+        meets_threshold_km = profit_pct_km >= threshold_start
+        meets_threshold_mk = profit_pct_mk >= threshold_start
+        
+        # Determine best direction based on strategy AND threshold
         if current_strategy == 'usdt':
-            with col_left:
-                st.markdown("### KUCOIN → MEXC")
-                if profit_km > 0:
-                    st.metric("Status", "✅ PROFITABLE", f"${profit_km:.6f}")
-                else:
-                    st.metric("Status", "❌ Verlust", f"${profit_km:.6f}")
-                st.metric("Kauf (K-Ask)", f"${k_ask:.6f}")
-                st.metric("Verkauf (M-Bid)", f"${m_bid:.6f}")
-                st.metric("Vol / Gewinn", f"{vol_km:.0f} / ${profit_km * vol_km:.4f}")
-            
-            with col_right:
-                st.markdown("### MEXC → KUCOIN")
-                if profit_mk > 0:
-                    st.metric("Status", "✅ PROFITABLE", f"${profit_mk:.6f}")
-                else:
-                    st.metric("Status", "❌ Verlust", f"${profit_mk:.6f}")
-                st.metric("Kauf (M-Ask)", f"${m_ask:.6f}")
-                st.metric("Verkauf (K-Bid)", f"${k_bid:.6f}")
-                st.metric("Vol / Gewinn", f"{vol_mk:.0f} / ${profit_mk * vol_mk:.4f}")
+            # USDT strategy: profit measured in USDT
+            show_profit = profit_km if meets_threshold_km else (profit_mk if meets_threshold_mk else 0)
+            show_profit_txt = f"${abs(show_profit):.6f}"
+            show_direction = "K→M" if meets_threshold_km else ("M→K" if meets_threshold_mk else "N/A")
+            show_volume = vol_km if meets_threshold_km else vol_mk
+        else:
+            # Coins strategy: profit measured in coins gained
+            coins_km = (vol_km * k_bid) / m_ask - vol_km if m_ask > 0 else 0
+            coins_mk = (vol_mk * m_bid) / k_ask - vol_mk if k_ask > 0 else 0
+            show_coin_profit = coins_km if coins_km > 0 else (coins_mk if coins_mk > 0 else 0)
+            show_profit_txt = f"{abs(show_coin_profit):.2f} MPC"
+            show_direction = "K→M" if coins_km > 0 else ("M→K" if coins_mk > 0 else "N/A")
+            show_volume = vol_km if coins_km > 0 else vol_mk
         
-        else:  # coins strategy
-            coins_from_km = (vol_km * k_bid) / m_ask if m_ask > 0 and k_bid > 0 else 0
-            coins_net_km = coins_from_km - vol_km
-            coins_from_mk = (vol_mk * m_bid) / k_ask if k_ask > 0 and m_bid > 0 else 0
-            coins_net_mk = coins_from_mk - vol_mk
-            
-            with col_left:
-                st.markdown("### KUCOIN → MEXC")
-                if coins_net_km > 0:
-                    st.metric("Status", "✅ Coins+", f"{coins_net_km:.0f}")
-                else:
-                    st.metric("Status", "❌ Coins-", f"{coins_net_km:.0f}")
-                st.metric("Verkauf (K-Bid)", f"${k_bid:.6f}")
-                st.metric("Kauf (M-Ask)", f"${m_ask:.6f}")
-                st.metric("Coin-Gewinn", f"{coins_net_km:+.0f}")
-            
-            with col_right:
-                st.markdown("### MEXC → KUCOIN")
-                if coins_net_mk > 0:
-                    st.metric("Status", "✅ Coins+", f"{coins_net_mk:.0f}")
-                else:
-                    st.metric("Status", "❌ Coins-", f"{coins_net_mk:.0f}")
-                st.metric("Verkauf (M-Bid)", f"${m_bid:.6f}")
-                st.metric("Kauf (K-Ask)", f"${k_ask:.6f}")
-                st.metric("Coin-Gewinn", f"{coins_net_mk:+.0f}")
+        # Check if trade should happen (threshold met)
+        trade_possible_km = meets_threshold_km and (profit_km * vol_km > 0)
+        trade_possible_mk = meets_threshold_mk and (profit_mk * vol_mk > 0)
         
-        # Status
-        if profit_km <= 0 and profit_mk <= 0:
+        if trade_possible_km or trade_possible_mk:
+            # Direction header
+            direction_color = "🟢" if show_direction == "K→M" else "🟢"
+            st.success(f"{direction_color} **BESTE RICHTUNG: {show_direction}** | Gewinn: {show_profit_txt} | Vol: {show_volume:.0f} Coins")
+            
+            # Create clear table
+            col_buy, col_sell, col_profit = st.columns(3)
+            
+            with col_buy:
+                st.markdown("### 📥 KAUFEN")
+                if show_direction == "K→M":
+                    # K→M: Buy on KuCoin (we have k_usdt USDT there)
+                    available_usdt = k_usdt  # From wallet
+                    max_coins_by_usdt = available_usdt / k_ask if k_ask > 0 else 0
+                    max_coins = min(max_coins_by_usdt, vol_km)
+                    st.metric("Exchange", "🥇 KuCoin")
+                    st.metric("Preis (Ask)", f"${k_ask:.6f}")
+                    st.metric("Verfügbar USDT", f"${available_usdt:.2f}")
+                    st.metric("Kaufbar (max)", f"{max_coins:.0f} MPC")
+                else:
+                    # M→K: Buy on MEXC (we have m_usdt USDT there)
+                    available_usdt = m_usdt  # From wallet
+                    max_coins_by_usdt = available_usdt / m_ask if m_ask > 0 else 0
+                    max_coins = min(max_coins_by_usdt, vol_mk)
+                    if available_usdt > 0:
+                        st.metric("Exchange", "🥈 MEXC")
+                        st.metric("Preis (Ask)", f"${m_ask:.6f}")
+                        st.metric("Verfügbar USDT", f"${available_usdt:.2f}")
+                        st.metric("Kaufbar (max)", f"{max_coins:.0f} MPC")
+                    else:
+                        st.metric("⚠️ Exchange", "🥈 MEXC")
+                        st.metric("Preis (Ask)", f"${m_ask:.6f}")
+                        st.metric("Verfügbar USDT", f"${available_usdt:.2f}")
+                        st.error("KEINE USDT!")
+            
+            with col_sell:
+                st.markdown("### 📤 VERKAUFEN")
+                if show_direction == "K→M":
+                    st.metric("Exchange", "🥈 MEXC")
+                    st.metric("Preis (Bid)", f"${m_bid:.6f}")
+                    st.metric("Max verkaufbar", f"{max_coins:.0f} MPC")
+                    st.metric("Ertrag (USD)", f"${m_bid * max_coins:.4f}")
+                else:
+                    st.metric("Exchange", "🥇 KuCoin")
+                    st.metric("Preis (Bid)", f"${k_bid:.6f}")
+                    st.metric("Max verkaufbar", f"{max_coins:.0f} MPC")
+                    st.metric("Ertrag (USD)", f"${k_bid * max_coins:.4f}")
+            
+            with col_profit:
+                st.markdown("### 💰 GEWINN")
+                if show_direction == "K→M":
+                    cost = k_ask * max_coins
+                    revenue = m_bid * max_coins
+                    profit = revenue - cost
+                    st.metric("Kosten", f"${cost:.4f}")
+                    st.metric("Erlös", f"${revenue:.4f}")
+                    st.metric("💵 NETTO-GEWINN", f"${profit:.4f}", delta=f"+{profit:.4f}")
+                else:
+                    st.error("Kein Trade möglich!")
+                    st.caption("Keine USDT auf MEXC")
+        else:
             st.warning("⚠️ Markt effizient - kein profitabler Spread")
+        
+        # Show both directions for reference
+        with st.expander("📊 Alle Richtungen (Details)"):
+            d1, d2 = st.columns(2)
+            with d1:
+                st.markdown("#### KUCOIN → MEXC")
+                st.write(f"Bid: ${k_bid:.6f} | Ask: ${k_ask:.6f}")
+                st.write(f"Profit/Coin: ${profit_km:.6f}")
+                st.write(f"Profit %: {profit_pct_km:.3f}%")
+                st.write(f"Threshold: {threshold_start}%")
+                if meets_threshold_km:
+                    st.success(f"✅ Genug ({profit_pct_km:.3f}% >= {threshold_start}%)")
+                else:
+                    st.error(f"❌ Zu wenig ({profit_pct_km:.3f}% < {threshold_start}%)")
+                st.write(f"Volume: {vol_km:.0f}")
+                st.write(f"Total: ${profit_km * vol_km:.4f}")
+            with d2:
+                st.markdown("#### MEXC → KUCOIN")
+                st.write(f"Bid: ${m_bid:.6f} | Ask: ${m_ask:.6f}")
+                st.write(f"Profit/Coin: ${profit_mk:.6f}")
+                st.write(f"Profit %: {profit_pct_mk:.3f}%")
+                st.write(f"Threshold: {threshold_start}%")
+                if meets_threshold_mk:
+                    st.success(f"✅ Genug ({profit_pct_mk:.3f}% >= {threshold_start}%)")
+                else:
+                    st.error(f"❌ Zu wenig ({profit_pct_mk:.3f}% < {threshold_start}%)")
+                st.write(f"Volume: {vol_mk:.0f}")
+                st.write(f"Total: ${profit_mk * vol_mk:.4f}")
         
         # =========================================================================
         # PAIR SETTINGS (compact at bottom)
@@ -530,24 +631,10 @@ else:
                 config['trading']['pairs'] = pairs_config
                 save_config(config)
         
-        # Alert
+        # Alert - only if threshold is met
         pair_alert = pair_data.get('alert_enabled', True)
-        if pair_alert and alert_enabled and (profit_km > 0 or profit_mk > 0):
-            components.html(f"""
-            <script>
-                try {{
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    for (let i = 0; i < 3; i++) {{
-                        setTimeout(() => {{
-                            const o = ctx.createOscillator(), g = ctx.createGain();
-                            o.connect(g); g.connect(ctx.destination);
-                            o.frequency.value = 880; o.type = 'sine'; g.gain.value = {volume};
-                            o.start(); o.stop(ctx.currentTime + 0.1);
-                        }}, i * 200);
-                    }}
-                }} catch(e) {{}}
-            </script>
-            """, height=0, width=0)
+        if pair_alert and alert_enabled and (trade_possible_km or trade_possible_mk):
+            st.warning("🚨 Profitabel!")
             st.warning("🚨 Profitabel!")
     
     else:
