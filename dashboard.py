@@ -588,9 +588,8 @@ else:
                 for sym in [base_coin, quote_coin]:
                     if sym and sym in bals:
                         bal = bals[sym]
-                        if bal['total'] > 0:
-                            st.metric(sym, f"{bal['available']:.2f}", f"Total: {bal['total']:.2f}")
-                            shown = True
+                        st.metric(sym, f"{bal['available']:.2f}", f"Total: {bal['total']:.2f}")
+                        shown = True
                 if not shown:
                     st.caption("Keine relevanten Balances")
             else:
@@ -623,9 +622,8 @@ else:
                 for sym in [base_coin, quote_coin]:
                     if sym and sym in unique_balances:
                         bal = unique_balances[sym]
-                        if bal['total'] > 0:
-                            st.metric(sym, f"{bal['available']:.2f}", f"Total: {bal['total']:.2f}")
-                            shown = True
+                        st.metric(sym, f"{bal['available']:.2f}", f"Total: {bal['total']:.2f}")
+                        shown = True
                 if not shown:
                     st.caption("Keine relevanten Balances")
             else:
