@@ -584,7 +584,7 @@ else:
             d1, d2 = st.columns(2)
             with d1:
                 st.markdown("#### KUCOIN → MEXC")
-                st.write(f"Bid: ${k_bid:.6f} | Ask: ${k_ask:.6f}")
+                st.write(f"**Bid:** `${k_bid:.6f}`  |  **Ask:** `${k_ask:.6f}`")
                 spread_km_color = "🔴" if profit_km <= 0 else ("🟡" if spread_pct_km < threshold_start else "🟢")
                 st.write(f"{spread_km_color} Spread: {spread_pct_km:+.3f}% (${profit_km:+.6f})")
                 st.write(f"   Threshold: {threshold_start}%")
@@ -603,7 +603,7 @@ else:
                     st.write(f"Coins: {profit_km * vol_km:+.4f} MPC")
             with d2:
                 st.markdown("#### MEXC → KUCOIN")
-                st.write(f"Bid: ${m_bid:.6f} | Ask: ${m_ask:.6f}")
+                st.write(f"**Bid:** `${m_bid:.6f}`  |  **Ask:** `${m_ask:.6f}`")
                 spread_mk_color = "🔴" if profit_mk <= 0 else ("🟡" if spread_pct_mk < threshold_start else "🟢")
                 st.write(f"{spread_mk_color} Spread: {spread_pct_mk:+.3f}% (${profit_mk:+.6f})")
                 st.write(f"   Threshold: {threshold_start}%")
