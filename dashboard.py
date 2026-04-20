@@ -584,14 +584,13 @@ else:
             kucoin_wallet = get_kucoin_balances(kucoin_key, kucoin_secret, kucoin_pass)
             if kucoin_wallet.get('ok'):
                 bals = kucoin_wallet['balances']
-                shown = False
                 for sym in [base_coin, quote_coin]:
-                    if sym and sym in bals:
-                        bal = bals[sym]
-                        st.metric(sym, f"{bal['available']:.2f}", f"Total: {bal['total']:.2f}")
-                        shown = True
-                if not shown:
-                    st.caption("Keine relevanten Balances")
+                    if sym:
+                        if sym in bals:
+                            bal = bals[sym]
+                            st.metric(sym, f"{bal['available']:.2f}", f"Total: {bal['total']:.2f}")
+                        else:
+                            st.metric(sym, "0.00", "Total: 0.00")
             else:
                 err = kucoin_wallet.get('error', 'Unbekannt')
                 st.error(f"KuCoin: {err}")
@@ -617,15 +616,14 @@ else:
                                 'available': unique_balances[sym]['available'] + bal['available'],
                                 'total': unique_balances[sym]['total'] + bal['total']
                             }
-                # Show only relevant coins for this pair
-                shown = False
+                # Show both coins for the pair (even if 0)
                 for sym in [base_coin, quote_coin]:
-                    if sym and sym in unique_balances:
-                        bal = unique_balances[sym]
-                        st.metric(sym, f"{bal['available']:.2f}", f"Total: {bal['total']:.2f}")
-                        shown = True
-                if not shown:
-                    st.caption("Keine relevanten Balances")
+                    if sym:
+                        if sym in unique_balances:
+                            bal = unique_balances[sym]
+                            st.metric(sym, f"{bal['available']:.2f}", f"Total: {bal['total']:.2f}")
+                        else:
+                            st.metric(sym, "0.00", "Total: 0.00")
             else:
                 err = mexc_wallet.get('error', 'Unbekannt')
                 st.error(f"MEXC: {err}")
