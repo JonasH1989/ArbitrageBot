@@ -118,6 +118,58 @@ def get_kucoin_balances(api_key: str, api_secret: str, passphrase: str):
     except Exception as e:
         return {'ok': False, 'balances': {}, 'error': str(e)}
 
+def get_kucoin_trades(api_key: str, api_secret: str, passphrase: str, symbol: str = 'MPC-USDT', limit: int = 10):
+    """Get KuCoin trade/fill history"""
+    try:
+        import hashlib
+        import hmac
+        import base64
+        import time
+        
+        now = int(time.time() * 1000)
+        method = 'GET'
+        path = f'/api/v1/fills?symbol={symbol}&limit={limit}'
+        body = ''
+        
+        # Signature (same as balances)
+        message = f'{now}{method}{path}{body}'
+        mac = hmac.new(api_secret.encode(), message.encode(), hashlib.sha256)
+        signature = base64.b64encode(mac.digest()).decode()
+        
+        headers = {
+            'KC-API-KEY': api_key,
+            'KC-API-SIGN': signature,
+            'KC-API-TIMESTAMP': str(now),
+            'KC-API-PASSPHRASE': passphrase,
+            'KC-API-KEY-VERSION': '1'
+        }
+        
+        resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get('code') == '200000':
+                items = data.get('data', {}).get('items', [])
+                trades = []
+                for item in items:
+                    trades.append({
+                        'symbol': item.get('symbol'),
+                        'side': item.get('side'),
+                        'price': float(item.get('price', 0)),
+                        'size': float(item.get('size', 0)),
+                        'funds': float(item.get('funds', 0)),
+                        'fee': float(item.get('fee', 0)),
+                        'fee_currency': item.get('feeCurrency'),
+                        'time': item.get('time'),
+                        'trade_id': item.get('tradeId')
+                    })
+                return {'ok': True, 'trades': trades}
+            else:
+                return {'ok': False, 'trades': [], 'error': data.get('msg', 'Unknown error')}
+        else:
+            return {'ok': False, 'trades': [], 'error': f'HTTP {resp.status_code}'}
+    except Exception as e:
+        return {'ok': False, 'trades': [], 'error': str(e)}
+
 def get_mexc_balances(api_key: str, api_secret: str):
     """Get MEXC account balances"""
     try:
@@ -151,6 +203,41 @@ def get_mexc_balances(api_key: str, api_secret: str):
             return {'ok': False, 'balances': {}, 'error': f'HTTP {resp.status_code}'}
     except Exception as e:
         return {'ok': False, 'balances': {}, 'error': str(e)}
+
+def get_mexc_trades(api_key: str, api_secret: str, symbol: str = 'MPCUSDT', limit: int = 10):
+    """Get MEXC trade history"""
+    try:
+        import hashlib
+        import hmac
+        import time
+        
+        ts = int(time.time() * 1000)
+        path = '/api/v3/trades'
+        query = f'symbol={symbol}&limit={limit}&timestamp={ts}'
+        
+        signature = hmac.new(api_secret.encode(), query.encode(), hashlib.sha256).hexdigest()
+        
+        headers = {'ApiKey': api_key}
+        
+        resp = requests.get(f'https://api.mexc.com{path}?{query}&signature={signature}', headers=headers, timeout=10)
+        if resp.status_code == 200:
+            trades = resp.json()
+            result = []
+            for t in trades:
+                result.append({
+                    'symbol': t.get('symbol'),
+                    'side': 'sell' if t.get('isBuyerMaker') else 'buy',  # isBuyerMaker=true means sell
+                    'price': float(t.get('price', 0)),
+                    'qty': float(t.get('qty', 0)),
+                    'quote': float(t.get('quoteQty', 0)),
+                    'time': t.get('time'),
+                    'trade_id': t.get('id')
+                })
+            return {'ok': True, 'trades': result}
+        else:
+            return {'ok': False, 'trades': [], 'error': f'HTTP {resp.status_code}'}
+    except Exception as e:
+        return {'ok': False, 'trades': [], 'error': str(e)}
 
 # ============================================================================
 # Session State
