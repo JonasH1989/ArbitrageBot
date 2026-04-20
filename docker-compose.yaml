@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # MPC Arbitrage Bot (Multi-Pair)
+  arbitrage-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: mpc-arbitrage-bot
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Europe/Berlin
+    command: ["python", "arbitrage_multi.py"]
+
+  # Dashboard
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: mpc-arbitrage-dashboard
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./config:/app/config

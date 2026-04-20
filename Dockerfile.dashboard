@@ -1,0 +1,23 @@
+# MPC Arbitrage Dashboard Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy dashboard
+COPY dashboard.py .
+
+# Copy config directory
+COPY config/ ./config/
+
+# Create config directory if not exists
+RUN mkdir -p config
+
+# Expose Streamlit port
+EXPOSE 8501
+
+# Run dashboard
+CMD ["streamlit", "run", "dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]

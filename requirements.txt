@@ -1,0 +1,6 @@
+# MPC Arbitrage Bot Dependencies
+aiohttp>=3.9.0
+pyyaml>=6.0
+loguru>=0.7.0
+streamlit>=1.28.0
+requests>=2.31.0
