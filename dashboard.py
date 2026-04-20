@@ -102,8 +102,13 @@ def get_kucoin_balances(api_key: str, api_secret: str, passphrase: str):
                     currency = acc.get('currency', '')
                     available = float(acc.get('available', 0) or 0)
                     total = float(acc.get('balance', 0) or 0)
-                    if total > 0:
-                        balances[currency] = {'available': available, 'total': total}
+                    if currency and total > 0:
+                        if currency not in balances:
+                            balances[currency] = {'available': available, 'total': total}
+                        else:
+                            # Sum across multiple accounts (e.g., trade + main + margin)
+                            balances[currency]['available'] += available
+                            balances[currency]['total'] += total
                 return {'ok': True, 'balances': balances}
             else:
                 return {'ok': False, 'balances': {}, 'error': data.get('msg', 'Unknown error')}
