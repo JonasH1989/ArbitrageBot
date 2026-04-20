@@ -849,7 +849,7 @@ else:
         else:
             st.caption("MEXC API Keys nicht konfiguriert")
 
-# Log portfolio on each refresh (for history tracking)
+# Smart portfolio logging - only log when balances change
             try:
                 k_bal = {'MPC': 0, 'USDT': 0}
                 m_bal = {'MPC': 0, 'USDT': 0}
@@ -861,9 +861,35 @@ else:
                     for sym, bal in mexc_wallet.get('balances', {}).items():
                         if sym in ['MPC', 'USDT']:
                             m_bal[sym] = bal.get('total', 0)
-                log_portfolio(k_bal, m_bal, strategy=current_strategy, threshold=threshold_start)
+                
+                # Only log if something changed
+                changed = check_and_log_portfolio(k_bal, m_bal, strategy=current_strategy, threshold=threshold_start)
+                if changed:
+                    st.info(f"📝 Portfolio-Änderung erkannt und geloggt!")
             except Exception as e:
                 pass  # Silent fail for logging
+
+# Auto-detect new trades from exchange APIs
+            try:
+                if kucoin_key and kucoin_secret and kucoin_pass:
+                    k_trades = get_kucoin_trades(kucoin_key, kucoin_secret, kucoin_pass, pair.replace('-', '-'), limit=5)
+                    if not k_trades.get('ok'):
+                        k_trades = {'trades': []}
+                else:
+                    k_trades = {'trades': []}
+                
+                if mexc_key and mexc_secret:
+                    m_trades = get_mexc_trades(mexc_key, mexc_secret, pair.replace('-', ''), limit=5)
+                    if not m_trades.get('ok'):
+                        m_trades = {'trades': []}
+                else:
+                    m_trades = {'trades': []}
+                
+                new = detect_and_log_trades(k_trades.get('trades', []), m_trades.get('trades', []), threshold_start)
+                if new:
+                    st.success(f"🚀 {len(new)} neue Trade(s) automatisch erkannt und geloggt!")
+            except Exception as e:
+                pass  # Silent fail for trade detection
 
 # =========================================================================
 # TRADE LOG SECTION
