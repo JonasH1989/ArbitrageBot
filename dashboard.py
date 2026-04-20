@@ -601,7 +601,9 @@ else:
                 if current_strategy == 'usdt':
                     st.write(f"Total: ${profit_km * vol_km:+.4f}")
                 else:
-                    st.write(f"MPC-Gewinn: {coins_km:+.4f} MPC")
+                    # Only show positive MPC gain for this direction
+                    mpc_gain_km = coins_km if km_profitable and spread_pct_km >= threshold_start else 0
+                    st.write(f"MPC-Gewinn: {mpc_gain_km:+.4f} MPC")
             with d2:
                 st.markdown("#### MEXC → KUCOIN")
                 st.write(f"🥈 MEXC **Ask:** `${m_ask:.6f}`  |  🥇 KuCoin **Bid:** `${k_bid:.6f}`")
@@ -618,7 +620,9 @@ else:
                 if current_strategy == 'usdt':
                     st.write(f"Total: ${profit_mk * vol_mk:+.4f}")
                 else:
-                    st.write(f"MPC-Gewinn: {coins_mk:+.4f} MPC")
+                    # Only show positive MPC gain for this direction
+                    mpc_gain_mk = coins_mk if mk_profitable and spread_pct_mk >= threshold_start else 0
+                    st.write(f"MPC-Gewinn: {mpc_gain_mk:+.4f} MPC")
         
         # =========================================================================
         # PAIR SETTINGS (compact at bottom)
