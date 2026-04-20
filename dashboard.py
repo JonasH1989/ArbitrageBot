@@ -459,39 +459,43 @@ else:
         threshold_start = pair_data.get('threshold_start', thresholds['start'])
         threshold_stop = pair_data.get('threshold_stop', thresholds['stop'])
         
-        # Calculate profit percentage for threshold comparison
-        # profit_km = m_bid - k_ask (buy on KuCoin, sell on MEXC)
-        # profit_mk = k_bid - m_ask (buy on MEXC, sell on KuCoin)
-        profit_pct_km = (profit_km / k_ask * 100) if k_ask > 0 else 0  # % profit on KuCoin Ask
-        profit_pct_mk = (profit_mk / m_ask * 100) if m_ask > 0 else 0  # % profit on MEXC Ask
+        # Spread calculation (overkreuz):
+        # K→M: Buy on KuCoin (Ask), Sell on MEXC (Bid) → Spread = MEXC_Bid - KuCoin_Ask
+        # M→K: Buy on MEXC (Ask), Sell on KuCoin (Bid) → Spread = KuCoin_Bid - MEXC_Ask
+        # 
+        # Logic: Only positive spreads can be traded. Threshold filters out small spreads.
         
-        # Check if spread is large enough to meet threshold
-        meets_threshold_km = profit_pct_km >= threshold_start
-        meets_threshold_mk = profit_pct_mk >= threshold_start
+        # Check if spread is positive (profitable)
+        km_profitable = profit_km > 0  # K→M direction
+        mk_profitable = profit_mk > 0  # M→K direction
         
-        # Determine best direction based on strategy AND threshold
-        if current_strategy == 'usdt':
-            # USDT strategy: profit measured in USDT
-            show_profit = profit_km if meets_threshold_km else (profit_mk if meets_threshold_mk else 0)
-            show_profit_txt = f"${abs(show_profit):.6f}"
-            show_direction = "K→M" if meets_threshold_km else ("M→K" if meets_threshold_mk else "N/A")
-            show_volume = vol_km if meets_threshold_km else vol_mk
-        else:
-            # Coins strategy: profit measured in coins gained
-            coins_km = (vol_km * k_bid) / m_ask - vol_km if m_ask > 0 else 0
-            coins_mk = (vol_mk * m_bid) / k_ask - vol_mk if k_ask > 0 else 0
-            show_coin_profit = coins_km if coins_km > 0 else (coins_mk if coins_mk > 0 else 0)
-            show_profit_txt = f"{abs(show_coin_profit):.2f} MPC"
-            show_direction = "K→M" if coins_km > 0 else ("M→K" if coins_mk > 0 else "N/A")
-            show_volume = vol_km if coins_km > 0 else vol_mk
+        # Only check threshold for positive spreads
+        km_meets_threshold = km_profitable and (profit_km >= threshold_start)
+        mk_meets_threshold = mk_profitable and (profit_mk >= threshold_start)
         
-        # Check if trade should happen (threshold met)
-        trade_possible_km = meets_threshold_km and (profit_km * vol_km > 0)
-        trade_possible_mk = meets_threshold_mk and (profit_mk * vol_mk > 0)
+        # Trade possible only if profitable AND threshold met
+        trade_possible_km = km_meets_threshold
+        trade_possible_mk = mk_meets_threshold
         
         if trade_possible_km or trade_possible_mk:
+            # Determine best direction based on strategy
+            if current_strategy == 'usdt':
+                # USDT strategy: compare total profit
+                profit_km_total = profit_km * vol_km
+                profit_mk_total = profit_mk * vol_mk
+                show_direction = "K→M" if profit_km_total >= profit_mk_total else "M→K"
+                show_volume = vol_km if show_direction == "K→M" else vol_mk
+                show_profit_txt = f"${abs(profit_km if show_direction == "K→M" else profit_mk):.6f}"
+            else:
+                # Coins strategy
+                coins_km = (vol_km * k_bid) / m_ask - vol_km if m_ask > 0 else 0
+                coins_mk = (vol_mk * m_bid) / k_ask - vol_mk if k_ask > 0 else 0
+                show_direction = "K→M" if coins_km >= coins_mk else "M→K"
+                show_volume = vol_km if show_direction == "K→M" else vol_mk
+                show_profit_txt = f"{abs(coins_km if show_direction == "K→M" else coins_mk):.2f} MPC"
+            
             # Direction header
-            direction_color = "🟢" if show_direction == "K→M" else "🟢"
+            direction_color = "🟢"
             st.success(f"{direction_color} **BESTE RICHTUNG: {show_direction}** | Gewinn: {show_profit_txt} | Vol: {show_volume:.0f} Coins")
             
             # Create clear table
@@ -558,27 +562,29 @@ else:
             with d1:
                 st.markdown("#### KUCOIN → MEXC")
                 st.write(f"Bid: ${k_bid:.6f} | Ask: ${k_ask:.6f}")
-                st.write(f"Profit/Coin: ${profit_km:.6f}")
-                st.write(f"Profit %: {profit_pct_km:.3f}%")
-                st.write(f"Threshold: {threshold_start}%")
-                if meets_threshold_km:
-                    st.success(f"✅ Genug ({profit_pct_km:.3f}% >= {threshold_start}%)")
+                st.write(f"Spread: ${profit_km:.6f}")
+                st.write(f"Threshold: ${threshold_start}")
+                if km_profitable and profit_km >= threshold_start:
+                    st.success(f"✅ Trade möglich")
+                elif km_profitable:
+                    st.warning(f"⚠️ Positiv aber < Threshold")
                 else:
-                    st.error(f"❌ Zu wenig ({profit_pct_km:.3f}% < {threshold_start}%)")
+                    st.error(f"❌ Negativer Spread")
                 st.write(f"Volume: {vol_km:.0f}")
-                st.write(f"Total: ${profit_km * vol_km:.4f}")
+                st.write(f"Total Profit: ${profit_km * vol_km:.4f}")
             with d2:
                 st.markdown("#### MEXC → KUCOIN")
                 st.write(f"Bid: ${m_bid:.6f} | Ask: ${m_ask:.6f}")
-                st.write(f"Profit/Coin: ${profit_mk:.6f}")
-                st.write(f"Profit %: {profit_pct_mk:.3f}%")
-                st.write(f"Threshold: {threshold_start}%")
-                if meets_threshold_mk:
-                    st.success(f"✅ Genug ({profit_pct_mk:.3f}% >= {threshold_start}%)")
+                st.write(f"Spread: ${profit_mk:.6f}")
+                st.write(f"Threshold: ${threshold_start}")
+                if mk_profitable and profit_mk >= threshold_start:
+                    st.success(f"✅ Trade möglich")
+                elif mk_profitable:
+                    st.warning(f"⚠️ Positiv aber < Threshold")
                 else:
-                    st.error(f"❌ Zu wenig ({profit_pct_mk:.3f}% < {threshold_start}%)")
+                    st.error(f"❌ Negativer Spread")
                 st.write(f"Volume: {vol_mk:.0f}")
-                st.write(f"Total: ${profit_mk * vol_mk:.4f}")
+                st.write(f"Total Profit: ${profit_mk * vol_mk:.4f}")
         
         # =========================================================================
         # PAIR SETTINGS (compact at bottom)
