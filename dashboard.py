@@ -594,13 +594,11 @@ else:
                     st.warning(f"⚠️ Positiv aber < Threshold")
                 else:
                     st.error(f"❌ Negativer Spread")
-                vol_km_coins = vol_km if current_strategy == 'usdt' else vol_km
-                profit_km_total = profit_km * vol_km if current_strategy == 'usdt' else (coins_km if coins_km > 0 else 0)
                 st.write(f"Volume: {vol_km:.0f} MPC")
                 if current_strategy == 'usdt':
                     st.write(f"Total: ${profit_km * vol_km:+.4f}")
                 else:
-                    st.write(f"Coins: {profit_km * vol_km:+.4f} MPC")
+                    st.write(f"MPC-Gewinn: {coins_km:+.4f} MPC")
             with d2:
                 st.markdown("#### MEXC → KUCOIN")
                 st.write(f"🥈 MEXC **Ask:** `${m_ask:.6f}`  |  🥇 KuCoin **Bid:** `${k_bid:.6f}`")
@@ -617,7 +615,7 @@ else:
                 if current_strategy == 'usdt':
                     st.write(f"Total: ${profit_mk * vol_mk:+.4f}")
                 else:
-                    st.write(f"Coins: {profit_mk * vol_mk:+.4f} MPC")
+                    st.write(f"MPC-Gewinn: {coins_mk:+.4f} MPC")
         
         # =========================================================================
         # PAIR SETTINGS (compact at bottom)
