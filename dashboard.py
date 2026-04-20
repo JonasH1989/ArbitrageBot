@@ -584,7 +584,7 @@ else:
             d1, d2 = st.columns(2)
             with d1:
                 st.markdown("#### KUCOIN → MEXC")
-                st.write(f"🥇 KuCoin **Bid:** `${k_bid:.6f}`  |  🥈 MEXC **Ask:** `${m_ask:.6f}`")
+                st.write(f"🥇 KuCoin **Ask:** `${k_ask:.6f}`  |  🥈 MEXC **Bid:** `${m_bid:.6f}`")
                 spread_km_color = "🔴" if profit_km <= 0 else ("🟡" if spread_pct_km < threshold_start else "🟢")
                 st.write(f"{spread_km_color} Spread: {spread_pct_km:+.3f}% (${profit_km:+.6f})")
                 st.write(f"   Threshold: {threshold_start}%")
