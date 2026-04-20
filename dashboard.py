@@ -10,6 +10,7 @@ import yaml
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
+from trade_logger import *
 
 st.set_page_config(page_title="Arbitrage Bot", page_icon="📊", layout="wide")
 
@@ -760,6 +761,112 @@ else:
                 st.error(f"MEXC: {err}")
         else:
             st.caption("MEXC API Keys nicht konfiguriert")
+
+# Log portfolio on each refresh (for history tracking)
+            try:
+                k_bal = {'MPC': 0, 'USDT': 0}
+                m_bal = {'MPC': 0, 'USDT': 0}
+                if kucoin_wallet.get('ok'):
+                    for sym, bal in kucoin_wallet.get('balances', {}).items():
+                        if sym in ['MPC', 'USDT']:
+                            k_bal[sym] = bal.get('total', 0)
+                if mexc_wallet.get('ok'):
+                    for sym, bal in mexc_wallet.get('balances', {}).items():
+                        if sym in ['MPC', 'USDT']:
+                            m_bal[sym] = bal.get('total', 0)
+                log_portfolio(k_bal, m_bal, strategy=current_strategy, threshold=threshold_start)
+            except Exception as e:
+                pass  # Silent fail for logging
+
+# =========================================================================
+# TRADE LOG SECTION
+# =========================================================================
+        st.divider()
+        st.subheader("📜 Trade Log")
+        
+        # Summary stats
+        summary = get_trade_summary()
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            st.metric("Trades", summary['total_trades'])
+        with col2:
+            st.metric("Win Rate", summary['win_rate'])
+        with col3:
+            st.metric("Total Profit", f"${summary['total_profit_usdt']}", delta=f"{summary['total_profit_mpc']} MPC")
+        with col4:
+            st.metric("Best Trade", f"${summary['best_trade_usdt']}")
+        with col5:
+            st.metric("Avg Profit", f"${summary['avg_profit_usdt']}")
+        
+        # Export buttons
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("📥 Export Trades CSV"):
+                path = export_trades_csv()
+                if path:
+                    st.success(f"Exported to: {path}")
+                else:
+                    st.info("No trades to export yet")
+        with c2:
+            if st.button("📥 Export Portfolio CSV"):
+                path = export_portfolio_csv()
+                if path:
+                    st.success(f"Exported to: {path}")
+                else:
+                    st.info("No portfolio data to export yet")
+        
+        # Trade history table
+        trades = get_trade_history(limit=50)
+        if trades:
+            # Create dataframe
+            df_trades = pd.DataFrame(trades, columns=[
+                'Time', 'Direction', 'Buy Ex', 'Sell Ex', 'Buy Price', 'Sell Price',
+                'Volume MPC', 'Cost USDT', 'Revenue USDT', 'Profit USDT', 'Profit MPC',
+                'Spread %', 'Threshold %', 'Fee Buy', 'Fee Sell', 'Net Profit USDT', 'Net Profit MPC',
+                'Status', 'Notes'
+            ])
+            # Reverse to show newest first
+            df_trades = df_trades.iloc[::-1]
+            # Format for display
+            df_display = df_trades[['Time', 'Direction', 'Volume MPC', 'Buy Price', 'Sell Price', 
+                                   'Spread %', 'Net Profit USDT', 'Net Profit MPC', 'Status']].copy()
+            df_display['Time'] = df_display['Time'].str[:19]
+            st.dataframe(df_display, use_container_width=True, height=300)
+        else:
+            st.info("No trades logged yet. Start trading to see history!")
+
+    # =========================================================================
+    # LOG TRADE FORM (Manual entry)
+    # =========================================================================
+    st.divider()
+    st.subheader("📝 Trade Manuell Loggen")
+    with st.expander("Trade-Eintrag hinzufügen"):
+        t1, t2, t3, t4 = st.columns(4)
+        with t1:
+            trade_dir = st.selectbox("Richtung", ["K→M", "M→K"], key="trade_dir")
+        with t2:
+            trade_vol = st.number_input("Volume (MPC)", 0.0, 10000.0, 80.0, 0.1, key="trade_vol")
+        with t3:
+            trade_buy = st.number_input("Buy Price", 0.0, 10.0, 0.01584, 0.00001, key="trade_buy")
+        with t4:
+            trade_sell = st.number_input("Sell Price", 0.0, 10.0, 0.01605, 0.00001, key="trade_sell")
+        
+        cost = trade_vol * trade_buy
+        revenue = trade_vol * trade_sell
+        profit_usdt = revenue - cost
+        profit_mpc = profit_usdt / trade_sell if trade_sell > 0 else 0
+        spread_pct = ((trade_sell - trade_buy) / trade_buy * 100) if trade_buy > 0 else 0
+        
+        st.info(f"Kosten: ${cost:.4f} | Erlös: ${revenue:.4f} | Profit: ${profit_usdt:.4f} ({profit_mpc:.4f} MPC) | Spread: {spread_pct:.3f}%")
+        
+        if st.button("✅ Trade Loggen"):
+            ex_buy = "KuCoin" if trade_dir == "M→K" else "MEXC"
+            ex_sell = "MEXC" if trade_dir == "M→K" else "KuCoin"
+            buy_p = trade_buy if trade_dir == "M→K" else trade_sell
+            sell_p = trade_sell if trade_dir == "M→K" else trade_buy
+            log_trade(trade_dir, ex_buy, ex_sell, buy_p, sell_p, trade_vol, cost, revenue, threshold_pct=threshold_start, status="manual", notes="Logged by bot")
+            st.success("Trade wurde geloggt!")
+            st.rerun()
 
 # Auto refresh
 if st.session_state.selected_pair:
