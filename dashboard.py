@@ -482,6 +482,10 @@ else:
         trade_possible_km = km_meets_threshold
         trade_possible_mk = mk_meets_threshold
         
+        # Calculate coin profit for coins strategy (always, for display)
+        coins_km = (vol_km * k_bid) / m_ask - vol_km if m_ask > 0 else 0
+        coins_mk = (vol_mk * m_bid) / k_ask - vol_mk if k_ask > 0 else 0
+        
         if trade_possible_km or trade_possible_mk:
             # Determine best direction based on strategy
             if current_strategy == 'usdt':
@@ -493,8 +497,6 @@ else:
                 show_profit_txt = f"${abs(profit_km if show_direction == 'K→M' else profit_mk):.6f}"
             else:
                 # Coins strategy
-                coins_km = (vol_km * k_bid) / m_ask - vol_km if m_ask > 0 else 0
-                coins_mk = (vol_mk * m_bid) / k_ask - vol_mk if k_ask > 0 else 0
                 show_direction = "K→M" if coins_km >= coins_mk else "M→K"
                 show_volume = vol_km if show_direction == "K→M" else vol_mk
                 show_profit_txt = f"{abs(coins_km if show_direction == 'K→M' else coins_mk):.2f} MPC"
@@ -552,12 +554,28 @@ else:
                     cost = k_ask * max_coins
                     revenue = m_bid * max_coins
                     profit = revenue - cost
-                    st.metric("Kosten", f"${cost:.4f}")
-                    st.metric("Erlös", f"${revenue:.4f}")
-                    st.metric("💵 NETTO-GEWINN", f"${profit:.4f}", delta=f"+{profit:.4f}")
+                    if current_strategy == 'usdt':
+                        st.metric("Kosten", f"${cost:.4f}")
+                        st.metric("Erlös", f"${revenue:.4f}")
+                        st.metric("💵 NETTO-GEWINN", f"${profit:.4f}", delta=f"+{profit:.4f}")
+                    else:
+                        st.metric("Kosten", f"{cost / k_ask:.2f} MPC")
+                        st.metric("Erlös", f"{revenue / m_bid:.2f} MPC")
+                        coins_profit = (revenue / m_bid) - (cost / k_ask)
+                        st.metric("💵 NETTO-GEWINN", f"{coins_profit:.2f} MPC", delta=f"+{coins_profit:.2f}")
                 else:
-                    st.error("Kein Trade möglich!")
-                    st.caption("Keine USDT auf MEXC")
+                    cost = m_ask * max_coins
+                    revenue = k_bid * max_coins
+                    profit = revenue - cost
+                    if current_strategy == 'usdt':
+                        st.metric("Kosten", f"${cost:.4f}")
+                        st.metric("Erlös", f"${revenue:.4f}")
+                        st.metric("💵 NETTO-GEWINN", f"${profit:.4f}", delta=f"+{profit:.4f}")
+                    else:
+                        st.metric("Kosten", f"{cost / m_ask:.2f} MPC")
+                        st.metric("Erlös", f"{revenue / k_bid:.2f} MPC")
+                        coins_profit = (revenue / k_bid) - (cost / m_ask)
+                        st.metric("💵 NETTO-GEWINN", f"{coins_profit:.2f} MPC", delta=f"+{coins_profit:.2f}")
         else:
             st.warning("⚠️ Markt effizient - kein profitabler Spread")
         
@@ -567,29 +585,39 @@ else:
             with d1:
                 st.markdown("#### KUCOIN → MEXC")
                 st.write(f"Bid: ${k_bid:.6f} | Ask: ${k_ask:.6f}")
-                st.write(f"Spread: {spread_pct_km:.3f}% (= ${profit_km:.6f})")
-                st.write(f"Threshold: {threshold_start}%")
+                spread_km_color = "🔴" if profit_km <= 0 else ("🟡" if spread_pct_km < threshold_start else "🟢")
+                st.write(f"{spread_km_color} Spread: {spread_pct_km:+.3f}% (${profit_km:+.6f})")
+                st.write(f"   Threshold: {threshold_start}%")
                 if km_profitable and spread_pct_km >= threshold_start:
-                    st.success(f"✅ Trade möglich")
+                    st.success(f"✅ Trade möglich!")
                 elif km_profitable:
                     st.warning(f"⚠️ Positiv aber < Threshold")
                 else:
                     st.error(f"❌ Negativer Spread")
-                st.write(f"Volume: {vol_km:.0f}")
-                st.write(f"Total Profit: ${profit_km * vol_km:.4f}")
+                vol_km_coins = vol_km if current_strategy == 'usdt' else vol_km
+                profit_km_total = profit_km * vol_km if current_strategy == 'usdt' else (coins_km if coins_km > 0 else 0)
+                st.write(f"Volume: {vol_km:.0f} MPC")
+                if current_strategy == 'usdt':
+                    st.write(f"Total: ${profit_km * vol_km:+.4f}")
+                else:
+                    st.write(f"Coins: {profit_km * vol_km:+.4f} MPC")
             with d2:
                 st.markdown("#### MEXC → KUCOIN")
                 st.write(f"Bid: ${m_bid:.6f} | Ask: ${m_ask:.6f}")
-                st.write(f"Spread: {spread_pct_mk:.3f}% (= ${profit_mk:.6f})")
-                st.write(f"Threshold: {threshold_start}%")
+                spread_mk_color = "🔴" if profit_mk <= 0 else ("🟡" if spread_pct_mk < threshold_start else "🟢")
+                st.write(f"{spread_mk_color} Spread: {spread_pct_mk:+.3f}% (${profit_mk:+.6f})")
+                st.write(f"   Threshold: {threshold_start}%")
                 if mk_profitable and spread_pct_mk >= threshold_start:
-                    st.success(f"✅ Trade möglich")
+                    st.success(f"✅ Trade möglich!")
                 elif mk_profitable:
                     st.warning(f"⚠️ Positiv aber < Threshold")
                 else:
                     st.error(f"❌ Negativer Spread")
-                st.write(f"Volume: {vol_mk:.0f}")
-                st.write(f"Total Profit: ${profit_mk * vol_mk:.4f}")
+                st.write(f"Volume: {vol_mk:.0f} MPC")
+                if current_strategy == 'usdt':
+                    st.write(f"Total: ${profit_mk * vol_mk:+.4f}")
+                else:
+                    st.write(f"Coins: {profit_mk * vol_mk:+.4f} MPC")
         
         # =========================================================================
         # PAIR SETTINGS (compact at bottom)
