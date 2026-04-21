@@ -205,19 +205,19 @@ def get_mexc_balances(api_key: str, api_secret: str):
         return {'ok': False, 'balances': {}, 'error': str(e)}
 
 def get_mexc_trades(api_key: str, api_secret: str, symbol: str = 'MPCUSDT', limit: int = 10):
-    """Get MEXC trade history"""
+    """Get MEXC trade/fill history using myTrades endpoint"""
     try:
         import hashlib
         import hmac
         import time
         
         ts = int(time.time() * 1000)
-        path = '/api/v3/trades'
+        path = '/api/v3/myTrades'
         query = f'symbol={symbol}&limit={limit}&timestamp={ts}'
         
         signature = hmac.new(api_secret.encode(), query.encode(), hashlib.sha256).hexdigest()
         
-        headers = {'ApiKey': api_key}
+        headers = {'X-MEXC-APIKEY': api_key}
         
         resp = requests.get(f'https://api.mexc.com{path}?{query}&signature={signature}', headers=headers, timeout=10)
         if resp.status_code == 200:
@@ -226,16 +226,19 @@ def get_mexc_trades(api_key: str, api_secret: str, symbol: str = 'MPCUSDT', limi
             for t in trades:
                 result.append({
                     'symbol': t.get('symbol'),
-                    'side': 'sell' if t.get('isBuyerMaker') else 'buy',  # isBuyerMaker=true means sell
+                    'side': 'buy' if t.get('isBuyer') else 'sell',
                     'price': float(t.get('price', 0)),
                     'qty': float(t.get('qty', 0)),
                     'quote': float(t.get('quoteQty', 0)),
+                    'fee': float(t.get('commission', 0)),
+                    'fee_asset': t.get('commissionAsset'),
                     'time': t.get('time'),
-                    'trade_id': t.get('id')
+                    'trade_id': t.get('id'),
+                    'order_id': t.get('orderId')
                 })
             return {'ok': True, 'trades': result}
         else:
-            return {'ok': False, 'trades': [], 'error': f'HTTP {resp.status_code}'}
+            return {'ok': False, 'trades': [], 'error': f'HTTP {resp.status_code}: {resp.text}'}
     except Exception as e:
         return {'ok': False, 'trades': [], 'error': str(e)}
 
@@ -569,6 +572,48 @@ else:
         # Trade possible only if profitable AND threshold met
         trade_possible_km = km_meets_threshold
         trade_possible_mk = mk_meets_threshold
+        
+        # =====================================================================
+        # FEE WARNING - Calculate minimum threshold based on exchange fees
+        # =====================================================================
+        fee_taker = 0.001  # 0.1% taker fee for both exchanges
+        min_profit_buffer = 0.0002  # 0.02% minimum profit buffer
+        
+        # Calculate minimum threshold needed to cover fees + buffer
+        # For a trade: fee = volume * price * fee_taker (for each side)
+        # Total fee % = (fee_buy + fee_sell) / cost * 100
+        # = (vol * ask * fee_taker + vol * bid * fee_taker) / (vol * ask) * 100
+        # = fee_taker * (ask + bid) / ask * 100
+        
+        if k_ask > 0 and m_ask > 0:
+            # For K→M: buy on KuCoin (k_ask), sell on MEXC (m_bid)
+            fee_pct_km = fee_taker * (k_ask + m_bid) / k_ask * 100
+            recommended_min_km = fee_pct_km + min_profit_buffer * 100
+            
+            # For M→K: buy on MEXC (m_ask), sell on KuCoin (k_bid)
+            fee_pct_mk = fee_taker * (m_ask + k_bid) / m_ask * 100
+            recommended_min_mk = fee_pct_mk + min_profit_buffer * 100
+        else:
+            fee_pct_km = fee_pct_mk = 0.2
+            recommended_min_km = recommended_min_mk = 0.3
+        
+        # Show fee warning in sidebar or above opportunity
+        with st.expander("⚠️ Fee-Empfehlung", expanded=False):
+            fee_col1, fee_col2 = st.columns(2)
+            with fee_col1:
+                st.write(f"**K→M:** Fees ≈ {fee_pct_km:.3f}%")
+                st.write(f"**M→K:** Fees ≈ {fee_pct_mk:.3f}%")
+            with fee_col2:
+                st.write(f"**Min. Threshold:** ≥{max(recommended_min_km, recommended_min_mk):.2f}%")
+                st.write(f"**Aktueller Threshold:** {threshold_start}%")
+            
+            if threshold_start < max(recommended_min_km, recommended_min_mk):
+                st.error(f"⚠️ **WARNUNG:** Threshold {threshold_start}% ist unter dem empfohlenen Minimum! "
+                        f"Gebühren könnten den Gewinn auffressen.")
+            else:
+                st.success(f"✅ Threshold {threshold_start}% ist ausreichend.")
+            
+            st.caption("Hinweis: Fees sind geschätzt (0.1% + 0.1% Taker). Auto-Set später verfügbar.")
         
         # Calculate coin profit for coins strategy
         # Profit per coin in MPC = spread_USDT / ask_price
