@@ -184,6 +184,7 @@ def get_trade_summary() -> Dict:
             'total_trades': 0,
             'winning_trades': 0,
             'losing_trades': 0,
+            'win_rate': '0%',
             'total_profit_usdt': 0,
             'total_profit_mpc': 0,
             'avg_profit_usdt': 0,
