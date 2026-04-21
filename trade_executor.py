@@ -74,10 +74,11 @@ class TradeExecution:
 # ============================================================================
 
 def kucoin_signature(api_secret: str, timestamp: str, method: str, path: str, body: str = '') -> str:
-    """Generate KuCoin API signature"""
+    """Generate KuCoin API signature - MUST use base64 encoding!"""
+    import base64
     message = f'{timestamp}{method}{path}{body}'
     mac = hmac.new(api_secret.encode(), message.encode(), hashlib.sha256)
-    return mac.digest().hex()
+    return base64.b64encode(mac.digest()).decode()
 
 def mexc_signature(api_secret: str, query_string: str) -> str:
     """Generate MEXC API signature"""
