@@ -32,9 +32,9 @@ def ensure_log_dir():
             writer = csv.writer(f)
             writer.writerow(['timestamp', 'direction', 'exchange_buy', 'exchange_sell', 
                            'buy_price', 'sell_price', 'volume_mpc', 'cost_usdt', 'revenue_usdt',
-                           'profit_usdt', 'profit_mpc', 'spread_pct', 'threshold_pct',
-                           'fee_buy', 'fee_sell', 'net_profit_usdt', 'net_profit_mpc',
-                           'status', 'notes'])
+                           'gross_profit', 'fee_total', 'net_profit_usdt', 'net_profit_mpc',
+                           'spread_pct', 'threshold_pct', 'fee_buy', 'fee_sell',
+                           'win_loss', 'fee_warning', 'status', 'notes'])
 
 
 def check_and_log_portfolio(kucoin_balances: Dict, mexc_balances: Dict, strategy: str = "usdt", 
@@ -116,9 +116,19 @@ def log_trade(direction: str, exchange_buy: str, exchange_sell: str,
     spread_pct = ((sell_price - buy_price) / buy_price) * 100 if buy_price > 0 else 0
     
     # Net after fees
-    net_profit_usdt = profit_usdt - fee_buy - fee_sell
+    fee_total = fee_buy + fee_sell
+    net_profit_usdt = profit_usdt - fee_total
     # Approximate MPC profit
     net_profit_mpc = net_profit_usdt / sell_price if sell_price > 0 else 0
+    
+    # Determine WIN/LOSS
+    win_loss = "WIN" if net_profit_usdt > 0 else "LOSS"
+    
+    # Calculate gross profit before fees
+    gross_profit = profit_usdt
+    
+    # Fee warning: if fees > 50% of gross profit, flag it
+    fee_warning = "FEE_WARNING" if gross_profit > 0 and fee_total > gross_profit * 0.5 else ""
     
     with open(TRADES_FILE, 'a', newline='') as f:
         writer = csv.writer(f)
@@ -132,14 +142,16 @@ def log_trade(direction: str, exchange_buy: str, exchange_sell: str,
             f"{volume_mpc:.4f}",
             f"{cost_usdt:.4f}",
             f"{revenue_usdt:.4f}",
-            f"{profit_usdt:.4f}",
-            f"{profit_usdt / sell_price:.4f}" if sell_price > 0 else "0",
+            f"{gross_profit:.4f}",
+            f"{fee_total:.4f}",
+            f"{net_profit_usdt:.4f}",
+            f"{net_profit_mpc:.4f}",
             f"{spread_pct:.3f}",
             f"{threshold_pct:.3f}",
             f"{fee_buy:.4f}",
             f"{fee_sell:.4f}",
-            f"{net_profit_usdt:.4f}",
-            f"{net_profit_mpc:.4f}",
+            win_loss,
+            fee_warning,
             status,
             notes
         ])
@@ -204,8 +216,8 @@ def get_trade_summary() -> Dict:
     
     for t in trades:
         try:
-            profit_usdt = float(t[15])  # net_profit_usdt (index 15)
-            profit_mpc = float(t[16])   # net_profit_mpc (index 16)
+            profit_usdt = float(t[11])  # net_profit_usdt (index 11)
+            profit_mpc = float(t[12])   # net_profit_mpc (index 12)
             
             total_profit_usdt += profit_usdt
             total_profit_mpc += profit_mpc
@@ -316,14 +328,14 @@ def detect_and_log_trades(kucoin_trades: list, mexc_trades: list, threshold_pct:
             
         _logged_kucoin_trades.add(trade_id)
         
-        # Parse timestamp (KuCoin format: e.g. "2024-04-20T12:34:56Z")
-        ts_str = trade.get('created_at', trade.get('time', ''))
+        # Parse timestamp (KuCoin: created_at in milliseconds)
+        from datetime import datetime
+        ts_val = trade.get('created_at')
         try:
-            from datetime import datetime
-            if isinstance(ts_str, (int, float)):
-                ts = datetime.fromtimestamp(ts_str)
+            if ts_val:
+                ts = datetime.fromtimestamp(int(ts_val) / 1000)
             else:
-                ts = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
+                ts = datetime.now()
         except:
             ts = datetime.now()
         
@@ -376,6 +388,15 @@ def detect_and_log_trades(kucoin_trades: list, mexc_trades: list, threshold_pct:
     
     # Try to match trades
     matched_pairs = []
+    # Try to match trades
+    matched_pairs = []
+    
+    # For MEXC: trades without IDs get synthetic IDs based on position
+    # This prevents us from skipping them as "already logged"
+    for i, trade in enumerate(all_trades):
+        if not trade['id'] or trade['id'].endswith('_None'):
+            trade['id'] = f"{trade['exchange']}_{trade['timestamp'].strftime('%Y%m%d%H%M%S')}_{i}"
+    
     unmatched = list(all_trades)
     
     for i, trade1 in enumerate(unmatched):
