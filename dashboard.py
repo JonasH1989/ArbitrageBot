@@ -867,7 +867,7 @@ else:
                 if changed:
                     st.info(f"📝 Portfolio-Änderung erkannt und geloggt!")
             except Exception as e:
-                pass  # Silent fail for logging
+                st.warning(f"⚠️ Portfolio-Log Fehler: {e}")
 
 # Auto-detect new trades from exchange APIs
             try:
@@ -889,7 +889,7 @@ else:
                 if new:
                     st.success(f"🚀 {len(new)} neue Trade(s) automatisch erkannt und geloggt!")
             except Exception as e:
-                pass  # Silent fail for trade detection
+                st.warning(f"⚠️ Trade-Detection Fehler: {e}")
 
 # =========================================================================
 # TRADE LOG SECTION

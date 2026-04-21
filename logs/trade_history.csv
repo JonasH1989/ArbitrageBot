@@ -1,0 +1,1 @@
+timestamp,direction,exchange_buy,exchange_sell,buy_price,sell_price,volume_mpc,cost_usdt,revenue_usdt,profit_usdt,profit_mpc,spread_pct,threshold_pct,fee_buy,fee_sell,net_profit_usdt,net_profit_mpc,status,notes

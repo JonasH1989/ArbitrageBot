@@ -203,8 +203,8 @@ def get_trade_summary() -> Dict:
     
     for t in trades:
         try:
-            profit_usdt = float(t[16])  # net_profit_usdt
-            profit_mpc = float(t[17])   # net_profit_mpc
+            profit_usdt = float(t[15])  # net_profit_usdt (index 15)
+            profit_mpc = float(t[16])   # net_profit_mpc (index 16)
             
             total_profit_usdt += profit_usdt
             total_profit_mpc += profit_mpc
