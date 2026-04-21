@@ -288,92 +288,183 @@ def export_portfolio_csv(filename: str = None) -> str:
 _logged_kucoin_trades = set()
 _logged_mexc_trades = set()
 
-def detect_and_log_trades(kucoin_trades: list, mexc_trades: list, threshold_pct: float = 0.0) -> list:
+def detect_and_log_trades(kucoin_trades: list, mexc_trades: list, threshold_pct: float = 0.0, time_window_minutes: int = 5, volume_tolerance: float = 0.1) -> list:
     """
-    Detect new trades from exchange trade histories and log them.
-    Returns list of newly logged trades.
+    Detect and match arbitrage trades from exchange trade histories.
+    
+    Matching logic:
+    - One trade must be a BUY, one must be a SELL
+    - Volumes must be within tolerance (default 10%)
+    - Trades must be within time window (default 5 minutes)
+    
+    Returns list of matched trade pairs.
     """
     global _logged_kucoin_trades, _logged_mexc_trades
     
-    new_trades = []
+    # Normalize and combine all trades with timestamps
+    all_trades = []
     
     # Process KuCoin trades
     for trade in kucoin_trades:
         trade_id = f"kucoin_{trade.get('trade_id', '')}"
-        if trade_id not in _logged_kucoin_trades:
-            _logged_kucoin_trades.add(trade_id)
+        if trade_id in _logged_kucoin_trades:
+            continue
+        
+        side = trade.get('side', '')
+        if side not in ['buy', 'sell']:
+            continue
             
-            side = trade.get('side', '')
-            price = trade.get('price', 0)
-            size = trade.get('size', 0)
-            funds = trade.get('funds', 0)
-            fee = trade.get('fee', 0)
-            
-            if side == 'sell':
-                direction = 'M→K'
-                buy_ex = 'MEXC'
-                sell_ex = 'KuCoin'
-                buy_price = 0
-                sell_price = price
+        _logged_kucoin_trades.add(trade_id)
+        
+        # Parse timestamp (KuCoin format: e.g. "2024-04-20T12:34:56Z")
+        ts_str = trade.get('created_at', trade.get('time', ''))
+        try:
+            from datetime import datetime
+            if isinstance(ts_str, (int, float)):
+                ts = datetime.fromtimestamp(ts_str)
             else:
-                direction = 'K→M'
-                buy_ex = 'KuCoin'
-                sell_ex = 'MEXC'
-                buy_price = price
-                sell_price = 0
-            
-            log_trade(
-                direction=direction,
-                exchange_buy=buy_ex,
-                exchange_sell=sell_ex,
-                buy_price=buy_price,
-                sell_price=sell_price,
-                volume_mpc=size,
-                cost_usdt=funds,
-                revenue_usdt=funds - fee,
-                fee_buy=0,
-                fee_sell=fee,
-                threshold_pct=threshold_pct,
-                status='auto_detected',
-                notes=f'KuCoin trade ID: {trade_id}'
-            )
-            new_trades.append({'exchange': 'KuCoin', 'trade': trade})
+                ts = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
+        except:
+            ts = datetime.now()
+        
+        all_trades.append({
+            'id': trade_id,
+            'exchange': 'KuCoin',
+            'side': side,  # 'buy' or 'sell'
+            'price': float(trade.get('price', 0)),
+            'volume': float(trade.get('size', trade.get('funds', 0) / (float(trade.get('price', 1)) or 1))),
+            'quote': float(trade.get('funds', 0)),
+            'fee': float(trade.get('fee', 0)),
+            'timestamp': ts,
+            'raw': trade
+        })
     
     # Process MEXC trades
     for trade in mexc_trades:
         trade_id = f"mexc_{trade.get('trade_id', '')}"
-        if trade_id not in _logged_mexc_trades:
-            _logged_mexc_trades.add(trade_id)
+        if trade_id in _logged_mexc_trades:
+            continue
             
-            side = trade.get('side', '')
-            price = trade.get('price', 0)
-            qty = trade.get('qty', 0)
-            quote = trade.get('quote', 0)
+        side = trade.get('side', '')
+        if side not in ['buy', 'sell']:
+            continue
             
-            if side == 'buy':
-                direction = 'M→K'
-                buy_ex = 'MEXC'
-                sell_ex = 'KuCoin'
+        _logged_mexc_trades.add(trade_id)
+        
+        # Parse timestamp (MEXC format)
+        ts_str = trade.get('time', trade.get('timestamp', ''))
+        try:
+            from datetime import datetime
+            if isinstance(ts_str, (int, float)):
+                ts = datetime.fromtimestamp(ts_str / 1000)  # MEXC uses milliseconds
             else:
-                direction = 'K→M'
-                buy_ex = 'KuCoin'
-                sell_ex = 'MEXC'
-            
-            log_trade(
-                direction=direction,
-                exchange_buy=buy_ex,
-                exchange_sell=sell_ex,
-                buy_price=price,
-                sell_price=price,
-                volume_mpc=qty,
-                cost_usdt=quote,
-                revenue_usdt=quote,
-                fee_buy=0,
-                fee_sell=0,
-                threshold_pct=threshold_pct,
-                status='auto_detected',
-                notes=f'MEXC trade ID: {trade_id}'
-            )
-            new_trades.append({'exchange': 'MEXC', 'trade': trade})
+                ts = datetime.fromisoformat(str(ts_str).replace('Z', '+00:00'))
+        except:
+            ts = datetime.now()
+        
+        all_trades.append({
+            'id': trade_id,
+            'exchange': 'MEXC',
+            'side': side,
+            'price': float(trade.get('price', 0)),
+            'volume': float(trade.get('qty', trade.get('vol', 0))),
+            'quote': float(trade.get('quote', 0)),
+            'fee': float(trade.get('fee', 0)),
+            'timestamp': ts,
+            'raw': trade
+        })
     
-    return new_trades
+    # Try to match trades
+    matched_pairs = []
+    unmatched = list(all_trades)
+    
+    for i, trade1 in enumerate(unmatched):
+        for j, trade2 in enumerate(unmatched[i+1:], start=i+1):
+            # Check if opposite sides
+            if trade1['side'] == trade2['side']:
+                continue
+            
+            # Check if same exchange (can't be arbitrage with same exchange)
+            if trade1['exchange'] == trade2['exchange']:
+                continue
+            
+            # Check time window
+            time_diff = abs((trade1['timestamp'] - trade2['timestamp']).total_seconds())
+            if time_diff > time_window_minutes * 60:
+                continue
+            
+            # Check volume tolerance
+            vol1 = trade1['volume']
+            vol2 = trade2['volume']
+            if vol1 <= 0 or vol2 <= 0:
+                continue
+                
+            vol_diff = abs(vol1 - vol2) / max(vol1, vol2)
+            if vol_diff > volume_tolerance:
+                continue
+            
+            # MATCH FOUND!
+            # Determine direction: K→M means bought on KuCoin, sold on MEXC
+            if trade1['exchange'] == 'KuCoin' and trade1['side'] == 'buy':
+                buy_trade = trade1
+                sell_trade = trade2
+                direction = 'K→M'
+            elif trade2['exchange'] == 'KuCoin' and trade2['side'] == 'buy':
+                buy_trade = trade2
+                sell_trade = trade1
+                direction = 'K→M'
+            elif trade1['exchange'] == 'MEXC' and trade1['side'] == 'buy':
+                buy_trade = trade1
+                sell_trade = trade2
+                direction = 'M→K'
+            else:
+                buy_trade = trade2
+                sell_trade = trade1
+                direction = 'M→K'
+            
+            matched_pairs.append({
+                'direction': direction,
+                'buy_exchange': buy_trade['exchange'],
+                'sell_exchange': sell_trade['exchange'],
+                'buy_price': buy_trade['price'],
+                'sell_price': sell_trade['price'],
+                'volume': min(buy_trade['volume'], sell_trade['volume']),  # Use smaller vol
+                'buy_fee': buy_trade['fee'],
+                'sell_fee': sell_trade['fee'],
+                'time_diff_seconds': time_diff,
+                'buy_trade_id': buy_trade['id'],
+                'sell_trade_id': sell_trade['id']
+            })
+            
+            # Remove matched trades from unmatched list
+            break
+    
+    # Log matched pairs as arbitrage trades
+    logged_count = 0
+    for pair in matched_pairs:
+        cost = pair['volume'] * pair['buy_price']
+        revenue = pair['volume'] * pair['sell_price']
+        profit_usdt = revenue - cost
+        spread_pct = (pair['sell_price'] - pair['buy_price']) / pair['buy_price'] * 100 if pair['buy_price'] > 0 else 0
+        
+        log_trade(
+            direction=pair['direction'],
+            exchange_buy=pair['buy_exchange'],
+            exchange_sell=pair['sell_exchange'],
+            buy_price=pair['buy_price'],
+            sell_price=pair['sell_price'],
+            volume_mpc=pair['volume'],
+            cost_usdt=cost,
+            revenue_usdt=revenue,
+            fee_buy=pair['buy_fee'],
+            fee_sell=pair['sell_fee'],
+            threshold_pct=threshold_pct,
+            status='matched_arbitrage',
+            notes=f"Auto-matched | Time-diff: {pair['time_diff_seconds']:.0f}s | IDs: {pair['buy_trade_id']}/{pair['sell_trade_id']}"
+        )
+        logged_count += 1
+    
+    # Also log any unmatched trades as single-sided (for record)
+    # But don't log them as arbitrage trades
+    
+    return matched_pairs
