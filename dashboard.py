@@ -159,7 +159,7 @@ def get_kucoin_trades(api_key: str, api_secret: str, passphrase: str, symbol: st
                         'funds': float(item.get('funds', 0)),
                         'fee': float(item.get('fee', 0)),
                         'fee_currency': item.get('feeCurrency'),
-                        'time': item.get('time'),
+                        'created_at': item.get('createdAt'),  # timestamp in ms
                         'trade_id': item.get('tradeId')
                     })
                 return {'ok': True, 'trades': trades}
@@ -931,20 +931,42 @@ else:
         # Trade history table
         trades = get_trade_history(limit=50)
         if trades:
-            # Create dataframe
+            # Create dataframe with new columns
             df_trades = pd.DataFrame(trades, columns=[
                 'Time', 'Direction', 'Buy Ex', 'Sell Ex', 'Buy Price', 'Sell Price',
-                'Volume MPC', 'Cost USDT', 'Revenue USDT', 'Profit USDT', 'Profit MPC',
-                'Spread %', 'Threshold %', 'Fee Buy', 'Fee Sell', 'Net Profit USDT', 'Net Profit MPC',
-                'Status', 'Notes'
+                'Volume MPC', 'Cost USDT', 'Revenue USDT', 'Gross Profit', 'Fee Total',
+                'Net Profit USDT', 'Net Profit MPC', 'Spread %', 'Threshold %', 
+                'Fee Buy', 'Fee Sell', 'Win/Loss', 'Fee Warning', 'Status', 'Notes'
             ])
             # Reverse to show newest first
             df_trades = df_trades.iloc[::-1]
-            # Format for display
-            df_display = df_trades[['Time', 'Direction', 'Volume MPC', 'Buy Price', 'Sell Price', 
-                                   'Spread %', 'Net Profit USDT', 'Net Profit MPC', 'Status']].copy()
+            
+            # Add WIN/LOSS badge styling
+            def style_win_loss(x):
+                if x == 'WIN':
+                    return '🟢 WIN'
+                elif x == 'LOSS':
+                    return '🔴 LOSS'
+                return x
+            
+            # Display key columns
+            display_cols = ['Time', 'Direction', 'Volume MPC', 'Buy Price', 'Sell Price', 
+                          'Gross Profit', 'Fee Total', 'Net Profit USDT', 'Win/Loss']
+            df_display = df_trades[[c for c in display_cols if c in df_trades.columns]].copy()
             df_display['Time'] = df_display['Time'].str[:19]
+            
+            # Apply win/loss styling
+            if 'Win/Loss' in df_display.columns:
+                df_display['Win/Loss'] = df_display['Win/Loss'].apply(style_win_loss)
+            
             st.dataframe(df_display, use_container_width=True, height=300)
+            
+            # Show fee warnings if any
+            if 'Fee Warning' in df_trades.columns:
+                warnings = df_trades[df_trades['Fee Warning'] == 'FEE_WARNING']
+                if len(warnings) > 0:
+                    st.warning(f"⚠️ {len(warnings)} Trade(s) mit hohen Gebühren (>{50}% des Gewinns)! "
+                             f"→ Threshold möglicherweise zu niedrig.")
         else:
             st.info("No trades logged yet. Start trading to see history!")
 
