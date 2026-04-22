@@ -1,0 +1,13 @@
+{
+  "C02__675584713091387392119": {
+    "order_id": "C02__675584713091387392119",
+    "exchange": "MEXC",
+    "direction": "K->M",
+    "qty": 160,
+    "buy_price": 0.012238,
+    "sell_price": 0.01235,
+    "filled": 0,
+    "status": "PENDING",
+    "placed_at": "2026-04-22 12:36:23"
+  }
+}
