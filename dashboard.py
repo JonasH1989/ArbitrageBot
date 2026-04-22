@@ -960,7 +960,7 @@ else:
 # TRADE LOG SECTION - ONLY IN DETAIL VIEW (FULL WIDTH)
 # =========================================================================
         if st.session_state.selected_pair:
-            # Use full width container
+                # Use full width container
             with st.container():
                 st.divider()
                 st.subheader("📜 Trade Log")
@@ -970,32 +970,52 @@ else:
                 # Summary stats - full width, 8 metrics
                 summary = get_trade_summary_extended(log_pair)
                 
-                # Create 8 columns for summary
-                m1, m2, m3, m4, m5, m6, m7, m8 = st.columns(8)
-            with m1:
-                st.metric("Summe Trades", summary.get('total_trades', 0))
-            with m2:
-                st.metric("Completed", summary.get('completed_trades', 0))
-            with m3:
-                st.metric("Open Trades", summary.get('open_trades', 0))
-            with m4:
-                st.metric("Total Profit", f"${summary.get('total_profit_usdt', 0):.4f}")
-            with m5:
-                st.metric("Total MPC", f"{summary.get('total_profit_mpc', 0):.2f}", delta=f"+{summary.get('total_profit_mpc', 0):.2f}")
-            with m6:
-                st.metric("Best Trade", f"${summary.get('best_trade_usdt', 0):.4f}")
-            with m7:
-                st.metric("Avg Profit", f"${summary.get('avg_profit_usdt', 0):.4f}")
-            with m8:
-                st.metric("Avg Spread", f"{summary.get('avg_spread_pct', 0):.3f}%")
+                # Summary stats as HTML table for full width control
+                s = summary
+                st.markdown(f"""
+                <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 0; width: 100%; font-family: sans-serif;">
+                    <div style="text-align: center; padding: 12px 8px; border: 1px solid #ddd; background: #0a0a0a;">
+                        <div style="color: #aaa; font-size: 11px;">SUMME TRADES</div>
+                        <div style="color: white; font-size: 18px; font-weight: bold;">{s.get('total_trades', 0)}</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px 8px; border: 1px solid #ddd; background: #0a0a0a;">
+                        <div style="color: #aaa; font-size: 11px;">COMPLETED</div>
+                        <div style="color: white; font-size: 18px; font-weight: bold;">{s.get('completed_trades', 0)}</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px 8px; border: 1px solid #ddd; background: #0a0a0a;">
+                        <div style="color: #aaa; font-size: 11px;">OPEN TRADES</div>
+                        <div style="color: white; font-size: 18px; font-weight: bold;">{s.get('open_trades', 0)}</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px 8px; border: 1px solid #ddd; background: #0a0a0a;">
+                        <div style="color: #aaa; font-size: 11px;">TOTAL PROFIT</div>
+                        <div style="color: #00ff00; font-size: 18px; font-weight: bold;">${s.get('total_profit_usdt', 0):.4f}</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px 8px; border: 1px solid #ddd; background: #0a0a0a;">
+                        <div style="color: #aaa; font-size: 11px;">TOTAL MPC</div>
+                        <div style="color: #00ff00; font-size: 18px; font-weight: bold;">{s.get('total_profit_mpc', 0):.2f}</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px 8px; border: 1px solid #ddd; background: #0a0a0a;">
+                        <div style="color: #aaa; font-size: 11px;">BEST TRADE</div>
+                        <div style="color: white; font-size: 18px; font-weight: bold;">${s.get('best_trade_usdt', 0):.4f}</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px 8px; border: 1px solid #ddd; background: #0a0a0a;">
+                        <div style="color: #aaa; font-size: 11px;">AVG PROFIT</div>
+                        <div style="color: white; font-size: 18px; font-weight: bold;">${s.get('avg_profit_usdt', 0):.4f}</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px 8px; border: 1px solid #ddd; background: #0a0a0a;">
+                        <div style="color: #aaa; font-size: 11px;">AVG SPREAD</div>
+                        <div style="color: white; font-size: 18px; font-weight: bold;">{s.get('avg_spread_pct', 0):.3f}%</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
             
-            # Export button
-            if st.button("📥 Export CSV"):
-                path = export_trades_csv(log_pair)
-                if path:
-                    st.success(f"Exported!")
-                else:
-                    st.info("No trades")
+                # Export button
+                if st.button("📥 Export CSV"):
+                    path = export_trades_csv(log_pair)
+                    if path:
+                        st.success(f"Exported!")
+                    else:
+                        st.info("No trades")
             
             # Trade history table
             trades = get_trades(log_pair, limit=100)
