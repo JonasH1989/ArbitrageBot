@@ -1,491 +1,523 @@
 """
-Trade Logger - Portfolio Tracking & Trade History
+Trade Logger - Harmonized Multi-Exchange Trade Capture
+One CSV per trading pair, all trades appended sequentially.
+
+Harmonization: Exchange-specific API responses are normalized into
+a unified schema so data is comparable across exchanges.
 """
 import csv
 import os
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Tuple
 
-LOG_DIR = Path(__file__).parent / "logs"
-PORTFOLIO_FILE = LOG_DIR / "portfolio_history.csv"
-TRADES_FILE = LOG_DIR / "trade_history.csv"
-LAST_STATE_FILE = LOG_DIR / ".last_state.json"
+LOG_DIR = Path("/home/openclaw/.openclaw/logs")
 
-# Store last known balances to detect changes
-_last_balances = None
+# Unified CSV columns for ALL trades (harmonized format)
+UNIFIED_COLUMNS = [
+    # Trade identity
+    "trade_id",
+    "internal_ts",           # When BOT fired the trade (our timestamp)
+    "direction",              # "K->M" or "M->K"  
+    "pair",                  # Trading pair e.g. "MPC-USDT"
+    
+    # Exchange 1 (Market Order - first leg)
+    "ex1_exchange",          # "KUCOIN" or "MEXC"
+    "ex1_order_id",          # Exchange order ID
+    "ex1_type",              # "market" or "limit"
+    "ex1_side",              # "buy" or "sell"
+    "ex1_qty_ordered",       # Quantity ordered
+    "ex1_qty_filled",        # Quantity filled
+    "ex1_price_avg",         # Average fill price
+    "ex1_value_usdt",        # Total value in USDT
+    "ex1_fees",              # Fees paid
+    "ex1_create_ts",         # Exchange timestamp (ms)
+    "ex1_status",            # Exchange status
+    
+    # Exchange 2 (Limit Order - second leg)
+    "ex2_exchange",          # "KUCOIN" or "MEXC"
+    "ex2_order_id",          # Exchange order ID
+    "ex2_type",              # "market" or "limit"
+    "ex2_side",              # "buy" or "sell"
+    "ex2_qty_ordered",       # Quantity ordered
+    "ex2_qty_filled",        # Quantity filled
+    "ex2_price_avg",         # Average fill price (0 if not filled)
+    "ex2_value_usdt",        # Total value in USDT (0 if not filled)
+    "ex2_fees",              # Fees paid
+    "ex2_create_ts",         # Exchange timestamp (ms)
+    "ex2_status",            # Exchange status
+    
+    # Limit Order Watch State
+    "limit_watch_status",    # "WATCHING", "FILLED", "PARTIAL", "CANCELLED", "EXPIRED"
+    "limit_last_check",      # Last time we checked fill status
+    
+    # Metadata
+    "raw_ex1_response",      # Full JSON response from exchange 1
+    "raw_ex2_response",      # Full JSON response from exchange 2
+    "updated_at",            # Last update timestamp
+]
+
 
 def ensure_log_dir():
-    """Create logs directory if it doesn't exist"""
-    LOG_DIR.mkdir(exist_ok=True)
-    
-    # Create CSV files with headers if they don't exist
-    if not PORTFOLIO_FILE.exists():
-        with open(PORTFOLIO_FILE, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['timestamp', 'mpc_total', 'usdt_total', 'mpc_on_kucoin', 'usdt_on_kucoin', 
-                           'mpc_on_mexc', 'usdt_on_mexc', 'strategy', 'threshold', 'notes'])
-    
-    if not TRADES_FILE.exists():
-        with open(TRADES_FILE, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['timestamp', 'direction', 'exchange_buy', 'exchange_sell', 
-                           'buy_price', 'sell_price', 'volume_mpc', 'cost_usdt', 'revenue_usdt',
-                           'gross_profit', 'fee_total', 'net_profit_usdt', 'net_profit_mpc',
-                           'spread_pct', 'threshold_pct', 'fee_buy', 'fee_sell',
-                           'win_loss', 'fee_warning', 'status', 'notes'])
+    """Ensure log directory exists"""
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def check_and_log_portfolio(kucoin_balances: Dict, mexc_balances: Dict, strategy: str = "usdt", 
-                            threshold: float = 0.0, notes: str = "") -> bool:
-    """
-    Check if balances changed and log only if something changed.
-    Returns True if something was logged, False otherwise.
-    """
-    global _last_balances
+def get_trade_csv_path(pair: str) -> Path:
+    """Get CSV file path for a trading pair"""
+    # Normalize pair format: MPCUSDT -> MPC-USDT
+    normalized_pair = pair.replace("USDT", "-USDT").replace("-USDT", "USDT").upper()
+    if not normalized_pair.endswith("-USDT") and not normalized_pair.endswith("USDT"):
+        normalized_pair += "-USDT"
+    # Fix double hyphen
+    normalized_pair = normalized_pair.replace("--", "-")
+    return LOG_DIR / f"{normalized_pair}_trades.csv"
+
+
+def init_pair_csv(pair: str) -> Path:
+    """Initialize CSV file for a trading pair if it doesn't exist"""
+    ensure_log_dir()
+    csv_path = get_trade_csv_path(pair)
     
-    mpc_k = kucoin_balances.get('MPC', 0)
-    usdt_k = kucoin_balances.get('USDT', 0)
-    mpc_m = mexc_balances.get('MPC', 0)
-    usdt_m = mexc_balances.get('USDT', 0)
+    if not csv_path.exists():
+        with open(csv_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(UNIFIED_COLUMNS)
     
-    current = {
-        'mpc_kucoin': mpc_k,
-        'usdt_kucoin': usdt_k,
-        'mpc_mexc': mpc_m,
-        'usdt_mexc': usdt_m
+    return csv_path
+
+
+def generate_trade_id() -> str:
+    """Generate unique trade ID"""
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    return f"TRADE_{ts}"
+
+
+# =============================================================================
+# HARMONIZATION FUNCTIONS
+# Convert exchange-specific responses to unified format
+# =============================================================================
+
+def harmonize_kucoin_order(response: dict, side: str, order_type: str, pair: str) -> Dict:
+    """
+    Harmonize KuCoin order response to unified format.
+    
+    KuCoin Market Order Response fields:
+    - orderId: order ID
+    - symbol: pair symbol
+    - type: "market" 
+    - side: "buy" or "sell"
+    - size: quantity ordered
+    - dealSize: quantity filled
+    - dealFunds: total value
+    - fee: fee amount
+    - feeCurrency: currency of fee
+    - createTime: timestamp in ms
+    - status: "Done", "Active"
+    """
+    # Calculate average price
+    deal_size = float(response.get('dealSize', 0) or 0)
+    deal_funds = float(response.get('dealFunds', 0) or 0)
+    price_avg = deal_funds / deal_size if deal_size > 0 else 0
+    
+    # Determine status
+    status_map = {
+        "Done": "FILLED",
+        "Active": "OPEN",
+        "cancelled": "CANCELLED",
     }
+    raw_status = response.get('status', '')
+    unified_status = status_map.get(raw_status, raw_status)
     
-    # Check if anything changed
-    if _last_balances is not None:
-        changed = False
-        for key, val in current.items():
-            if abs(val - _last_balances.get(key, 0)) > 0.0001:  # Ignore tiny float differences
-                changed = True
-                break
+    return {
+        "exchange": "KUCOIN",
+        "order_id": response.get('orderId', ''),
+        "type": order_type,
+        "side": side.lower(),
+        "qty_ordered": float(response.get('size', 0) or 0),
+        "qty_filled": deal_size,
+        "price_avg": price_avg,
+        "value_usdt": deal_funds,
+        "fees": float(response.get('fee', 0) or 0),
+        "create_ts": int(response.get('createTime', 0) or 0),
+        "status": unified_status,
+        "raw_response": response,  # Keep full response for debugging
+    }
+
+
+def harmonize_mexc_order(response: dict, side: str, order_type: str, pair: str) -> Dict:
+    """
+    Harmonize MEXC order response to unified format.
+    
+    MEXC Market Order Response fields:
+    - orderId: order ID
+    - symbol: pair symbol (e.g. "MPCUSDT")
+    - side: "BUY" or "SELL"
+    - type: "MARKET"
+    - orderQuantity: quantity ordered
+    - orderAmount: amount ordered (for market buys in USDT)
+    - quantity: quantity filled
+    - amount: amount filled (in USDT value)
+    - fees: fee amount
+    - createTime: timestamp in ms
+    - status: "Filled", "New"
+    
+    MEXC Limit Order Response:
+    - orderId: order ID
+    - symbol: pair symbol
+    - side: "BUY" or "SELL"
+    - type: "LIMIT"
+    - price: limit price
+    - quantity: quantity ordered
+    - orderQuantity: same as quantity
+    - amount: total value
+    - dealQuantity: quantity filled
+    - dealAmount: value filled
+    - fees: fee amount
+    - createTime: timestamp in ms
+    - status: "Filled", "PartiallyFilled", "New", "Cancelled"
+    """
+    # Handle market vs limit order differences
+    if order_type == "market":
+        qty_filled = float(response.get('quantity', 0) or 0)
+        value_usdt = float(response.get('amount', 0) or 0)
+        qty_ordered = float(response.get('orderQuantity', 0) or 0)
+        price_avg = value_usdt / qty_filled if qty_filled > 0 else 0
+    else:  # limit
+        qty_filled = float(response.get('dealQuantity', 0) or 0)
+        value_usdt = float(response.get('dealAmount', 0) or 0)
+        qty_ordered = float(response.get('quantity', 0) or 0)
+        price_avg = float(response.get('price', 0) or 0)  # Limit price is the price
+    
+    # Determine status
+    status_map = {
+        "Filled": "FILLED",
+        "PartiallyFilled": "PARTIAL",
+        "New": "OPEN",
+        "Cancelled": "CANCELLED",
+    }
+    raw_status = response.get('status', '')
+    unified_status = status_map.get(raw_status, raw_status)
+    
+    return {
+        "exchange": "MEXC",
+        "order_id": response.get('orderId', ''),
+        "type": order_type,
+        "side": side.lower(),
+        "qty_ordered": qty_ordered,
+        "qty_filled": qty_filled,
+        "price_avg": price_avg,
+        "value_usdt": value_usdt,
+        "fees": float(response.get('fees', 0) or 0),
+        "create_ts": int(response.get('createTime', 0) or 0),
+        "status": unified_status,
+        "raw_response": response,  # Keep full response for debugging
+    }
+
+
+def harmonize_order(response: dict, exchange: str, side: str, order_type: str, pair: str) -> Dict:
+    """Route to correct harmonizer based on exchange"""
+    if exchange.upper() == "KUCOIN":
+        return harmonize_kucoin_order(response, side, order_type, pair)
+    elif exchange.upper() == "MEXC":
+        return harmonize_mexc_order(response, side, order_type, pair)
+    else:
+        raise ValueError(f"Unknown exchange: {exchange}")
+
+
+def log_trade(
+    pair: str,
+    internal_ts: str,
+    direction: str,
+    ex1_data: Dict,   # Harmonized data from market exchange
+    ex2_data: Dict,   # Harmonized data from limit exchange (may be partial)
+    limit_watch_status: str = "WATCHING"
+) -> str:
+    """
+    Log a complete trade to the pair-specific CSV.
+    
+    Args:
+        pair: Trading pair e.g. "MPC-USDT"
+        internal_ts: Our internal timestamp when trade was fired
+        direction: "K->M" or "M->K"
+        ex1_data: Harmonized data from exchange 1 (market order)
+        ex2_data: Harmonized data from exchange 2 (limit order)
+        limit_watch_status: Initial status of limit order
+    
+    Returns:
+        trade_id: Generated trade ID
+    """
+    trade_id = generate_trade_id()
+    updated_at = datetime.now().isoformat()
+    
+    # Normalize pair for filename
+    csv_path = init_pair_csv(pair)
+    
+    # Build row in unified format
+    row = [
+        trade_id,
+        internal_ts,
+        direction,
+        pair,
         
-        if not changed:
-            return False  # No change, don't log
+        # Exchange 1 (market order)
+        ex1_data.get("exchange", ""),
+        ex1_data.get("order_id", ""),
+        ex1_data.get("type", ""),
+        ex1_data.get("side", ""),
+        ex1_data.get("qty_ordered", 0),
+        ex1_data.get("qty_filled", 0),
+        ex1_data.get("price_avg", 0),
+        ex1_data.get("value_usdt", 0),
+        ex1_data.get("fees", 0),
+        ex1_data.get("create_ts", 0),
+        ex1_data.get("status", ""),
+        
+        # Exchange 2 (limit order)
+        ex2_data.get("exchange", ""),
+        ex2_data.get("order_id", ""),
+        ex2_data.get("type", ""),
+        ex2_data.get("side", ""),
+        ex2_data.get("qty_ordered", 0),
+        ex2_data.get("qty_filled", 0),
+        ex2_data.get("price_avg", 0),
+        ex2_data.get("value_usdt", 0),
+        ex2_data.get("fees", 0),
+        ex2_data.get("create_ts", 0),
+        ex2_data.get("status", ""),
+        
+        # Limit watch state
+        limit_watch_status,
+        "",  # limit_last_check
+        
+        # Raw responses
+        json.dumps(ex1_data.get("raw_response", {})),
+        json.dumps(ex2_data.get("raw_response", {})),
+        updated_at,
+    ]
     
-    # Something changed - log it
-    _last_balances = current
-    log_portfolio(kucoin_balances, mexc_balances, strategy, threshold, notes)
-    return True
-
-
-def log_portfolio(kucoin_balances: Dict, mexc_balances: Dict, strategy: str = "usdt", 
-                  threshold: float = 0.0, notes: str = "") -> None:
-    """Log current portfolio state"""
-    ensure_log_dir()
-    
-    mpc_k = kucoin_balances.get('MPC', 0)
-    usdt_k = kucoin_balances.get('USDT', 0)
-    mpc_m = mexc_balances.get('MPC', 0)
-    usdt_m = mexc_balances.get('USDT', 0)
-    
-    mpc_total = mpc_k + mpc_m
-    usdt_total = usdt_k + usdt_m
-    
-    with open(PORTFOLIO_FILE, 'a', newline='') as f:
+    # Append to CSV
+    with open(csv_path, 'a', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow([
-            datetime.now().isoformat(),
-            f"{mpc_total:.4f}",
-            f"{usdt_total:.4f}",
-            f"{mpc_k:.4f}",
-            f"{usdt_k:.4f}",
-            f"{mpc_m:.4f}",
-            f"{usdt_m:.4f}",
-            strategy,
-            f"{threshold:.3f}",
-            notes
-        ])
+        writer.writerow(row)
+    
+    return trade_id
 
 
-def log_trade(direction: str, exchange_buy: str, exchange_sell: str,
-              buy_price: float, sell_price: float, volume_mpc: float,
-              cost_usdt: float, revenue_usdt: float,
-              fee_buy: float = 0.0, fee_sell: float = 0.0,
-              threshold_pct: float = 0.0, status: str = "completed",
-              notes: str = "") -> None:
-    """Log a completed trade"""
-    ensure_log_dir()
+def update_limit_watch(
+    trade_id: str,
+    pair: str,
+    new_status: str,
+    qty_filled: float = None,
+    price_avg: float = None,
+    fees: float = None
+):
+    """Update limit order watch state for a trade"""
+    csv_path = get_trade_csv_path(pair)
     
-    profit_usdt = revenue_usdt - cost_usdt
-    spread_pct = ((sell_price - buy_price) / buy_price) * 100 if buy_price > 0 else 0
+    if not csv_path.exists():
+        return False
     
-    # Net after fees
-    fee_total = fee_buy + fee_sell
-    net_profit_usdt = profit_usdt - fee_total
-    # Approximate MPC profit
-    net_profit_mpc = net_profit_usdt / sell_price if sell_price > 0 else 0
-    
-    # Determine WIN/LOSS
-    win_loss = "WIN" if net_profit_usdt > 0 else "LOSS"
-    
-    # Calculate gross profit before fees
-    gross_profit = profit_usdt
-    
-    # Fee warning: if fees > 50% of gross profit, flag it
-    fee_warning = "FEE_WARNING" if gross_profit > 0 and fee_total > gross_profit * 0.5 else ""
-    
-    with open(TRADES_FILE, 'a', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            datetime.now().isoformat(),
-            direction,
-            exchange_buy,
-            exchange_sell,
-            f"{buy_price:.6f}",
-            f"{sell_price:.6f}",
-            f"{volume_mpc:.4f}",
-            f"{cost_usdt:.4f}",
-            f"{revenue_usdt:.4f}",
-            f"{gross_profit:.4f}",
-            f"{fee_total:.4f}",
-            f"{net_profit_usdt:.4f}",
-            f"{net_profit_mpc:.4f}",
-            f"{spread_pct:.3f}",
-            f"{threshold_pct:.3f}",
-            f"{fee_buy:.4f}",
-            f"{fee_sell:.4f}",
-            win_loss,
-            fee_warning,
-            status,
-            notes
-        ])
-
-
-def get_portfolio_history(limit: int = 100) -> list:
-    """Get recent portfolio history"""
-    ensure_log_dir()
-    
-    if not PORTFOLIO_FILE.exists():
-        return []
-    
-    with open(PORTFOLIO_FILE, 'r') as f:
-        reader = csv.reader(f)
-        next(reader)  # Skip header
+    # Read all rows
+    rows = []
+    with open(csv_path, 'r', newline='') as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames
         rows = list(reader)
     
-    return rows[-limit:]
-
-
-def get_trade_history(limit: int = 100) -> list:
-    """Get recent trade history"""
-    ensure_log_dir()
+    # Find and update trade
+    updated = False
+    for row in rows:
+        if row.get("trade_id") == trade_id:
+            row["limit_watch_status"] = new_status
+            row["limit_last_check"] = datetime.now().isoformat()
+            
+            # Update fill data if provided
+            if qty_filled is not None:
+                row["ex2_qty_filled"] = qty_filled
+            if price_avg is not None:
+                row["ex2_price_avg"] = price_avg
+            if fees is not None:
+                row["ex2_fees"] = fees
+            
+            row["updated_at"] = datetime.now().isoformat()
+            updated = True
+            break
     
-    if not TRADES_FILE.exists():
+    # Write back
+    if updated:
+        with open(csv_path, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+    
+    return updated
+
+
+def get_trades(pair: str, limit: int = 100) -> List[Dict]:
+    """Get all trades for a trading pair"""
+    csv_path = get_trade_csv_path(pair)
+    
+    if not csv_path.exists():
         return []
     
-    with open(TRADES_FILE, 'r') as f:
-        reader = csv.reader(f)
-        next(reader)  # Skip header
+    trades = []
+    with open(csv_path, 'r', newline='') as f:
+        reader = csv.DictReader(f)
         rows = list(reader)
     
-    return rows[-limit:]
+    # Reverse to get newest first
+    rows = rows[::-1]
+    
+    for i, row in enumerate(rows):
+        if i >= limit:
+            break
+        trades.append(row)
+    
+    return trades
 
 
-def get_trade_summary() -> Dict:
-    """Calculate trade summary statistics"""
-    trades = get_trade_history()
+def get_pending_limit_orders(pair: str = None) -> List[Dict]:
+    """
+    Get all trades with pending limit orders.
+    Used by the limit order watcher to poll for fills.
+    
+    Args:
+        pair: Optional pair filter. If None, checks all pair CSVs.
+    
+    Returns:
+        List of trades with WATCHING status
+    """
+    pending = []
+    
+    if pair:
+        # Check specific pair
+        trades = get_trades(pair, limit=1000)
+        for trade in trades:
+            if trade.get("limit_watch_status") == "WATCHING":
+                pending.append(trade)
+    else:
+        # Check all pair CSVs
+        for csv_file in LOG_DIR.glob("*_trades.csv"):
+            pair_name = csv_file.stem.replace("_trades", "")
+            trades = get_trades(pair_name, limit=1000)
+            for trade in trades:
+                if trade.get("limit_watch_status") == "WATCHING":
+                    pending.append(trade)
+    
+    return pending
+
+
+def get_trade_summary(pair: str) -> Dict:
+    """Get summary statistics for a trading pair"""
+    trades = get_trades(pair, limit=10000)
     
     if not trades:
         return {
-            'total_trades': 0,
-            'winning_trades': 0,
-            'losing_trades': 0,
-            'win_rate': '0%',
-            'total_profit_usdt': 0,
-            'total_profit_mpc': 0,
-            'avg_profit_usdt': 0,
-            'avg_profit_mpc': 0,
-            'best_trade_usdt': 0,
-            'best_trade_mpc': 0,
-            'worst_trade_usdt': 0
+            "pair": pair,
+            "total_trades": 0,
+            "win_rate": "0%",
+            "total_profit_usdt": 0,
+            "total_profit_mpc": 0,
+            "best_trade_usdt": 0,
+            "avg_profit_usdt": 0,
+            "pending_limit_orders": 0,
         }
     
+    wins = 0
+    losses = 0
     total_profit_usdt = 0
     total_profit_mpc = 0
-    winning = 0
-    losing = 0
-    best_usdt = 0
-    best_mpc = 0
-    worst_usdt = 0
+    best_trade_usdt = 0
+    pending = 0
     
-    for t in trades:
-        try:
-            profit_usdt = float(t[11])  # net_profit_usdt (index 11)
-            profit_mpc = float(t[12])   # net_profit_mpc (index 12)
+    for trade in trades:
+        status = trade.get("limit_watch_status", "")
+        
+        # Only count completed trades for stats
+        if status == "FILLED":
+            # Calculate profit from the trade
+            ex1_value = float(trade.get("ex1_value_usdt", 0) or 0)
+            ex2_value = float(trade.get("ex2_value_usdt", 0) or 0)
+            ex1_fees = float(trade.get("ex1_fees", 0) or 0)
+            ex2_fees = float(trade.get("ex2_fees", 0) or 0)
             
-            total_profit_usdt += profit_usdt
-            total_profit_mpc += profit_mpc
+            # For K->M: Buy on KuCoin (ex1), Sell on MEXC (ex2)
+            # Direction tells us which is buy/sell
+            direction = trade.get("direction", "")
             
-            if profit_usdt > 0:
-                winning += 1
-                if profit_usdt > best_usdt:
-                    best_usdt = profit_usdt
-                    best_mpc = profit_mpc
+            # Calculate profit based on direction
+            if "K->M" in direction:
+                cost = ex1_value  # Bought on KuCoin
+                revenue = ex2_value  # Sold on MEXC
+            else:  # M->K
+                cost = ex1_value  # Bought on MEXC
+                revenue = ex2_value  # Sold on KuCoin
+            
+            net_profit = revenue - cost - ex1_fees - ex2_fees
+            total_profit_usdt += net_profit
+            
+            # Calculate MPC gain (reinvested coins)
+            ex2_price = float(trade.get("ex2_price_avg", 0) or 0)
+            if ex2_price > 0:
+                mpc_gain = net_profit / ex2_price
+                total_profit_mpc += mpc_gain
+            
+            if net_profit > 0:
+                wins += 1
             else:
-                losing += 1
-                if profit_usdt < worst_usdt:
-                    worst_usdt = profit_usdt
-        except (ValueError, IndexError):
-            continue
+                losses += 1
+            
+            if net_profit > best_trade_usdt:
+                best_trade_usdt = net_profit
+                
+        elif status == "WATCHING":
+            pending += 1
     
-    count = len(trades)
+    total_completed = wins + losses
+    win_rate = f"{(wins/total_completed*100):.1f}%" if total_completed > 0 else "0%"
+    avg_profit = total_profit_usdt / total_completed if total_completed > 0 else 0
+    
     return {
-        'total_trades': count,
-        'winning_trades': winning,
-        'losing_trades': losing,
-        'win_rate': f"{winning/count*100:.1f}%" if count > 0 else "0%",
-        'total_profit_usdt': f"{total_profit_usdt:.4f}",
-        'total_profit_mpc': f"{total_profit_mpc:.4f}",
-        'avg_profit_usdt': f"{total_profit_usdt/count:.4f}" if count > 0 else "0",
-        'avg_profit_mpc': f"{total_profit_mpc/count:.4f}" if count > 0 else "0",
-        'best_trade_usdt': f"{best_usdt:.4f}",
-        'best_trade_mpc': f"{best_mpc:.4f}",
-        'worst_trade_usdt': f"{worst_usdt:.4f}"
+        "pair": pair,
+        "total_trades": len(trades),
+        "completed_trades": total_completed,
+        "win_rate": win_rate,
+        "total_profit_usdt": round(total_profit_usdt, 4),
+        "total_profit_mpc": round(total_profit_mpc, 4),
+        "best_trade_usdt": round(best_trade_usdt, 4),
+        "avg_profit_usdt": round(avg_profit, 4),
+        "pending_limit_orders": pending,
     }
 
 
-def export_trades_csv(filename: str = None) -> str:
-    """Export trade history to CSV file and return path"""
-    if filename is None:
-        filename = f"trades_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    
-    trades = get_trade_history(limit=10000)
+def export_trades_csv(pair: str) -> Optional[str]:
+    """Export all trades for a pair to a standalone CSV"""
+    trades = get_trades(pair, limit=100000)
     
     if not trades:
         return None
     
-    export_path = LOG_DIR / filename
+    export_dir = LOG_DIR / "exports"
+    export_dir.mkdir(parents=True, exist_ok=True)
     
-    with open(export_path, 'w', newline='') as f:
-        writer = csv.writer(f)
-        # Header
-        writer.writerow(['timestamp', 'direction', 'exchange_buy', 'exchange_sell',
-                       'buy_price', 'sell_price', 'volume_mpc', 'cost_usdt', 'revenue_usdt',
-                       'profit_usdt', 'profit_mpc', 'spread_pct', 'threshold_pct',
-                       'fee_buy', 'fee_sell', 'net_profit_usdt', 'net_profit_mpc',
-                       'status', 'notes'])
-        writer.writerows(trades)
+    filename = f"{pair}_trades_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    filepath = export_dir / filename
     
-    return str(export_path)
+    with open(filepath, 'w', newline='') as f:
+        if trades:
+            writer = csv.DictWriter(f, fieldnames=trades[0].keys())
+            writer.writeheader()
+            writer.writerows(trades)
+    
+    return str(filepath)
 
 
-def export_portfolio_csv(filename: str = None) -> str:
-    """Export portfolio history to CSV file and return path"""
-    if filename is None:
-        filename = f"portfolio_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    
-    portfolio = get_portfolio_history(limit=10000)
-    
-    if not portfolio:
-        return None
-    
-    export_path = LOG_DIR / filename
-    
-    with open(export_path, 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(['timestamp', 'mpc_total', 'usdt_total', 'mpc_on_kucoin', 'usdt_on_kucoin',
-                        'mpc_on_mexc', 'usdt_on_mexc', 'strategy', 'threshold', 'notes'])
-        writer.writerows(portfolio)
-    
-    return str(export_path)
-
-
-# Track last logged trade IDs to detect new trades
-_logged_kucoin_trades = set()
-_logged_mexc_trades = set()
-
-def detect_and_log_trades(kucoin_trades: list, mexc_trades: list, threshold_pct: float = 0.0, time_window_minutes: int = 5, volume_tolerance: float = 0.1) -> list:
-    """
-    Detect and match arbitrage trades from exchange trade histories.
-    
-    Matching logic:
-    - One trade must be a BUY, one must be a SELL
-    - Volumes must be within tolerance (default 10%)
-    - Trades must be within time window (default 5 minutes)
-    
-    Returns list of matched trade pairs.
-    """
-    global _logged_kucoin_trades, _logged_mexc_trades
-    
-    # Normalize and combine all trades with timestamps
-    all_trades = []
-    
-    # Process KuCoin trades
-    for trade in kucoin_trades:
-        trade_id = f"kucoin_{trade.get('trade_id', '')}"
-        if trade_id in _logged_kucoin_trades:
-            continue
-        
-        side = trade.get('side', '')
-        if side not in ['buy', 'sell']:
-            continue
-            
-        _logged_kucoin_trades.add(trade_id)
-        
-        # Parse timestamp (KuCoin: created_at in milliseconds)
-        from datetime import datetime
-        ts_val = trade.get('created_at')
-        try:
-            if ts_val:
-                ts = datetime.fromtimestamp(int(ts_val) / 1000)
-            else:
-                ts = datetime.now()
-        except:
-            ts = datetime.now()
-        
-        all_trades.append({
-            'id': trade_id,
-            'exchange': 'KuCoin',
-            'side': side,  # 'buy' or 'sell'
-            'price': float(trade.get('price', 0)),
-            'volume': float(trade.get('size', trade.get('funds', 0) / (float(trade.get('price', 1)) or 1))),
-            'quote': float(trade.get('funds', 0)),
-            'fee': float(trade.get('fee', 0)),
-            'timestamp': ts,
-            'raw': trade
-        })
-    
-    # Process MEXC trades
-    for trade in mexc_trades:
-        trade_id = f"mexc_{trade.get('trade_id', '')}"
-        if trade_id in _logged_mexc_trades:
-            continue
-            
-        side = trade.get('side', '')
-        if side not in ['buy', 'sell']:
-            continue
-            
-        _logged_mexc_trades.add(trade_id)
-        
-        # Parse timestamp (MEXC format)
-        ts_str = trade.get('time', trade.get('timestamp', ''))
-        try:
-            from datetime import datetime
-            if isinstance(ts_str, (int, float)):
-                ts = datetime.fromtimestamp(ts_str / 1000)  # MEXC uses milliseconds
-            else:
-                ts = datetime.fromisoformat(str(ts_str).replace('Z', '+00:00'))
-        except:
-            ts = datetime.now()
-        
-        all_trades.append({
-            'id': trade_id,
-            'exchange': 'MEXC',
-            'side': side,
-            'price': float(trade.get('price', 0)),
-            'volume': float(trade.get('qty', trade.get('vol', 0))),
-            'quote': float(trade.get('quote', 0)),
-            'fee': float(trade.get('fee', 0)),
-            'timestamp': ts,
-            'raw': trade
-        })
-    
-    # Try to match trades
-    matched_pairs = []
-    # Try to match trades
-    matched_pairs = []
-    
-    # For MEXC: trades without IDs get synthetic IDs based on position
-    # This prevents us from skipping them as "already logged"
-    for i, trade in enumerate(all_trades):
-        if not trade['id'] or trade['id'].endswith('_None'):
-            trade['id'] = f"{trade['exchange']}_{trade['timestamp'].strftime('%Y%m%d%H%M%S')}_{i}"
-    
-    unmatched = list(all_trades)
-    
-    for i, trade1 in enumerate(unmatched):
-        for j, trade2 in enumerate(unmatched[i+1:], start=i+1):
-            # Check if opposite sides
-            if trade1['side'] == trade2['side']:
-                continue
-            
-            # Check if same exchange (can't be arbitrage with same exchange)
-            if trade1['exchange'] == trade2['exchange']:
-                continue
-            
-            # Check time window
-            time_diff = abs((trade1['timestamp'] - trade2['timestamp']).total_seconds())
-            if time_diff > time_window_minutes * 60:
-                continue
-            
-            # Check volume tolerance
-            vol1 = trade1['volume']
-            vol2 = trade2['volume']
-            if vol1 <= 0 or vol2 <= 0:
-                continue
-                
-            vol_diff = abs(vol1 - vol2) / max(vol1, vol2)
-            if vol_diff > volume_tolerance:
-                continue
-            
-            # MATCH FOUND!
-            # Determine direction: K→M means bought on KuCoin, sold on MEXC
-            if trade1['exchange'] == 'KuCoin' and trade1['side'] == 'buy':
-                buy_trade = trade1
-                sell_trade = trade2
-                direction = 'K→M'
-            elif trade2['exchange'] == 'KuCoin' and trade2['side'] == 'buy':
-                buy_trade = trade2
-                sell_trade = trade1
-                direction = 'K→M'
-            elif trade1['exchange'] == 'MEXC' and trade1['side'] == 'buy':
-                buy_trade = trade1
-                sell_trade = trade2
-                direction = 'M→K'
-            else:
-                buy_trade = trade2
-                sell_trade = trade1
-                direction = 'M→K'
-            
-            matched_pairs.append({
-                'direction': direction,
-                'buy_exchange': buy_trade['exchange'],
-                'sell_exchange': sell_trade['exchange'],
-                'buy_price': buy_trade['price'],
-                'sell_price': sell_trade['price'],
-                'volume': min(buy_trade['volume'], sell_trade['volume']),  # Use smaller vol
-                'buy_fee': buy_trade['fee'],
-                'sell_fee': sell_trade['fee'],
-                'time_diff_seconds': time_diff,
-                'buy_trade_id': buy_trade['id'],
-                'sell_trade_id': sell_trade['id']
-            })
-            
-            # Remove matched trades from unmatched list
-            break
-    
-    # Log matched pairs as arbitrage trades
-    logged_count = 0
-    for pair in matched_pairs:
-        cost = pair['volume'] * pair['buy_price']
-        revenue = pair['volume'] * pair['sell_price']
-        profit_usdt = revenue - cost
-        spread_pct = (pair['sell_price'] - pair['buy_price']) / pair['buy_price'] * 100 if pair['buy_price'] > 0 else 0
-        
-        log_trade(
-            direction=pair['direction'],
-            exchange_buy=pair['buy_exchange'],
-            exchange_sell=pair['sell_exchange'],
-            buy_price=pair['buy_price'],
-            sell_price=pair['sell_price'],
-            volume_mpc=pair['volume'],
-            cost_usdt=cost,
-            revenue_usdt=revenue,
-            fee_buy=pair['buy_fee'],
-            fee_sell=pair['sell_fee'],
-            threshold_pct=threshold_pct,
-            status='matched_arbitrage',
-            notes=f"Auto-matched | Time-diff: {pair['time_diff_seconds']:.0f}s | IDs: {pair['buy_trade_id']}/{pair['sell_trade_id']}"
-        )
-        logged_count += 1
-    
-    # Also log any unmatched trades as single-sided (for record)
-    # But don't log them as arbitrage trades
-    
-    return matched_pairs
+def get_all_pairs_with_trades() -> List[str]:
+    """Get list of all trading pairs that have CSV files"""
+    pairs = []
+    for csv_file in LOG_DIR.glob("*_trades.csv"):
+        pair = csv_file.stem.replace("_trades", "")
+        pairs.append(pair)
+    return pairs
