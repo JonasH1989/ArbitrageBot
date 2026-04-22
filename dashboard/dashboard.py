@@ -17,15 +17,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.config_manager import get_config
 from bot.spread_analyzer import SpreadAnalyzer
 from bot.main_bot import get_bot, start_bot, stop_bot
-import json
-
-# Fallback: read snapshot.json if analyzer not available
-def load_snapshot_json():
-    try:
-        with open('/home/openclaw/.openclaw/logs/snapshot.json', 'r') as f:
-            return json.load(f)
-    except:
-        return None
 
 
 # Page config
@@ -207,31 +198,7 @@ def main_dashboard():
         
         st.divider()
         
-        # Bot controls 
-        st.subheader("🎯 Trading Strategy")
-        
-        # Get current strategy from config
-        trading_config = config.get('trading', {})
-        pairs = trading_config.get('pairs', {})
-        mpc_config = pairs.get('MPC-USDT', {})
-        current_strategy = mpc_config.get('strategy', 'usdt')
-        
-        strategy_option = st.radio(
-            "Select Strategy",
-            options=['usdt', 'coin'],
-            format_func=lambda x: "USDT Gewinn" if x == 'usdt' else "Coin Gewinn (MPC akkumulieren)",
-            index=0 if current_strategy == 'usdt' else 1,
-            help="USDT: Profit as USDT behalten | Coin: Profit in MPC reinvestieren"
-        )
-        
-        if st.button("💾 Save Strategy", use_container_width=True):
-            mpc_config['strategy'] = strategy_option
-            pairs['MPC-USDT'] = mpc_config
-            trading_config['pairs'] = pairs
-            config.set('trading', trading_config)
-            st.success(f"✅ Strategy geändert zu: {'USDT Gewinn' if strategy_option == 'usdt' else 'Coin Gewinn'}")
-        
-        st.divider()
+        # Bot controls
         st.subheader("🤖 Bot Controls")
         
         col1, col2 = st.columns(2)
@@ -282,28 +249,17 @@ def main_dashboard():
         st.metric("Bot Status", bot_status)
     
     with col2:
-        opp_status = "None"
-        if bot and hasattr(bot, 'analyzer') and bot.analyzer:
-            opp_status = "🚀 Active" if bot.analyzer.is_opportunity_active else "⏸️ None"
-        # Check snapshot.json as fallback
-        snap = load_snapshot_json()
-        if snap:
-            opp_status = "Active" if snap.get('p', 0) > 0 else "Waiting"
+        opp_status = "🚀 Active" if bot and bot.analyzer.is_opportunity_active else "⏸️ None"
         st.metric("Opportunity", opp_status)
     
     with col3:
         current_spread = 0.0
-        if bot and hasattr(bot, 'analyzer') and bot.analyzer and bot.analyzer.current_snapshot:
+        if bot and bot.analyzer.current_snapshot:
             snapshot = bot.analyzer.current_snapshot
             current_spread = max(
                 snapshot.kucoin_buy_mexc_sell if snapshot.kucoin_buy_mexc_sell > 0 else 0,
                 getattr(snapshot, 'mexc_buy_kucoin_sell', 0)
             )
-        # Calculate from snapshot.json as fallback
-        elif snap:
-            kb, ka, mb, ma = snap.get('kb', 0), snap.get('ka', 0), snap.get('mb', 0), snap.get('ma', 0)
-            if kb and ma and mb and ka:
-                current_spread = max((kb - ma) / ma * 100, (mb - ka) / ka * 100)
         st.metric("Current Spread", f"{current_spread:.3f}%")
     
     with col4:
@@ -315,28 +271,11 @@ def main_dashboard():
     # Price comparison
     st.subheader("💰 Price Comparison")
     
-    # Try analyzer first, then fallback to snapshot.json
-    snapshot = None
-    snap = load_snapshot_json()
-    
-    if bot and hasattr(bot, 'analyzer') and bot.analyzer and bot.analyzer.current_snapshot:
+    if bot and bot.analyzer.current_snapshot:
         snapshot = bot.analyzer.current_snapshot
-    elif snap:
-        # Create a simple object from snapshot.json
-        class SimpleSnapshot:
-            pass
-        snapshot = SimpleSnapshot()
-        snapshot.kucoin_bid = snap.get('kb', 0)
-        snapshot.kucoin_ask = snap.get('ka', 0)
-        snapshot.kucoin_bid_vol = snap.get('kbq', 0)
-        snapshot.kucoin_ask_vol = snap.get('kaq', 0)
-        snapshot.mexc_bid = snap.get('mb', 0)
-        snapshot.mexc_ask = snap.get('ma', 0)
-        snapshot.mexc_bid_vol = snap.get('mbq', 0)
-        snapshot.mexc_ask_vol = snap.get('maq', 0)
-    
-    if snapshot:
+        
         price_col1, price_col2, price_col3, price_col4 = st.columns(4)
+        
         with price_col1:
             st.metric("KuCoin Bid", f"${snapshot.kucoin_bid:.6f}")
         with price_col2:
@@ -345,23 +284,6 @@ def main_dashboard():
             st.metric("MEXC Bid", f"${snapshot.mexc_bid:.6f}")
         with price_col4:
             st.metric("MEXC Ask", f"${snapshot.mexc_ask:.6f}")
-        
-        # Volumen anzeigen
-        vol_col1, vol_col2, vol_col3, vol_col4 = st.columns(4)
-        with vol_col1:
-            st.metric("KuCoin Bid Vol", f"{snapshot.kucoin_bid_vol:.0f}")
-        with vol_col2:
-            st.metric("KuCoin Ask Vol", f"{snapshot.kucoin_ask_vol:.0f}")
-        with vol_col3:
-            st.metric("MEXC Bid Vol", f"{snapshot.mexc_bid_vol:.0f}")
-        with vol_col4:
-            st.metric("MEXC Ask Vol", f"{snapshot.mexc_ask_vol:.0f}")
-    
-    # Pending Orders (from snapshot.json)
-    if snap:
-        pending = snap.get('p', 0)
-        if pending > 0:
-            st.warning(f"⏳ Pending Sell Orders: {pending:.0f} MPC")
     else:
         st.info("📡 Waiting for orderbook data... Start the bot to see live prices.")
     
@@ -404,53 +326,34 @@ def main_dashboard():
             st.bar_chart(vol_data.set_index('Exchange'))
     
     # Statistics
-    st.subheader("📊 Statistik")
+    st.subheader("📊 Statistics")
     
-    # Try to get stats from bot, fallback to trade log
-    trades = []
-    total_trades = 0
-    total_usdt_profit = 0.0
-    
-    try:
-        trades = json.load(open('/home/openclaw/.openclaw/logs/arb_trades.json'))
-    except:
-        pass
-    
-    if trades:
-        total_trades = len(trades)
-        total_usdt_profit = sum(t.get('n', t.get('net_usdt', 0)) for t in trades)
-        total_mpc = sum(t.get('q', t.get('qty', 0)) for t in trades)
-    
-    # Show metrics
-    stat_col1, stat_col2, stat_col3, stat_col4 = st.columns(4)
-    
-    with stat_col1:
-        st.metric("Total Trades", f"{total_trades}")
-    with stat_col2:
-        st.metric("Total USDT Profit", f"${total_usdt_profit:.4f}")
-    with stat_col3:
-        st.metric("Total MPC Volume", f"{total_mpc:.0f}")
-    with stat_col4:
-        current_pending = snap.get('p', 0) if snap else 0
-        st.metric("Pending Orders", f"{current_pending:.0f}")
-    
-    # Recent Trades from trade log
-    st.subheader("📝 Letzte Trades")
-    
-    if trades:
-        recent = trades[-10:]
-        trade_data = []
-        for t in recent:
-            trade_data.append({
-                'Time': t.get('ts', t.get('timestamp', ''))[-8:],
-                'Trade ID': t.get('id', t.get('trade_id', '')),
-                'Qty': f"{t.get('q', t.get('qty', 0)):.0f}",
-                'Net USDT': f"${t.get('n', t.get('net', 0)):.4f}"
-            })
+    if bot:
+        stats = bot.analyzer.stats
         
-        st.dataframe(pd.DataFrame(trade_data), use_container_width=True)
-    else:
-        st.info("Noch keine Trades - starte den Bot")
+        stat_col1, stat_col2, stat_col3, stat_col4 = st.columns(4)
+        
+        with stat_col1:
+            st.metric("Opportunities Found", stats['opportunities_found'])
+        with stat_col2:
+            st.metric("Max Spread Observed", f"{stats['max_spread_observed']:.3f}%")
+        with stat_col3:
+            st.metric("Min Spread Observed", f"{stats['min_spread_observed']:.3f}%")
+        with stat_col4:
+            st.metric("Avg Spread", f"{stats['avg_spread_kucoin_mexc']:.3f}%")
+    
+    # Recent Opportunities
+    st.subheader("🔔 Recent Opportunities")
+    
+    if bot and len(bot.analyzer.opportunities) > 0:
+        opportunities = list(bot.analyzer.opportunities)[-10:]
+        
+        opp_data = []
+        for opp in opportunities:
+            opp_data.append({
+                'Time': opp.timestamp.strftime('%H:%M:%S'),
+                'Buy Exchange': opp.buy_exchange.upper(),
+                'Sell Exchange': opp.sell_exchange.upper(),
                 'Buy Price': f"${opp.buy_price:.6f}",
                 'Sell Price': f"${opp.sell_price:.6f}",
                 'Spread (%)': f"{opp.spread_pct:.3f}%",
@@ -460,25 +363,6 @@ def main_dashboard():
         st.dataframe(pd.DataFrame(opp_data), use_container_width=True)
     else:
         st.info("No opportunities detected yet")
-
-    # 📝 Live Log Viewer
-    st.subheader("📝 Live Bot Log")
-
-    try:
-        with open('/home/openclaw/.openclaw/logs/arb_autotrade.log', 'r') as f:
-            log_lines = f.readlines()
-
-        if log_lines:
-            # Show last 50 lines
-            recent_logs = log_lines[-50:]
-            log_text = ''.join(recent_logs)
-            st.text_area("Log Output (last 50 lines)", value=log_text, height=300, disabled=True)
-        else:
-            st.info("No log entries yet - start the bot")
-    except FileNotFoundError:
-        st.info("Log file not found - start the bot")
-    except Exception as e:
-        st.error(f"Error reading log: {e}")
 
 
 def main():
