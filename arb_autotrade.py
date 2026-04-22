@@ -1,272 +1,191 @@
 #!/usr/bin/env python3
-"""
-Arbitrage Auto-Trade Bot
-Executes trades automatically when opportunities arise
-"""
-import sys
-sys.path.insert(0, '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot')
-
-import requests
-import yaml
-import time
-import json
-import hashlib
-import hmac
-import base64
-import json as json_lib
+"""Arbitrage Bot v3"""
+import requests, time, json, hashlib, hmac, base64, os
 from datetime import datetime
-import os
 
-LOG_FILE = '/home/openclaw/.openclaw/logs/arb_autotrade.log'
-CONFIG_FILE = '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot/config/config.yaml'
+LOG = '/home/openclaw/.openclaw/logs/arb_autotrade.log'
+TRADES = '/home/openclaw/.openclaw/logs/arb_trades.json'
+TRACKER = '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot/order_tracker.json'
+SNAPSHOT = '/home/openclaw/.openclaw/logs/snapshot.json'
 
-# Exchange configs
-KUCOIN_KEY = "69e6445dd56900000160af01"
-KUCOIN_SECRET = "787903d0-bb7f-4d84-b598-c07ac71180ef"
-KUCOIN_PASSPHRASE = "YtuyE5uM6hE8HC6"
+KC_KEY = "69e6445dd56900000160af01"
+KC_SEC = "787903d0-bb7f-4d84-b598-c07ac71180ef"
+KC_PASS = "YtuyE5uM6hE8HC6"
+MX_KEY = "mx0vglqkp7DNxtrVO6"
+MX_SEC = "880bf82a7761449fa24cc508c6e577fa"
+MIN_USDT = 1.0
+MIN_KC = 10
+THRESH = 0.5
 
-MEXC_KEY = "mx0vglqkp7DNxtrVO6"
-MEXC_SECRET = "880bf82a7761449fa24cc508c6e577fa"
+def lg(m):
+    t = datetime.now().strftime('%H:%M:%S')
+    print(f"[{t}] {m}")
+    open(LOG, 'a').write(f"[{t}] {m}\n")
 
-MEXC_MIN_USDT = 1.0
-KUCOIN_MIN_MPC = 10
+def ksig(ts, method, path, body=''):
+    m = hmac.new(KC_SEC.encode(), f'{ts}{method}{path}{body}'.encode(), hashlib.sha256)
+    return base64.b64encode(m.digest()).decode()
 
-def log(msg):
-    ts = datetime.now().strftime('%H:%M:%S')
-    line = f"[{ts}] {msg}"
-    print(line)
-    with open(LOG_FILE, 'a') as f:
-        f.write(line + '\n')
-
-def kucoin_sig(secret, ts, method, path, body=''):
-    message = f'{ts}{method}{path}{body}'
-    mac = hmac.new(secret.encode(), message.encode(), hashlib.sha256)
-    return base64.b64encode(mac.digest()).decode()
-
-def get_prices():
+def get_p():
     try:
-        resp_k = requests.get('https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=MPC-USDT', timeout=5)
-        k_data = resp_k.json()['data']
-        
-        resp_m = requests.get('https://api.mexc.com/api/v3/ticker/24hr?symbol=MPCUSDT', timeout=5)
-        m_data = resp_m.json()
-        
-        return {
-            'kucoin': {'bid': float(k_data['bestBid']), 'ask': float(k_data['bestAsk'])},
-            'mexc': {'bid': float(m_data['bidPrice']), 'ask': float(m_data['askPrice'])}
-        }
-    except Exception as e:
-        log(f"Error getting prices: {e}")
+        r = requests.get('https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=MPC-USDT', timeout=5).json()['data']
+        m = requests.get('https://api.mexc.com/api/v3/ticker/24hr?symbol=MPCUSDT', timeout=5).json()
+        return {'k': {'b': float(r['bestBid']), 'a': float(r['bestAsk']), 'bq': float(r.get('bestBidSize', 0)), 'aq': float(r.get('bestAskSize', 0))}, 'm': {'b': float(m['bidPrice']), 'a': float(m['askPrice']), 'bq': float(m.get('bidQty', 0)), 'aq': float(m.get('askQty', 0))}}
+    except:
         return None
 
-def execute_market_buy_kucoin(qty):
-    """Buy MPC on KuCoin at market price"""
-    ts = str(int(time.time() * 1000))
-    body = json_lib.dumps({"clientOid": ts, "symbol": "MPC-USDT", "side": "buy", "type": "market", "size": str(qty)})
-    sig = kucoin_sig(KUCOIN_SECRET, ts, 'POST', '/api/v1/orders', body)
-    
-    headers = {
-        'KC-API-KEY': KUCOIN_KEY,
-        'KC-API-SIGN': sig,
-        'KC-API-TIMESTAMP': ts,
-        'KC-API-PASSPHRASE': KUCOIN_PASSPHRASE,
-        'Content-Type': 'application/json'
-    }
-    
-    resp = requests.post('https://api.kucoin.com/api/v1/orders', headers=headers, data=body, timeout=10)
-    return resp.json()
+def load_tk():
+    try:
+        return json.load(open(TRACKER))
+    except:
+        return {}
 
-def execute_limit_sell_kucoin(qty, price):
-    """Sell MPC on KuCoin at limit price"""
-    ts = str(int(time.time() * 1000))
-    body = json_lib.dumps({"clientOid": f"{ts}_sell", "symbol": "MPC-USDT", "side": "sell", "type": "limit", "size": str(qty), "price": f"{price:.6f}"})
-    sig = kucoin_sig(KUCOIN_SECRET, ts, 'POST', '/api/v1/orders', body)
-    
-    headers = {
-        'KC-API-KEY': KUCOIN_KEY,
-        'KC-API-SIGN': sig,
-        'KC-API-TIMESTAMP': ts,
-        'KC-API-PASSPHRASE': KUCOIN_PASSPHRASE,
-        'Content-Type': 'application/json'
-    }
-    
-    resp = requests.post('https://api.kucoin.com/api/v1/orders', headers=headers, data=body, timeout=10)
-    return resp.json()
+def save_tk(t):
+    json.dump(t, open(TRACKER, 'w'), indent=2)
 
-def execute_market_buy_mexc(qty):
-    """Buy MPC on MEXC at market price"""
-    ts = str(int(time.time() * 1000))
-    params = f'symbol=MPCUSDT&side=BUY&type=MARKET&quantity={qty}&timestamp={ts}'
-    sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
-    
-    url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
-    headers = {'X-MEXC-APIKEY': MEXC_KEY}
-    
-    resp = requests.post(url, headers=headers, timeout=10)
-    return resp.json()
+def chk_k(oid):
+    ts = str(int(time.time()*1000))
+    h = {'KC-API-KEY': KC_KEY, 'KC-API-SIGN': ksig(ts, 'GET', f'/api/v1/orders/{oid}'), 'KC-API-TIMESTAMP': ts, 'KC-API-PASSPHRASE': KC_PASS}
+    r = requests.get(f'https://api.kucoin.com/api/v1/orders/{oid}', headers=h).json()
+    if r.get('code') == '200000':
+        o = r['data']
+        return {'f': float(o.get('dealSize', 0)), 'd': not o.get('isActive', True)}
+    return None
 
-def execute_limit_sell_mexc(qty, price):
-    """Sell MPC on MEXC at limit price"""
-    ts = str(int(time.time() * 1000))
-    params = f'symbol=MPCUSDT&side=SELL&type=LIMIT&quantity={qty}&price={price:.6f}&timestamp={ts}'
-    sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
-    
-    url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
-    headers = {'X-MEXC-APIKEY': MEXC_KEY}
-    
-    resp = requests.post(url, headers=headers, timeout=10)
-    return resp.json()
+def chk_m(oid):
+    ts = str(int(time.time()*1000))
+    p = f'orderId={oid}&timestamp={ts}'
+    s = hmac.new(MX_SEC.encode(), p.encode(), hashlib.sha256).hexdigest()
+    r = requests.get(f'https://api.mexc.com/api/v3/order?{p}&signature={s}', headers={'X-MEXC-APIKEY': MX_KEY}).json()
+    if 'orderId' in r:
+        return {'f': float(r.get('executedQty', 0)), 'd': r.get('status') in ['FILLED', 'CANCELED']}
+    return None
 
-def execute_trade_M_to_K(qty, buy_price, sell_price):
-    """M -> K: Buy MEXC (market), Sell KuCoin (limit)"""
-    log(f"=== EXECUTING M->K TRADE ===")
-    log(f"Buy MEXC: {qty} MPC @ ${buy_price:.6f}")
-    log(f"Sell KuCoin: {qty} MPC @ ${sell_price:.6f}")
-    
-    # Step 1: Market Buy on MEXC
-    log("Step 1: MEXC Market BUY...")
-    result1 = execute_market_buy_mexc(qty)
-    if result1.get('code') is None or 'orderId' in result1:
-        order_id1 = result1.get('orderId', 'unknown')
-        log(f"✅ MEXC Order placed: {order_id1}")
+def exec_k_buy(qty):
+    ts, body = str(int(time.time()*1000)), json.dumps({"clientOid": ts, "symbol": "MPC-USDT", "side": "buy", "type": "market", "size": str(int(qty))})
+    h = {'KC-API-KEY': KC_KEY, 'KC-API-SIGN': ksig(ts, 'POST', '/api/v1/orders', body), 'KC-API-TIMESTAMP': ts, 'KC-API-PASSPHRASE': KC_PASS, 'Content-Type': 'application/json'}
+    return requests.post('https://api.kucoin.com/api/v1/orders', headers=h, data=body).json()
+
+def exec_k_sell(qty, pr):
+    ts, body = str(int(time.time()*1000)), json.dumps({"clientOid": f"{ts}_s", "symbol": "MPC-USDT", "side": "sell", "type": "limit", "size": str(int(qty)), "price": f"{pr:.6f}"})
+    h = {'KC-API-KEY': KC_KEY, 'KC-API-SIGN': ksig(ts, 'POST', '/api/v1/orders', body), 'KC-API-TIMESTAMP': ts, 'KC-API-PASSPHRASE': KC_PASS, 'Content-Type': 'application/json'}
+    return requests.post('https://api.kucoin.com/api/v1/orders', headers=h, data=body).json()
+
+def exec_m_buy(qty):
+    ts = str(int(time.time()*1000))
+    p = f'symbol=MPCUSDT&side=BUY&type=MARKET&quantity={qty:.2f}&timestamp={ts}'
+    s = hmac.new(MX_SEC.encode(), p.encode(), hashlib.sha256).hexdigest()
+    return requests.post(f'https://api.mexc.com/api/v3/order?{p}&signature={s}', headers={'X-MEXC-APIKEY': MX_KEY}).json()
+
+def exec_m_sell(qty, pr):
+    ts = str(int(time.time()*1000))
+    p = f'symbol=MPCUSDT&side=SELL&type=LIMIT&quantity={qty:.2f}&price={pr:.6f}&timestamp={ts}'
+    s = hmac.new(MX_SEC.encode(), p.encode(), hashlib.sha256).hexdigest()
+    return requests.post(f'https://api.mexc.com/api/v3/order?{p}&signature={s}', headers={'X-MEXC-APIKEY': MX_KEY}).json()
+
+def track(oid, ex, q):
+    t = load_tk()
+    t[oid] = {'id': oid, 'ex': ex, 'qty': q, 'f': 0, 'st': 'P'}
+    save_tk(t)
+
+def ptot():
+    return sum(o.get('qty', 0) - o.get('f', o.get('filled', 0)) for o in load_tk().values() if o.get('st', o.get('status', 'P')) in ['P', 'PENDING'])
+
+def chk_all():
+    t = load_tk()
+    for i, o in list(t.items()):
+        st = o.get('st', o.get('status', 'P'))
+        if st != 'P' and st != 'PENDING':
+            continue
+        r = chk_k(i) if o.get('ex', o.get('exchange', '')) == 'KuCoin' else chk_m(i)
+        if r and r['d']:
+            o['f'] = r['f']
+            o['st'] = 'F'
+            o['status'] = 'FILLED'
+            lg(f"FILLED: {i}")
+    save_tk(t)
+
+def snap(k, m, p):
+    try:
+        json.dump({'t': datetime.now().isoformat(), 'kb': k['b'], 'ka': k['a'], 'kbq': k['bq'], 'kaq': k['aq'], 'mb': m['b'], 'ma': m['a'], 'mbq': m['bq'], 'maq': m['aq'], 'p': p}, open(SNAPSHOT, 'w'))
+    except:
+        pass
+
+trds = []
+try:
+    trds = json.load(open(TRADES))
+except:
+    pass
+
+def trade_KM(q, bp, sp):
+    tid = f"KT{int(time.time())}"
+    lg(f"=== {tid} ===")
+    r1 = exec_k_buy(q)
+    if r1.get('code') == '200000':
+        bo = r1['data']['orderId']
+        lg(f"Buy: {bo}")
+        while not chk_k(bo)['d']:
+            time.sleep(1)
     else:
-        log(f"❌ MEXC Error: {result1}")
         return False
-    
-    # Small delay
-    time.sleep(0.5)
-    
-    # Step 2: Limit Sell on KuCoin
-    log("Step 2: KuCoin Limit SELL...")
-    result2 = execute_limit_sell_kucoin(qty, sell_price)
-    if result2.get('code') == '200000':
-        order_id2 = result2['data'].get('orderId', 'unknown')
-        log(f"✅ KuCoin Order placed: {order_id2}")
-    else:
-        log(f"❌ KuCoin Error: {result2}")
-        return False
-    
-    # Calculate profit
-    cost = qty * buy_price
-    revenue = qty * sell_price
-    gross_profit = revenue - cost
-    fee_taker = cost * 0.001
-    fee_maker = revenue * 0.001
-    net_profit = gross_profit - fee_taker - fee_maker
-    mpc_gain = net_profit / sell_price
-    
-    log(f"=== TRADE COMPLETED ===")
-    log(f"Cost: ${cost:.4f} | Revenue: ${revenue:.4f}")
-    log(f"Gross Profit: ${gross_profit:.4f} | Fees: ${fee_taker + fee_maker:.4f}")
-    log(f"Net Profit: ${net_profit:.4f} | MPC Gain: {mpc_gain:.4f}")
-    
+    r2 = exec_m_sell(q, sp)
+    so = r2.get('orderId', 'u')
+    lg(f"Sell: {so}")
+    track(so, 'MEXC', q)
+    net = q * (sp - bp) * 0.998
+    lg(f"Net: ${net:.4f}")
+    trds.append({'id': tid, 'q': q, 'n': net, 'ts': datetime.now().isoformat()})
+    json.dump(trds, open(TRADES, 'w'))
     return True
 
-def execute_trade_K_to_M(qty, buy_price, sell_price):
-    """K -> M: Buy KuCoin (market), Sell MEXC (limit)"""
-    log(f"=== EXECUTING K->M TRADE ===")
-    log(f"Buy KuCoin: {qty} MPC @ ${buy_price:.6f}")
-    log(f"Sell MEXC: {qty} MPC @ ${sell_price:.6f}")
-    
-    # Step 1: Market Buy on KuCoin
-    log("Step 1: KuCoin Market BUY...")
-    result1 = execute_market_buy_kucoin(qty)
-    if result1.get('code') == '200000':
-        order_id1 = result1['data'].get('orderId', 'unknown')
-        log(f"✅ KuCoin Order placed: {order_id1}")
+def trade_MK(q, bp, sp):
+    tid = f"MT{int(time.time())}"
+    lg(f"=== {tid} ===")
+    r1 = exec_m_buy(q)
+    if r1.get('code') is None or 'orderId' in r1:
+        bo = r1['orderId']
+        lg(f"Buy: {bo}")
+        while not chk_m(bo)['d']:
+            time.sleep(1)
     else:
-        log(f"❌ KuCoin Error: {result1}")
         return False
-    
-    # Small delay
-    time.sleep(0.5)
-    
-    # Step 2: Limit Sell on MEXC
-    log("Step 2: MEXC Limit SELL...")
-    result2 = execute_limit_sell_mexc(qty, sell_price)
-    if result2.get('code') is None or 'orderId' in result2:
-        order_id2 = result2.get('orderId', 'unknown')
-        log(f"✅ MEXC Order placed: {order_id2}")
-    else:
-        log(f"❌ MEXC Error: {result2}")
-        return False
-    
-    # Calculate profit
-    cost = qty * buy_price
-    revenue = qty * sell_price
-    gross_profit = revenue - cost
-    fee_taker = cost * 0.001
-    fee_maker = revenue * 0.001
-    net_profit = gross_profit - fee_taker - fee_maker
-    mpc_gain = net_profit / sell_price
-    
-    log(f"=== TRADE COMPLETED ===")
-    log(f"Cost: ${cost:.4f} | Revenue: ${revenue:.4f}")
-    log(f"Gross Profit: ${gross_profit:.4f} | Fees: ${fee_taker + fee_maker:.4f}")
-    log(f"Net Profit: ${net_profit:.4f} | MPC Gain: {mpc_gain:.4f}")
-    
-    return True
-    
+    r2 = exec_k_sell(q, sp)
+    so = r2['data'].get('orderId', 'u')
+    lg(f"Sell: {so}")
+    track(so, 'KuCoin', q)
+    net = q * (sp - bp) * 0.998
+    lg(f"Net: ${net:.4f}")
+    trds.append({'id': tid, 'q': q, 'n': net, 'ts': datetime.now().isoformat()})
+    json.dump(trds, open(TRADES, 'w'))
     return True
 
 def main():
-    log("=== AUTO-TRADE BOT STARTED ===")
-    log("Strategy: Coin-Gewinn (MPC akkumulieren)")
-    log("Principle: ONE TRADE AT A TIME")
-    
-    # Ensure logs directory exists
+    lg("=== BOT v3 START ===")
     os.makedirs('/home/openclaw/.openclaw/logs', exist_ok=True)
-    
-    threshold = 0.5  # minimum spread %
-    trade_in_progress = False
-    last_trade_time = 0
-    
+    lc = 0
     while True:
-        prices = get_prices()
-        if not prices:
+        p = get_p()
+        if not p:
             time.sleep(1)
             continue
-        
-        k = prices['kucoin']
-        m = prices['mexc']
-        
-        # Check M->K (Buy MEXC, Sell KuCoin)
-        spread_mk = k['bid'] - m['ask']
-        spread_pct_mk = (spread_mk / m['ask']) * 100 if m['ask'] > 0 else 0
-        
-        # Check K->M (Buy KuCoin, Sell MEXC)
-        spread_km = m['bid'] - k['ask']
-        spread_pct_km = (spread_km / k['ask']) * 100 if k['ask'] > 0 else 0
-        
-        # Determine volume (minimum for both exchanges)
-        # MEXC requires at least 1 USDT, so calculate MPC qty from that
-        vol_for_mexc = int((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 86  # +1 buffer
-        vol_for_kucoin = max(KUCOIN_MIN_MPC, vol_for_mexc)  # Use same or larger for KuCoin
-        
-        # Log every 30 seconds
-        if int(time.time()) % 30 == 0:
-            log(f"Prices: K=${k['bid']:.4f}/${k['ask']:.4f} | M=${m['bid']:.4f}/${m['ask']:.4f}")
-            log(f"  M->K spread: {spread_pct_mk:.2f}% | K->M spread: {spread_pct_km:.2f}%")
-        
-        # Trade BOTH directions when profitable!
-        # K->M: Buy MEXC (cheaper), Sell KuCoin (more expensive)
-        # M->K: Buy KuCoin (cheaper), Sell MEXC (more expensive)
-        # Either way, we profit!
-        
-        if spread_km >= threshold and not trade_in_progress:
-            log(f"🚨 K->M OPPORTUNITY: {spread_km:.2f}%")
-            trade_in_progress = True
-            success = execute_trade_K_to_M(vol_for_kucoin, k['ask'], m['bid'])
-            last_trade_time = time.time()
-            trade_in_progress = False
-        elif spread_mk >= threshold and not trade_in_progress:
-            log(f"🚨 M->K OPPORTUNITY: {spread_mk:.2f}%")
-            trade_in_progress = True
-            success = execute_trade_M_to_K(vol_for_mexc, m['ask'], k['bid'])
-            last_trade_time = time.time()
-            trade_in_progress = False
-        
-        time.sleep(1)  # Check every second
+        k, m = p['k'], p['m']
+        smk = (k['b'] - m['a']) / m['a'] * 100
+        skm = (m['b'] - k['a']) / k['a'] * 100
+        vm = int((MIN_USDT + 1) / m['a']) if m['a'] > 0 else 86
+        vk = max(MIN_KC, vm)
+        if int(time.time()) - lc >= 30:
+            lc = int(time.time())
+            chk_all()
+            pt = ptot()
+            lg(f"P: K={k['b']:.4f}/{k['a']:.4f} M={m['b']:.4f}/{m['a']:.4f}")
+            lg(f"Q: Kb={k['bq']:.0f} Ka={k['aq']:.0f} Mb={m['bq']:.0f} Ma={m['aq']:.0f}")
+            lg(f"S: Mk={smk:.2f}% Km={skm:.2f}% P={pt}")
+            snap(k, m, pt)
+        if skm >= THRESH:
+            trade_KM(vk, k['a'], m['b'])
+        elif smk >= THRESH:
+            trade_MK(vm, m['a'], k['b'])
+        time.sleep(1)
 
 if __name__ == '__main__':
     main()
