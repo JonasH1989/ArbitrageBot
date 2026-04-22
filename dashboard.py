@@ -957,85 +957,132 @@ else:
                 st.warning(f"⚠️ Trade-Detection Fehler: {e}")
 
 # =========================================================================
-# TRADE LOG SECTION - ONLY IN DETAIL VIEW
+# TRADE LOG SECTION - ONLY IN DETAIL VIEW (FULL WIDTH)
 # =========================================================================
         if st.session_state.selected_pair:
-            st.divider()
-            st.subheader("📜 Trade Log")
+            # Use full width container
+            with st.container():
+                st.divider()
+                st.subheader("📜 Trade Log")
+                
+                log_pair = st.session_state.selected_pair
+                
+                # Summary stats - full width, 8 metrics
+                summary = get_trade_summary_extended(log_pair)
+                
+                # Create 8 columns for summary
+                m1, m2, m3, m4, m5, m6, m7, m8 = st.columns(8)
+            with m1:
+                st.metric("Summe Trades", summary.get('total_trades', 0))
+            with m2:
+                st.metric("Completed", summary.get('completed_trades', 0))
+            with m3:
+                st.metric("Open Trades", summary.get('open_trades', 0))
+            with m4:
+                st.metric("Total Profit", f"${summary.get('total_profit_usdt', 0):.4f}")
+            with m5:
+                st.metric("Total MPC", f"{summary.get('total_profit_mpc', 0):.2f}", delta=f"+{summary.get('total_profit_mpc', 0):.2f}")
+            with m6:
+                st.metric("Best Trade", f"${summary.get('best_trade_usdt', 0):.4f}")
+            with m7:
+                st.metric("Avg Profit", f"${summary.get('avg_profit_usdt', 0):.4f}")
+            with m8:
+                st.metric("Avg Spread", f"{summary.get('avg_spread_pct', 0):.3f}%")
             
-            log_pair = st.session_state.selected_pair
+            # Export button
+            if st.button("📥 Export CSV"):
+                path = export_trades_csv(log_pair)
+                if path:
+                    st.success(f"Exported!")
+                else:
+                    st.info("No trades")
             
-            # Summary stats - no winrate
-            summary = get_trade_summary(log_pair)
-            col1, col2, col3, col4, col5 = st.columns(5)
-        with col1:
-            st.metric("Trades", summary['total_trades'])
-        with col2:
-            st.metric("Win Rate", summary['win_rate'])
-        with col3:
-            st.metric("Total Profit", f"${summary['total_profit_usdt']}", delta=f"{summary['total_profit_mpc']} MPC")
-        with col4:
-            st.metric("Best Trade", f"${summary['best_trade_usdt']}")
-        with col5:
-            st.metric("Avg Profit", f"${summary['avg_profit_usdt']}")
-        
-        # Export button
-        if st.button("📥 Export Trades CSV"):
-            path = export_trades_csv(log_pair)
-            if path:
-                st.success(f"Exported to: {path}")
+            # Trade history table
+            trades = get_trades(log_pair, limit=100)
+            
+            if trades:
+                df = pd.DataFrame(trades)
+                df = df.iloc[::-1]  # Newest first
+                
+                # Calculate derived fields
+                def calc_profit(row):
+                    try:
+                        ex1 = float(row.get('ex1_value_usdt', 0) or 0)
+                        ex2 = float(row.get('ex2_value_usdt', 0) or 0)
+                        fees = float(row.get('ex1_fees', 0) or 0) + float(row.get('ex2_fees', 0) or 0)
+                        direction = row.get('direction', '')
+                        if 'K->M' in direction:
+                            return (ex2 - ex1) - fees
+                        else:
+                            return (ex2 - ex1) - fees
+                    except:
+                        return 0
+                
+                def calc_gross(row):
+                    try:
+                        ex1 = float(row.get('ex1_value_usdt', 0) or 0)
+                        ex2 = float(row.get('ex2_value_usdt', 0) or 0)
+                        direction = row.get('direction', '')
+                        if 'K->M' in direction:
+                            return ex2 - ex1
+                        else:
+                            return ex2 - ex1
+                    except:
+                        return 0
+                
+                def calc_fees(row):
+                    try:
+                        return float(row.get('ex1_fees', 0) or 0) + float(row.get('ex2_fees', 0) or 0)
+                    except:
+                        return 0
+                
+                def short_time(ts):
+                    try:
+                        return datetime.fromisoformat(ts).strftime('%H:%M:%S')
+                    except:
+                        return ts
+                
+                def direction_icon(d):
+                    return 'K→M' if 'K->M' in str(d) else 'M→K'
+                
+                def status_icon(s):
+                    icons = {'FILLED': '✅', 'PARTIAL': '⚠️', 'WATCHING': '⏳', 'CANCELLED': '❌', 'FAILED': '🔴'}
+                    return icons.get(s, '❓')
+                
+                df['time'] = df['internal_ts'].apply(short_time)
+                df['id'] = df['trade_id'].str[-10:]
+                df['dir'] = df['direction'].apply(direction_icon)
+                df['qty'] = df.apply(lambda r: float(r.get('ex1_qty_filled', 0) or 0), axis=1)
+                df['buy_ex'] = df['ex1_exchange'].str[:1]
+                df['buy_price'] = df['ex1_price_avg'].apply(lambda x: f"${float(x or 0):.4f}")
+                df['sell_price'] = df['ex2_price_avg'].apply(lambda x: f"${float(x or 0):.4f}")
+                df['gross'] = df.apply(calc_gross, axis=1).apply(lambda x: f"${x:.4f}")
+                df['fees'] = df.apply(calc_fees, axis=1).apply(lambda x: f"${x:.4f}")
+                df['net'] = df.apply(calc_profit, axis=1).apply(lambda x: f"${x:.4f}")
+                df['status'] = df['limit_watch_status'].apply(status_icon) + ' ' + df['limit_watch_status'].astype(str)
+                
+                # Build display dataframe
+                display_df = df[['time', 'id', 'dir', 'qty', 'buy_ex', 'buy_price', 'sell_price', 'gross', 'fees', 'net', 'status']].copy()
+                display_df.columns = ['Time', 'ID', 'Dir', 'Qty', 'Buy', 'Buy $', 'Sell $', 'Gross', 'Fees', 'Net', 'Status']
+                
+                # Color Net column
+                def net_color(val):
+                    try:
+                        v = float(str(val).replace('$', ''))
+                        if v > 0: return '🟢'
+                        elif v < 0: return '🔴'
+                        return '➖'
+                    except:
+                        return '➖'
+                
+                display_df['P/L'] = df.apply(calc_profit, axis=1).apply(net_color)
+                display_df = display_df[['Time', 'ID', 'Dir', 'Qty', 'Buy', 'Buy $', 'Sell $', 'Gross', 'Fees', 'Net', 'P/L', 'Status']]
+                
+                st.dataframe(display_df, use_container_width=True, hide_index=True)
             else:
-                st.info("No trades to export")
-        # Trade history table
-        trades = get_trades(log_pair, limit=50)
-        if trades:
-            # Create dataframe - auto-detect columns
-            df_trades = pd.DataFrame(trades)
-            # Reverse to show newest first
-            df_trades = df_trades.iloc[::-1]
+                st.info("⏳ No trades yet")
             
-            # Map new column names to display names
-            col_map = {
-                'market_timestamp': 'Time',
-                'direction': 'Direction',
-                'strategy': 'Strategy',
-                'total_qty': 'Volume MPC',
-                'market_price': 'Buy Price',
-                'limit_price': 'Sell Price',
-                'total_cost': 'Cost USDT',
-                'total_revenue': 'Revenue USDT',
-                'total_fees': 'Fee Total',
-                'net_profit_usdt': 'Net Profit USDT',
-                'net_profit_coins': 'Net Profit Coins',
-                'status': 'Status',
-                'limit_status': 'Limit Status',
-                'market_exchange': 'Buy Ex',
-                'limit_exchange': 'Sell Ex',
-            }
-            
-            # Build display selecting available columns
-            display_cols = ['market_timestamp', 'direction', 'strategy', 'total_qty', 
-                        'market_price', 'limit_price', 'total_cost', 'total_revenue',
-                        'total_fees', 'net_profit_usdt', 'net_profit_coins', 'status']
-            
-            # Select only columns that exist
-            avail_cols = [c for c in display_cols if c in df_trades.columns]
-            df_display = df_trades[avail_cols].copy()
-            
-            # Rename columns
-            df_display = df_display.rename(columns={k: v for k, v in col_map.items() if k in df_display.columns})
-            
-            # Add Win/Loss based on profit
-            if 'Net Profit USDT' in df_display.columns:
-                df_display['Win/Loss'] = df_display['Net Profit USDT'].apply(
-                    lambda x: '🟢 WIN' if float(x or 0) > 0 else '🔴 LOSS' if float(x or 0) < 0 else '-'
-                )
-            
-            # Use full width
-            st.dataframe(df_display, use_container_width=True, hide_index=True)
-        else:
-            st.info("No trades logged yet. Start trading to see history!")
-
+            st.divider()
 
 # Auto refresh
 if st.session_state.selected_pair:

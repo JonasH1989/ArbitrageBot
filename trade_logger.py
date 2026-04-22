@@ -521,3 +521,85 @@ def get_all_pairs_with_trades() -> List[str]:
         pair = csv_file.stem.replace("_trades", "")
         pairs.append(pair)
     return pairs
+
+def get_trade_summary_extended(pair: str) -> Dict:
+    """Get extended summary statistics including average spread"""
+    trades = get_trades(pair, limit=10000)
+    
+    if not trades:
+        return {
+            "pair": pair,
+            "total_trades": 0,
+            "completed_trades": 0,
+            "open_trades": 0,
+            "total_profit_usdt": 0,
+            "total_profit_mpc": 0,
+            "best_trade_usdt": 0,
+            "avg_profit_usdt": 0,
+            "avg_spread_pct": 0,
+            "pending_limit_orders": 0,
+        }
+    
+    completed = 0
+    open_trades = 0
+    total_profit_usdt = 0
+    total_profit_mpc = 0
+    best_trade_usdt = 0
+    total_spread = 0
+    
+    for trade in trades:
+        status = trade.get("limit_watch_status", "")
+        
+        if status == "FILLED":
+            completed += 1
+            
+            ex1_value = float(trade.get("ex1_value_usdt", 0) or 0)
+            ex2_value = float(trade.get("ex2_value_usdt", 0) or 0)
+            ex1_fees = float(trade.get("ex1_fees", 0) or 0)
+            ex2_fees = float(trade.get("ex2_fees", 0) or 0)
+            ex1_price = float(trade.get("ex1_price_avg", 0) or 0)
+            
+            direction = trade.get("direction", "")
+            
+            if "K->M" in direction:
+                cost = ex1_value
+                revenue = ex2_value
+            else:
+                cost = ex1_value
+                revenue = ex2_value
+            
+            net_profit = revenue - cost - ex1_fees - ex2_fees
+            total_profit_usdt += net_profit
+            
+            # Calculate spread for this trade
+            if ex1_price > 0 and ex2_value > 0:
+                spread_pct = ((revenue - cost) / cost) * 100 if cost > 0 else 0
+                total_spread += spread_pct
+            
+            # MPC gain
+            ex2_price = float(trade.get("ex2_price_avg", 0) or 0)
+            if ex2_price > 0:
+                mpc_gain = net_profit / ex2_price
+                total_profit_mpc += mpc_gain
+            
+            if net_profit > best_trade_usdt:
+                best_trade_usdt = net_profit
+                
+        elif status == "WATCHING" or status == "PARTIAL":
+            open_trades += 1
+    
+    avg_profit = total_profit_usdt / completed if completed > 0 else 0
+    avg_spread = total_spread / completed if completed > 0 else 0
+    
+    return {
+        "pair": pair,
+        "total_trades": len(trades),
+        "completed_trades": completed,
+        "open_trades": open_trades,
+        "total_profit_usdt": round(total_profit_usdt, 4),
+        "total_profit_mpc": round(total_profit_mpc, 4),
+        "best_trade_usdt": round(best_trade_usdt, 4),
+        "avg_profit_usdt": round(avg_profit, 4),
+        "avg_spread_pct": round(avg_spread, 3),
+        "pending_limit_orders": open_trades,
+    }
