@@ -957,14 +957,17 @@ else:
                 st.warning(f"⚠️ Trade-Detection Fehler: {e}")
 
 # =========================================================================
-# TRADE LOG SECTION
+# TRADE LOG SECTION - ONLY IN DETAIL VIEW
 # =========================================================================
-        st.divider()
-        st.subheader("📜 Trade Log")
-        
-        # Summary stats
-        summary = get_trade_summary()
-        col1, col2, col3, col4, col5 = st.columns(5)
+        if st.session_state.selected_pair:
+            st.divider()
+            st.subheader("📜 Trade Log")
+            
+            log_pair = st.session_state.selected_pair
+            
+            # Summary stats - no winrate
+            summary = get_trade_summary(log_pair)
+            col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
             st.metric("Trades", summary['total_trades'])
         with col2:
@@ -976,25 +979,15 @@ else:
         with col5:
             st.metric("Avg Profit", f"${summary['avg_profit_usdt']}")
         
-        # Export buttons
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button("📥 Export Trades CSV"):
-                path = export_trades_csv()
-                if path:
-                    st.success(f"Exported to: {path}")
-                else:
-                    st.info("No trades to export yet")
-        with c2:
-            if st.button("📥 Export Portfolio CSV"):
-                path = export_portfolio_csv()
-                if path:
-                    st.success(f"Exported to: {path}")
-                else:
-                    st.info("No portfolio data to export yet")
-        
+        # Export button
+        if st.button("📥 Export Trades CSV"):
+            path = export_trades_csv(log_pair)
+            if path:
+                st.success(f"Exported to: {path}")
+            else:
+                st.info("No trades to export")
         # Trade history table
-        trades = get_trade_history(limit=50)
+        trades = get_trades(log_pair, limit=50)
         if trades:
             # Create dataframe - auto-detect columns
             df_trades = pd.DataFrame(trades)
