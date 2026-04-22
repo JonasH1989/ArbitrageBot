@@ -9,7 +9,6 @@ import requests
 import yaml
 from pathlib import Path
 from datetime import datetime
-import os
 import pandas as pd
 from trade_logger import *
 
@@ -268,18 +267,7 @@ pairs_config = config.get('trading', {}).get('pairs', {})
 # Handle both list and dict format for backwards compatibility
 if isinstance(pairs_config, list):
     # Convert list to dict format
-    pairs_config = {p: {'enabled': True, 'strategy': 'usdt', 'threshold_start': 1.0, 'threshold_stop': 0.5, 'alert_enabled': True} for p in pairs_config}
-
-# ENFORCE INAKTIV on redeploy - check flag, set config to match
-if os.path.exists('/home/openclaw/.openclaw/logs/arb_active.flag'):
-    config['trading']['pairs'] = pairs_config
-else:
-    # Ensure config is INAKTIV on redeploy
-    for p in pairs_config:
-        pairs_config[p]['enabled'] = False
-    config['trading']['pairs'] = pairs_config
-    save_config(config)
-
+    pairs_config = {p: {'enabled': True, 'strategy': 'usdt', 'threshold_start': 0.2, 'threshold_stop': 0.1, 'alert_enabled': True} for p in pairs_config}
 thresholds = config['trading'].get('thresholds', {'start': 0.2, 'stop': 0.1})
 
 # ============================================================================
@@ -313,21 +301,13 @@ with st.sidebar:
     
     # Alert
     st.markdown("### 🔔 Alert")
-    # Ensure alert config exists with defaults
-    alert_config = config.get('alert', {})
-    if not alert_config:
-        config['alert'] = {'enabled': True, 'volume': 0.3}
-        save_config(config)
-        alert_config = config['alert']
+    alert_enabled = st.checkbox("Akustischer Alert", value=config.get('alert', {}).get('enabled', True))
     
-    alert_enabled = st.checkbox("Akustischer Alert", value=alert_config.get('enabled', True))
+    # Volume - explicit save button
+    volume = st.slider("🔊 Lautstaerke", 0.0, 1.0, config.get('alert', {}).get('volume', 0.3), 0.1, key="volume_slider")
     
-    # Volume
-    volume = st.slider("🔊 Lautstaerke", 0.0, 1.0, alert_config.get('volume', 0.3), 0.1, key="volume_slider")
-    
-    if st.button("💾 Alert Speichern"):
-        config.setdefault('alert', {})['enabled'] = alert_enabled
-        config['alert']['volume'] = volume
+    if st.button("💾 Vol"):
+        config.setdefault('alert', {})['volume'] = volume
         save_config(config)
         st.rerun()
     
@@ -371,8 +351,8 @@ with st.sidebar:
             pairs_config[new_pair] = {
                 'enabled': True,
                 'strategy': 'usdt',
-                'threshold_start': 1.0,
-                'threshold_stop': 0.5,
+                'threshold_start': thresholds['start'],
+                'threshold_stop': thresholds['stop'],
                 'alert_enabled': True
             }
             config['trading']['pairs'] = pairs_config
@@ -567,8 +547,8 @@ else:
         st.subheader("🎯 Zusammenfassung")
         
         current_strategy = pair_data.get('strategy', 'usdt')
-        threshold_start = pair_data.get('threshold_start', 1.0)
-        threshold_stop = pair_data.get('threshold_stop', 0.5)
+        threshold_start = pair_data.get('threshold_start', thresholds['start'])
+        threshold_stop = pair_data.get('threshold_stop', thresholds['stop'])
         
         # Spread calculation (overkreuz):
         # K→M: Buy on KuCoin (Ask), Sell on MEXC (Bid) → Spread = MEXC_Bid - KuCoin_Ask
@@ -787,7 +767,7 @@ else:
         s1, s2, s3, s4, s5 = st.columns([1, 1, 1, 1, 1])
         
         with s1:
-            ts = pair_data.get('threshold_start', 1.0)
+            ts = pair_data.get('threshold_start', thresholds['start'])
             ts_new = st.number_input("Start %", 0.0, 50.0, ts, 0.05, key=f"pts_{pair}")
             if ts_new != ts:
                 pairs_config[pair]['threshold_start'] = ts_new
@@ -795,7 +775,7 @@ else:
                 save_config(config)
         
         with s2:
-            tss = pair_data.get('threshold_stop', 0.5)
+            tss = pair_data.get('threshold_stop', thresholds['stop'])
             tss_new = st.number_input("Stop %", 0.0, max(0.1, ts_new), tss, 0.05, key=f"ptss_{pair}")
             if tss_new != tss:
                 pairs_config[pair]['threshold_stop'] = tss_new
@@ -996,53 +976,77 @@ else:
         # Trade history table
         trades = get_trade_history(limit=50)
         if trades:
-            # Create dataframe - auto-detect columns
-            df_trades = pd.DataFrame(trades)
+            # Create dataframe with new columns
+            df_trades = pd.DataFrame(trades, columns=[
+                'Time', 'Direction', 'Buy Ex', 'Sell Ex', 'Buy Price', 'Sell Price',
+                'Volume MPC', 'Cost USDT', 'Revenue USDT', 'Gross Profit', 'Fee Total',
+                'Net Profit USDT', 'Net Profit MPC', 'Spread %', 'Threshold %', 
+                'Fee Buy', 'Fee Sell', 'Win/Loss', 'Fee Warning', 'Status', 'Notes'
+            ])
             # Reverse to show newest first
             df_trades = df_trades.iloc[::-1]
             
-            # Map new column names to display names
-            col_map = {
-                'market_timestamp': 'Time',
-                'direction': 'Direction',
-                'strategy': 'Strategy',
-                'total_qty': 'Volume MPC',
-                'market_price': 'Buy Price',
-                'limit_price': 'Sell Price',
-                'total_cost': 'Cost USDT',
-                'total_revenue': 'Revenue USDT',
-                'total_fees': 'Fee Total',
-                'net_profit_usdt': 'Net Profit USDT',
-                'net_profit_coins': 'Net Profit Coins',
-                'status': 'Status',
-                'limit_status': 'Limit Status',
-                'market_exchange': 'Buy Ex',
-                'limit_exchange': 'Sell Ex',
-            }
+            # Add WIN/LOSS badge styling
+            def style_win_loss(x):
+                if x == 'WIN':
+                    return '🟢 WIN'
+                elif x == 'LOSS':
+                    return '🔴 LOSS'
+                return x
             
-            # Build display selecting available columns
-            display_cols = ['market_timestamp', 'direction', 'strategy', 'total_qty', 
-                        'market_price', 'limit_price', 'total_cost', 'total_revenue',
-                        'total_fees', 'net_profit_usdt', 'net_profit_coins', 'status']
+            # Display key columns
+            display_cols = ['Time', 'Direction', 'Volume MPC', 'Buy Price', 'Sell Price', 
+                          'Gross Profit', 'Fee Total', 'Net Profit USDT', 'Win/Loss']
+            df_display = df_trades[[c for c in display_cols if c in df_trades.columns]].copy()
+            df_display['Time'] = df_display['Time'].str[:19]
             
-            # Select only columns that exist
-            avail_cols = [c for c in display_cols if c in df_trades.columns]
-            df_display = df_trades[avail_cols].copy()
+            # Apply win/loss styling
+            if 'Win/Loss' in df_display.columns:
+                df_display['Win/Loss'] = df_display['Win/Loss'].apply(style_win_loss)
             
-            # Rename columns
-            df_display = df_display.rename(columns={k: v for k, v in col_map.items() if k in df_display.columns})
+            st.dataframe(df_display, use_container_width=True, height=300)
             
-            # Add Win/Loss based on profit
-            if 'Net Profit USDT' in df_display.columns:
-                df_display['Win/Loss'] = df_display['Net Profit USDT'].apply(
-                    lambda x: '🟢 WIN' if float(x or 0) > 0 else '🔴 LOSS' if float(x or 0) < 0 else '-'
-                )
-            
-            # Use full width
-            st.dataframe(df_display, use_container_width=True, hide_index=True)
+            # Show fee warnings if any
+            if 'Fee Warning' in df_trades.columns:
+                warnings = df_trades[df_trades['Fee Warning'] == 'FEE_WARNING']
+                if len(warnings) > 0:
+                    st.warning(f"⚠️ {len(warnings)} Trade(s) mit hohen Gebühren (>{50}% des Gewinns)! "
+                             f"→ Threshold möglicherweise zu niedrig.")
         else:
             st.info("No trades logged yet. Start trading to see history!")
 
+    # =========================================================================
+    # LOG TRADE FORM (Manual entry)
+    # =========================================================================
+    st.divider()
+    st.subheader("📝 Trade Manuell Loggen")
+    with st.expander("Trade-Eintrag hinzufügen"):
+        t1, t2, t3, t4 = st.columns(4)
+        with t1:
+            trade_dir = st.selectbox("Richtung", ["K→M", "M→K"], key="trade_dir")
+        with t2:
+            trade_vol = st.number_input("Volume (MPC)", 0.0, 10000.0, 80.0, 0.1, key="trade_vol")
+        with t3:
+            trade_buy = st.number_input("Buy Price", 0.0, 10.0, 0.01584, 0.00001, key="trade_buy")
+        with t4:
+            trade_sell = st.number_input("Sell Price", 0.0, 10.0, 0.01605, 0.00001, key="trade_sell")
+        
+        cost = trade_vol * trade_buy
+        revenue = trade_vol * trade_sell
+        profit_usdt = revenue - cost
+        profit_mpc = profit_usdt / trade_sell if trade_sell > 0 else 0
+        spread_pct = ((trade_sell - trade_buy) / trade_buy * 100) if trade_buy > 0 else 0
+        
+        st.info(f"Kosten: ${cost:.4f} | Erlös: ${revenue:.4f} | Profit: ${profit_usdt:.4f} ({profit_mpc:.4f} MPC) | Spread: {spread_pct:.3f}%")
+        
+        if st.button("✅ Trade Loggen"):
+            ex_buy = "KuCoin" if trade_dir == "M→K" else "MEXC"
+            ex_sell = "MEXC" if trade_dir == "M→K" else "KuCoin"
+            buy_p = trade_buy if trade_dir == "M→K" else trade_sell
+            sell_p = trade_sell if trade_dir == "M→K" else trade_buy
+            log_trade(trade_dir, ex_buy, ex_sell, buy_p, sell_p, trade_vol, cost, revenue, threshold_pct=threshold_start, status="manual", notes="Logged by bot")
+            st.success("Trade wurde geloggt!")
+            st.rerun()
 
 # Auto refresh
 if st.session_state.selected_pair:

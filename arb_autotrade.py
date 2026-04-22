@@ -2,6 +2,7 @@
 """
 Arbitrage Auto-Trade Bot
 Executes trades automatically when opportunities arise
+Uses harmonized trade_logger for unified multi-exchange logging
 """
 import sys
 sys.path.insert(0, '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot')
@@ -17,10 +18,22 @@ import json as json_lib
 from datetime import datetime
 import os
 
+# Import the harmonized trade logger
+from trade_logger import (
+    harmonize_kucoin_order,
+    harmonize_mexc_order,
+    log_trade,
+    update_limit_watch,
+    get_pending_limit_orders,
+    get_trade_summary,
+    get_trades,
+)
+
 LOG_FILE = '/home/openclaw/.openclaw/logs/arb_autotrade.log'
 CONFIG_FILE = '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot/config/config.yaml'
+ACTIVE_FLAG_FILE = '/home/openclaw/.openclaw/logs/arb_active.flag'
 
-# Exchange configs
+# Exchange API credentials
 KUCOIN_KEY = "69e6445dd56900000160af01"
 KUCOIN_SECRET = "787903d0-bb7f-4d84-b598-c07ac71180ef"
 KUCOIN_PASSPHRASE = "YtuyE5uM6hE8HC6"
@@ -30,6 +43,22 @@ MEXC_SECRET = "880bf82a7761449fa24cc508c6e577fa"
 
 MEXC_MIN_USDT = 1.0
 KUCOIN_MIN_MPC = 10
+
+TRADING_PAIR = "MPC-USDT"
+
+def is_active():
+    """Check if bot is marked as active"""
+    return os.path.exists(ACTIVE_FLAG_FILE)
+
+def set_active(flag):
+    """Enable or disable trading"""
+    if flag:
+        open(ACTIVE_FLAG_FILE, 'w').write(str(datetime.now()))
+    else:
+        try:
+            os.remove(ACTIVE_FLAG_FILE)
+        except:
+            pass
 
 def log(msg):
     ts = datetime.now().strftime('%H:%M:%S')
@@ -123,15 +152,24 @@ def execute_trade_M_to_K(qty, buy_price, sell_price):
     log(f"Buy MEXC: {qty} MPC @ ${buy_price:.6f}")
     log(f"Sell KuCoin: {qty} MPC @ ${sell_price:.6f}")
     
+    # Capture internal timestamp
+    internal_ts = datetime.now().isoformat()
+    
     # Step 1: Market Buy on MEXC
     log("Step 1: MEXC Market BUY...")
     result1 = execute_market_buy_mexc(qty)
+    
+    ex1_data = None
     if result1.get('code') is None or 'orderId' in result1:
         order_id1 = result1.get('orderId', 'unknown')
         log(f"✅ MEXC Order placed: {order_id1}")
+        
+        # Harmonize MEXC response
+        ex1_data = harmonize_mexc_order(result1, "buy", "market", TRADING_PAIR)
+        log(f"   Harmonized: qty_ordered={ex1_data['qty_ordered']}, qty_filled={ex1_data['qty_filled']}, price_avg={ex1_data['price_avg']:.6f}")
     else:
         log(f"❌ MEXC Error: {result1}")
-        return False
+        return False, None
     
     # Small delay
     time.sleep(0.5)
@@ -139,28 +177,48 @@ def execute_trade_M_to_K(qty, buy_price, sell_price):
     # Step 2: Limit Sell on KuCoin
     log("Step 2: KuCoin Limit SELL...")
     result2 = execute_limit_sell_kucoin(qty, sell_price)
+    
+    ex2_data = None
     if result2.get('code') == '200000':
         order_id2 = result2['data'].get('orderId', 'unknown')
         log(f"✅ KuCoin Order placed: {order_id2}")
+        
+        # Harmonize KuCoin response
+        ex2_data = harmonize_kucoin_order(result2.get('data', {}), "sell", "limit", TRADING_PAIR)
+        log(f"   Harmonized: qty_ordered={ex2_data['qty_ordered']}, qty_filled={ex2_data['qty_filled']}, price_avg={ex2_data['price_avg']:.6f}")
     else:
         log(f"❌ KuCoin Error: {result2}")
-        return False
+        # Log trade even with partial failure
+        ex2_data = {"exchange": "KUCOIN", "order_id": "FAILED", "type": "limit", "side": "sell",
+                    "qty_ordered": qty, "qty_filled": 0, "price_avg": 0, "value_usdt": 0,
+                    "fees": 0, "create_ts": 0, "status": "FAILED", "raw_response": result2}
     
-    # Calculate profit
+    # Log trade with harmonized data
+    trade_id = log_trade(
+        pair=TRADING_PAIR,
+        internal_ts=internal_ts,
+        direction="M->K",
+        ex1_data=ex1_data,
+        ex2_data=ex2_data,
+        limit_watch_status="WATCHING"
+    )
+    log(f"📝 Trade logged: {trade_id}")
+    
+    # Calculate expected profit
     cost = qty * buy_price
     revenue = qty * sell_price
     gross_profit = revenue - cost
     fee_taker = cost * 0.001
     fee_maker = revenue * 0.001
     net_profit = gross_profit - fee_taker - fee_maker
-    mpc_gain = net_profit / sell_price
+    mpc_gain = net_profit / sell_price if sell_price > 0 else 0
     
-    log(f"=== TRADE COMPLETED ===")
+    log(f"=== TRADE LOGGED (pending limit fill) ===")
     log(f"Cost: ${cost:.4f} | Revenue: ${revenue:.4f}")
     log(f"Gross Profit: ${gross_profit:.4f} | Fees: ${fee_taker + fee_maker:.4f}")
-    log(f"Net Profit: ${net_profit:.4f} | MPC Gain: {mpc_gain:.4f}")
+    log(f"Expected Net Profit: ${net_profit:.4f} | MPC Gain: {mpc_gain:.4f}")
     
-    return True
+    return True, trade_id
 
 def execute_trade_K_to_M(qty, buy_price, sell_price):
     """K -> M: Buy KuCoin (market), Sell MEXC (limit)"""
@@ -168,15 +226,24 @@ def execute_trade_K_to_M(qty, buy_price, sell_price):
     log(f"Buy KuCoin: {qty} MPC @ ${buy_price:.6f}")
     log(f"Sell MEXC: {qty} MPC @ ${sell_price:.6f}")
     
+    # Capture internal timestamp
+    internal_ts = datetime.now().isoformat()
+    
     # Step 1: Market Buy on KuCoin
     log("Step 1: KuCoin Market BUY...")
     result1 = execute_market_buy_kucoin(qty)
+    
+    ex1_data = None
     if result1.get('code') == '200000':
         order_id1 = result1['data'].get('orderId', 'unknown')
         log(f"✅ KuCoin Order placed: {order_id1}")
+        
+        # Harmonize KuCoin response
+        ex1_data = harmonize_kucoin_order(result1['data'], "buy", "market", TRADING_PAIR)
+        log(f"   Harmonized: qty_ordered={ex1_data['qty_ordered']}, qty_filled={ex1_data['qty_filled']}, price_avg={ex1_data['price_avg']:.6f}")
     else:
         log(f"❌ KuCoin Error: {result1}")
-        return False
+        return False, None
     
     # Small delay
     time.sleep(0.5)
@@ -184,42 +251,156 @@ def execute_trade_K_to_M(qty, buy_price, sell_price):
     # Step 2: Limit Sell on MEXC
     log("Step 2: MEXC Limit SELL...")
     result2 = execute_limit_sell_mexc(qty, sell_price)
+    
+    ex2_data = None
     if result2.get('code') is None or 'orderId' in result2:
         order_id2 = result2.get('orderId', 'unknown')
         log(f"✅ MEXC Order placed: {order_id2}")
+        
+        # Harmonize MEXC response
+        ex2_data = harmonize_mexc_order(result2, "sell", "limit", TRADING_PAIR)
+        log(f"   Harmonized: qty_ordered={ex2_data['qty_ordered']}, qty_filled={ex2_data['qty_filled']}, price_avg={ex2_data['price_avg']:.6f}")
     else:
         log(f"❌ MEXC Error: {result2}")
-        return False
+        # Log trade even with partial failure
+        ex2_data = {"exchange": "MEXC", "order_id": "FAILED", "type": "limit", "side": "sell",
+                    "qty_ordered": qty, "qty_filled": 0, "price_avg": 0, "value_usdt": 0,
+                    "fees": 0, "create_ts": 0, "status": "FAILED", "raw_response": result2}
     
-    # Calculate profit
+    # Log trade with harmonized data
+    trade_id = log_trade(
+        pair=TRADING_PAIR,
+        internal_ts=internal_ts,
+        direction="K->M",
+        ex1_data=ex1_data,
+        ex2_data=ex2_data,
+        limit_watch_status="WATCHING"
+    )
+    log(f"📝 Trade logged: {trade_id}")
+    
+    # Calculate expected profit
     cost = qty * buy_price
     revenue = qty * sell_price
     gross_profit = revenue - cost
     fee_taker = cost * 0.001
     fee_maker = revenue * 0.001
     net_profit = gross_profit - fee_taker - fee_maker
-    mpc_gain = net_profit / sell_price
+    mpc_gain = net_profit / sell_price if sell_price > 0 else 0
     
-    log(f"=== TRADE COMPLETED ===")
+    log(f"=== TRADE LOGGED (pending limit fill) ===")
     log(f"Cost: ${cost:.4f} | Revenue: ${revenue:.4f}")
     log(f"Gross Profit: ${gross_profit:.4f} | Fees: ${fee_taker + fee_maker:.4f}")
-    log(f"Net Profit: ${net_profit:.4f} | MPC Gain: {mpc_gain:.4f}")
+    log(f"Expected Net Profit: ${net_profit:.4f} | MPC Gain: {mpc_gain:.4f}")
     
-    return True
+    return True, trade_id
+
+
+def check_limit_order_fills():
+    """
+    Background task: Check pending limit orders and update status.
+    This polls the exchanges for fill status.
+    """
+    pending = get_pending_limit_orders(TRADING_PAIR)
     
-    return True
+    if not pending:
+        return
+    
+    log(f"🔍 Checking {len(pending)} pending limit orders...")
+    
+    for trade in pending:
+        direction = trade.get('direction', '')
+        ex2_exchange = trade.get('ex2_exchange', '')
+        ex2_order_id = trade.get('ex2_order_id', '')
+        trade_id = trade.get('trade_id', '')
+        
+        if not ex2_order_id or ex2_order_id == 'FAILED':
+            continue
+        
+        # Poll exchange for order status
+        try:
+            if ex2_exchange == 'KUCOIN':
+                # Check KuCoin order status
+                ts = str(int(time.time() * 1000))
+                path = f'/api/v1/orders/{ex2_order_id}'
+                sig = kucoin_sig(KUCOIN_SECRET, ts, 'GET', path)
+                
+                headers = {
+                    'KC-API-KEY': KUCOIN_KEY,
+                    'KC-API-SIGN': sig,
+                    'KC-API-TIMESTAMP': ts,
+                    'KC-API-PASSPHRASE': KUCOIN_PASSPHRASE,
+                }
+                
+                resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
+                data = resp.json().get('data', {})
+                
+                status = data.get('status', '')
+                deal_size = float(data.get('dealSize', 0) or 0)
+                deal_funds = float(data.get('dealFunds', 0) or 0)
+                
+                if status == 'Done':
+                    update_limit_watch(trade_id, TRADING_PAIR, 'FILLED', 
+                                     qty_filled=deal_size, 
+                                     price_avg=deal_funds/deal_size if deal_size > 0 else 0,
+                                     fees=float(data.get('fee', 0) or 0))
+                    log(f"✅ Limit filled: {trade_id}")
+                elif status == 'Active' and deal_size > 0:
+                    update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=deal_size)
+                    
+            elif ex2_exchange == 'MEXC':
+                # Check MEXC order status
+                ts = str(int(time.time() * 1000))
+                params = f'symbol=MPCUSDT&orderId={ex2_order_id}&timestamp={ts}'
+                sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
+                
+                url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
+                headers = {'X-MEXC-APIKEY': MEXC_KEY}
+                
+                resp = requests.get(url, headers=headers, timeout=10)
+                data = resp.json()
+                
+                status = data.get('status', '')
+                qty_filled = float(data.get('quantity', 0) or 0)
+                amount_filled = float(data.get('amount', 0) or 0)
+                
+                if status == 'Filled':
+                    update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
+                                     qty_filled=qty_filled,
+                                     price_avg=amount_filled/qty_filled if qty_filled > 0 else 0,
+                                     fees=float(data.get('fees', 0) or 0))
+                    log(f"✅ Limit filled: {trade_id}")
+                elif status == 'PartiallyFilled' and qty_filled > 0:
+                    update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=qty_filled)
+                    
+        except Exception as e:
+            log(f"⚠️ Error checking order {ex2_order_id}: {e}")
+
 
 def main():
     log("=== AUTO-TRADE BOT STARTED ===")
     log("Strategy: Coin-Gewinn (MPC akkumulieren)")
     log("Principle: ONE TRADE AT A TIME")
+    log(f"Logging: Harmonized CSV per pair -> {TRADING_PAIR}_trades.csv")
     
     # Ensure logs directory exists
     os.makedirs('/home/openclaw/.openclaw/logs', exist_ok=True)
     
-    threshold = 0.5  # minimum spread %
+    # Thresholds
+    START_THRESHOLD = 1.0  # Enter trade when spread >= this %
+    STOP_THRESHOLD = 0.5   # Stop running when spread < this %
+    
+    # State machine
+    STATE_WAITING = 'WAITING'
+    STATE_RUNNING = 'RUNNING'
+    state = STATE_WAITING
     trade_in_progress = False
     last_trade_time = 0
+    last_limit_check = 0
+    
+    # Start INAKTIV - must be manually activated
+    log("=== BOT STARTET IM INAKTIV STATUS ===")
+    log("Um zu aktivieren: touch /home/openclaw/.openclaw/logs/arb_active.flag")
+    log("Um zu deaktivieren: rm /home/openclaw/.openclaw/logs/arb_active.flag")
     
     while True:
         prices = get_prices()
@@ -239,32 +420,60 @@ def main():
         spread_pct_km = (spread_km / k['ask']) * 100 if k['ask'] > 0 else 0
         
         # Determine volume (minimum for both exchanges)
-        # MEXC requires at least 1 USDT, so calculate MPC qty from that
-        vol_for_mexc = int((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 86  # +1 buffer
-        vol_for_kucoin = max(KUCOIN_MIN_MPC, vol_for_mexc)  # Use same or larger for KuCoin
+        vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 86
+        vol_for_kucoin = max(KUCOIN_MIN_MPC, vol_for_mexc)
         
         # Log every 30 seconds
         if int(time.time()) % 30 == 0:
             log(f"Prices: K=${k['bid']:.4f}/${k['ask']:.4f} | M=${m['bid']:.4f}/${m['ask']:.4f}")
             log(f"  M->K spread: {spread_pct_mk:.2f}% | K->M spread: {spread_pct_km:.2f}%")
         
-        # Trade BOTH directions when profitable!
-        # K->M: Buy MEXC (cheaper), Sell KuCoin (more expensive)
-        # M->K: Buy KuCoin (cheaper), Sell MEXC (more expensive)
-        # Either way, we profit!
+        # Check limit order fills every 10 seconds
+        if time.time() - last_limit_check > 10:
+            check_limit_order_fills()
+            last_limit_check = time.time()
         
-        if spread_km >= threshold and not trade_in_progress:
-            log(f"🚨 K->M OPPORTUNITY: {spread_km:.2f}%")
-            trade_in_progress = True
-            success = execute_trade_K_to_M(vol_for_kucoin, k['ask'], m['bid'])
-            last_trade_time = time.time()
-            trade_in_progress = False
-        elif spread_mk >= threshold and not trade_in_progress:
-            log(f"🚨 M->K OPPORTUNITY: {spread_mk:.2f}%")
-            trade_in_progress = True
-            success = execute_trade_M_to_K(vol_for_mexc, m['ask'], k['bid'])
-            last_trade_time = time.time()
-            trade_in_progress = False
+        # Trade BOTH directions when profitable!
+        # Check if active
+        active = is_active()
+        if not active:
+            state = STATE_WAITING
+            if int(time.time()) % 30 == 0:
+                log(f"INAKTIV - keine Trades")
+            time.sleep(1)
+            continue
+        
+        # Determine which spread direction is profitable
+        profitable_spread = max(spread_pct_km, spread_pct_mk)
+        
+        # State machine logic
+        if state == STATE_WAITING:
+            if profitable_spread >= START_THRESHOLD and not trade_in_progress:
+                log(f"🚨 ENTERING: spread={profitable_spread:.2f}% >= START_THRESHOLD={START_THRESHOLD}%")
+                state = STATE_RUNNING
+                trade_in_progress = True
+                
+                if spread_pct_km >= spread_pct_mk:
+                    success, trade_id = execute_trade_K_to_M(vol_for_kucoin, k['ask'], m['bid'])
+                else:
+                    success, trade_id = execute_trade_M_to_K(vol_for_mexc, m['ask'], k['bid'])
+                
+                last_trade_time = time.time()
+                trade_in_progress = False
+                
+        elif state == STATE_RUNNING:
+            if profitable_spread < STOP_THRESHOLD:
+                log(f"⏹ STOPPING: spread={profitable_spread:.2f}% < STOP_THRESHOLD={STOP_THRESHOLD}%")
+                state = STATE_WAITING
+            elif not trade_in_progress:
+                trade_in_progress = True
+                if spread_pct_km >= spread_pct_mk:
+                    success, trade_id = execute_trade_K_to_M(vol_for_kucoin, k['ask'], m['bid'])
+                else:
+                    success, trade_id = execute_trade_M_to_K(vol_for_mexc, m['ask'], k['bid'])
+                
+                last_trade_time = time.time()
+                trade_in_progress = False
         
         time.sleep(1)  # Check every second
 
