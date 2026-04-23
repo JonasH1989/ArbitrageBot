@@ -857,9 +857,9 @@ else:
                     if sym:
                         if sym in bals:
                             bal = bals[sym]
-                            st.metric("", f"{bal['available']:.2f} {sym}", f"Total: {bal['total']:.2f} {sym}")
+                            st.metric(" ", f"{bal['available']:.2f} {sym}", f"Total: {bal['total']:.2f} {sym}")
                         else:
-                            st.metric("", f"0.00 {sym}", f"Total: 0.00 {sym}")
+                            st.metric(" ", f"0.00 {sym}", f"Total: 0.00 {sym}")
             else:
                 st.caption("KuCoin API Keys nicht konfiguriert")
         
@@ -882,9 +882,9 @@ else:
                     if sym:
                         if sym in unique_balances:
                             bal = unique_balances[sym]
-                            st.metric("", f"{bal['available']:.2f} {sym}", f"Total: {bal['total']:.2f} {sym}")
+                            st.metric(" ", f"{bal['available']:.2f} {sym}", f"Total: {bal['total']:.2f} {sym}")
                         else:
-                            st.metric("", f"0.00 {sym}", f"Total: 0.00 {sym}")
+                            st.metric(" ", f"0.00 {sym}", f"Total: 0.00 {sym}")
             else:
                 st.caption("MEXC API Keys nicht konfiguriert")
         
