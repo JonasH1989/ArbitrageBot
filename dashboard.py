@@ -522,7 +522,7 @@ else:
         c1, c2, c3 = st.columns(3)
         
         with c1:
-            st.image("/app/static/kucoin_badge.png", width=24)
+            st.markdown("### KuCoin")
             st.metric("Bid", f"${k_bid:.6f}", f"Vol: {kucoin['bid_size']:.0f}")
             st.metric("Ask", f"${k_ask:.6f}", f"Vol: {kucoin['ask_size']:.0f}")
         
@@ -551,7 +551,7 @@ else:
                 st.metric("M→K Total", f"${profit_mk * vol_mk:.4f}")
         
         with c3:
-            st.image("/app/static/mexc_badge.png", width=24)
+            st.markdown("### MEXC")
             st.metric("Bid", f"${m_bid:.6f}", f"Vol: {mexc['bid_size']:.0f}")
             st.metric("Ask", f"${m_ask:.6f}", f"Vol: {mexc['ask_size']:.0f}")
         
