@@ -303,6 +303,7 @@ with st.sidebar:
     st.markdown("### 🔗 Exchanges")
     
     with st.expander("KuCoin", expanded=True):
+        st.image("/app/static/kucoin_icon.png", width=32)
         kucoin_key_val = config.get('kucoin', {}).get('api_key', '')
         kucoin_secret_val = config.get('kucoin', {}).get('api_secret', '')
         kucoin_pass_val = config.get('kucoin', {}).get('api_passphrase', '')
@@ -315,6 +316,7 @@ with st.sidebar:
             st.rerun()
     
     with st.expander("MEXC", expanded=True):
+        st.image("/app/static/mexc_icon.png", width=32)
         mexc_key_val = config.get('mexc', {}).get('api_key', '')
         mexc_secret_val = config.get('mexc', {}).get('api_secret', '')
         mexc_key = st.text_input("API Key", value=mexc_key_val, type="password", key="mexc_key_field")
