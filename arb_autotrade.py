@@ -434,7 +434,11 @@ def main():
     # Read enabled status from config
     config = load_config()
     pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
-    log(f"Pair {TRADING_PAIR} enabled: {pair_enabled}")
+    log(f"Pair {TRADING_PAIR} enabled in config: {pair_enabled}")
+    
+    # ALWAYS start inactive for safety - user must enable via dashboard
+    log("=== BOT STARTET IM INAKTIV STATUS (Safety First) ===")
+    pair_enabled = False
     
     while True:
         prices = get_prices()
