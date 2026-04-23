@@ -439,6 +439,7 @@ def main():
     # ALWAYS start inactive for safety - user must enable via dashboard
     log("=== BOT STARTET IM INAKTIV STATUS (Safety First) ===")
     pair_enabled = False
+    set_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
     
     while True:
         prices = get_prices()
