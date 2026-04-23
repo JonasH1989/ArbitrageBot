@@ -869,94 +869,7 @@ else:
             else:
                 st.caption("MEXC API Keys nicht konfiguriert")
         
-        # Log - Trade history
-        with st.expander("📜 Log", expanded=False):
-            trades = get_trades('MPC-USDT', limit=50)
-            
-            if trades:
-                rows = []
-                for t in reversed(trades):
-                    try:
-                        ex1_val = float(t.get('ex1_value_usdt', 0) or 0)
-                        ex2_val = float(t.get('ex2_value_usdt', 0) or 0)
-                        fees = float(t.get('ex1_fees', 0) or 0) + float(t.get('ex2_fees', 0) or 0)
-                        gross = ex2_val - ex1_val
-                        net = gross - fees
-                        direction = t.get('direction', '')
-                        status = t.get('limit_watch_status', 'UNKNOWN')
-                        
-                        ts = t.get('internal_ts', '')
-                        try:
-                            time_str = datetime.fromisoformat(ts).strftime('%H:%M:%S')
-                        except:
-                            time_str = ts[-8:] if len(ts) > 8 else ts
-                        
-                        rows.append({
-                            'time': time_str,
-                            'trade_id': t.get('trade_id', '')[-8:],
-                            'direction': 'K→M' if 'K->M' in direction else 'M→K',
-                            'strategy': t.get('strategy', current_strategy),
-                            'gross': gross,
-                            'fees': fees,
-                            'net': net,
-                            'status': status,
-                            'full_data': t
-                        })
-                    except:
-                        pass
-                
-                if rows:
-                    # Scrollable table
-                    st.markdown("""
-                    <style>
-                        .trade-table-scroll{max-height:300px;overflow-y:auto;border:1px solid #333;border-radius:4px;}
-                        .trade-table{width:100%;border-collapse:collapse;font-size:12px;}
-                        .trade-table th{position:sticky;top:0;background:#1a1a1a;color:#aaa;text-align:left;padding:6px 8px;border-bottom:1px solid #333;}
-                        .trade-table td{padding:6px 8px;border-bottom:1px solid #222;color:white;}
-                        .trade-table tr:hover{background:#222;}
-                    </style>
-                    """, unsafe_allow_html=True)
-                    
-                    table_html = '<div class="trade-table-scroll"><table class="trade-table"><thead><tr>'
-                    table_html += '<th>Zeit</th><th>ID</th><th>Dir</th><th>Strat</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Fees</th><th style="text-align:right;">Netto</th><th>Status</th><th></th>'
-                    table_html += '</tr></thead><tbody>'
-                    
-                    for i, r in enumerate(rows):
-                        gc = '#00ff00' if r['gross'] > 0 else '#ff4444'
-                        nc = '#00ff00' if r['net'] > 0 else '#ff4444'
-                        se = {'FILLED': '✅', 'PARTIAL': '⚠️', 'WATCHING': '⏳', 'CANCELLED': '❌', 'FAILED': '🔴'}.get(r['status'], '❓')
-                        
-                        table_html += f"<tr>"
-                        table_html += f"<td>{r['time']}</td>"
-                        table_html += f"<td style='font-family:monospace;'>{r['trade_id']}</td>"
-                        table_html += f"<td>{r['direction']}</td>"
-                        table_html += f"<td>{r['strategy']}</td>"
-                        table_html += f"<td style='text-align:right;color:{gc};'>${r['gross']:.4f}</td>"
-                        table_html += f"<td style='text-align:right;'>${r['fees']:.4f}</td>"
-                        table_html += f"<td style='text-align:right;color:{nc};font-weight:bold;'>${r['net']:.4f}</td>"
-                        table_html += f"<td>{se} {r['status']}</td>"
-                        table_html += f"<td><button onclick=\"document.getElementById('td{i}').style.display=document.getElementById('td{i}').style.display==='none'?'block':'none'\" style='background:#444;color:white;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;'>Details</button></td>" 
-                        table_html += f"</tr>"
-                        table_html += f"<tr><td colspan='9' style='padding:0;display:none;' id='td{i}'>"
-                        table_html += f"<div style='background:#111;padding:12px;margin:2px 0;border-radius:3px;'>"
-                        table_html += f"<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:11px;'>"
-                        table_html += f"<div><span style='color:#888;'>Ex1:</span> {r['full_data'].get('ex1_exchange','N/A')}</div>"
-                        table_html += f"<div><span style='color:#888;'>Order1:</span> <code>{r['full_data'].get('ex1_order_id','N/A')}</code></div>"
-                        table_html += f"<div><span style='color:#888;'>Qty:</span> {float(r['full_data'].get('ex1_qty_filled',0) or 0):.4f}</div>"
-                        table_html += f"<div><span style='color:#888;'>Buy Price:</span> ${float(r['full_data'].get('ex1_price_avg',0) or 0):.4f}</div>"
-                        table_html += f"<div><span style='color:#888;'>Value:</span> ${float(r['full_data'].get('ex1_value_usdt',0) or 0):.4f}</div>"
-                        table_html += f"<div><span style='color:#888;'>Fees1:</span> ${float(r['full_data'].get('ex1_fees',0) or 0):.4f}</div>"
-                        table_html += f"<div><span style='color:#888;'>Ex2:</span> {r['full_data'].get('ex2_exchange','N/A')}</div>"
-                        table_html += f"<div><span style='color:#888;'>Order2:</span> <code>{r['full_data'].get('ex2_order_id','N/A')}</code></div>"
-                        table_html += f"<div><span style='color:#888;'>Sell Price:</span> ${float(r['full_data'].get('ex2_price_avg',0) or 0):.4f}</div>"
-                        table_html += f"</div></div></td></tr>"
-                    
-                    table_html += '</tbody></table></div>'
-                    st.markdown(table_html, unsafe_allow_html=True)
-                else:
-                    st.info("Keine Trades")
-            else:
-                st.info("Keine Trades")
+
         
         if trade_possible_km or trade_possible_mk:
             # Determine best direction based on strategy
@@ -1061,6 +974,95 @@ else:
     else:
         st.error("Daten nicht verfuegbar")
     
+# Trade Log - Always Visible
+with st.expander("📜 Log", expanded=False):
+    trades = get_trades('MPC-USDT', limit=50)
+    
+    if trades:
+        rows = []
+        for t in reversed(trades):
+            try:
+                ex1_val = float(t.get('ex1_value_usdt', 0) or 0)
+                ex2_val = float(t.get('ex2_value_usdt', 0) or 0)
+                fees = float(t.get('ex1_fees', 0) or 0) + float(t.get('ex2_fees', 0) or 0)
+                gross = ex2_val - ex1_val
+                net = gross - fees
+                direction = t.get('direction', '')
+                status = t.get('limit_watch_status', 'UNKNOWN')
+                
+                ts = t.get('internal_ts', '')
+                try:
+                    time_str = datetime.fromisoformat(ts).strftime('%H:%M:%S')
+                except:
+                    time_str = ts[-8:] if len(ts) > 8 else ts
+                
+                rows.append({
+                    'time': time_str,
+                    'trade_id': t.get('trade_id', '')[-8:],
+                    'direction': 'K→M' if 'K->M' in direction else 'M→K',
+                    'strategy': t.get('strategy', 'usdt'),
+                    'gross': gross,
+                    'fees': fees,
+                    'net': net,
+                    'status': status,
+                    'full_data': t
+                })
+            except:
+                pass
+        
+        if rows:
+            st.markdown("""
+            <style>
+                .trade-table-scroll{max-height:300px;overflow-y:auto;border:1px solid #333;border-radius:4px;}
+                .trade-table{width:100%;border-collapse:collapse;font-size:12px;}
+                .trade-table th{position:sticky;top:0;background:#1a1a1a;color:#aaa;text-align:left;padding:6px 8px;border-bottom:1px solid #333;}
+                .trade-table td{padding:6px 8px;border-bottom:1px solid #222;color:white;}
+                .trade-table tr:hover{background:#222;}
+            </style>
+            """, unsafe_allow_html=True)
+            
+            table_html = '<div class="trade-table-scroll"><table class="trade-table"><thead><tr>'
+            table_html += '<th>Zeit</th><th>ID</th><th>Dir</th><th>Strat</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Fees</th><th style="text-align:right;">Netto</th><th>Status</th><th></th>'
+            table_html += '</tr></thead><tbody>'
+            
+            for i, r in enumerate(rows):
+                gc = '#00ff00' if r['gross'] > 0 else '#ff4444'
+                nc = '#00ff00' if r['net'] > 0 else '#ff4444'
+                se = {'FILLED': '✅', 'PARTIAL': '⚠️', 'WATCHING': '⏳', 'CANCELLED': '❌', 'FAILED': '🔴'}.get(r['status'], '❓')
+                
+                table_html += f"<tr>"
+                table_html += f"<td>{r['time']}</td>"
+                table_html += f"<td style='font-family:monospace;'>{r['trade_id']}</td>"
+                table_html += f"<td>{r['direction']}</td>"
+                table_html += f"<td>{r['strategy']}</td>"
+                table_html += f"<td style='text-align:right;color:{gc};'>${r['gross']:.4f}</td>"
+                table_html += f"<td style='text-align:right;'>${r['fees']:.4f}</td>"
+                table_html += f"<td style='text-align:right;color:{nc};font-weight:bold;'>${r['net']:.4f}</td>"
+                table_html += f"<td>{se} {r['status']}</td>"
+                table_html += f"<td><button onclick=\"document.getElementById('td{i}').style.display=document.getElementById('td{i}').style.display==='none'?'block':'none'\" style='background:#444;color:white;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;'>Details</button></td>"
+                table_html += f"</tr>"
+                table_html += f"<tr><td colspan='9' style='padding:0;display:none;' id='td{i}'>"
+                table_html += f"<div style='background:#111;padding:12px;margin:2px 0;border-radius:3px;'>"
+                table_html += f"<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:11px;'>"
+                table_html += f"<div><span style='color:#888;'>Ex1:</span> {r['full_data'].get('ex1_exchange','N/A')}</div>"
+                table_html += f"<div><span style='color:#888;'>Order1:</span> <code>{r['full_data'].get('ex1_order_id','N/A')}</code></div>"
+                table_html += f"<div><span style='color:#888;'>Qty:</span> {float(r['full_data'].get('ex1_qty_filled',0) or 0):.4f}</div>"
+                table_html += f"<div><span style='color:#888;'>Buy Price:</span> ${float(r['full_data'].get('ex1_price_avg',0) or 0):.4f}</div>"
+                table_html += f"<div><span style='color:#888;'>Value:</span> ${float(r['full_data'].get('ex1_value_usdt',0) or 0):.4f}</div>"
+                table_html += f"<div><span style='color:#888;'>Fees1:</span> ${float(r['full_data'].get('ex1_fees',0) or 0):.4f}</div>"
+                table_html += f"<div><span style='color:#888;'>Ex2:</span> {r['full_data'].get('ex2_exchange','N/A')}</div>"
+                table_html += f"<div><span style='color:#888;'>Order2:</span> <code>{r['full_data'].get('ex2_order_id','N/A')}</code></div>"
+                table_html += f"<div><span style='color:#888;'>Sell Price:</span> ${float(r['full_data'].get('ex2_price_avg',0) or 0):.4f}</div>"
+                table_html += f"</div></div></td></tr>"
+            
+            table_html += '</tbody></table></div>'
+            st.markdown(table_html, unsafe_allow_html=True)
+        else:
+            st.info("Keine Trades")
+    else:
+        st.info("Keine Trades")
+
+
 # Auto refresh
 if st.session_state.selected_pair:
     import time
