@@ -755,7 +755,6 @@ else:
             spread_mk_dollar = profit_mk
             
             # Create orderbook display
-            st.markdown("### 📊 Orderbook Vergleich")
             
             # KUCOIN → MEXC Direction (Buy KuCoin, Sell MEXC)
             st.markdown("#### 🥇 KuCoin ← → 🥈 MEXC  (K→M Direction)")
