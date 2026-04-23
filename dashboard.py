@@ -1037,88 +1037,107 @@ else:
                     else:
                         st.info("No trades")
                 
-                # Trade history table
+                # Trade history table - scrollable
                 trades = get_trades(log_pair, limit=100)
                 
                 if trades:
-                    df = pd.DataFrame(trades)
-                    df = df.iloc[::-1]  # Newest first
-                    
-                    # Calculate derived fields
-                    def calc_profit(row):
+                    # Build simplified table
+                    rows = []
+                    for t in reversed(trades):
                         try:
-                            ex1 = float(row.get('ex1_value_usdt', 0) or 0)
-                            ex2 = float(row.get('ex2_value_usdt', 0) or 0)
-                            fees = float(row.get('ex1_fees', 0) or 0) + float(row.get('ex2_fees', 0) or 0)
-                            direction = row.get('direction', '')
-                            if 'K->M' in direction:
-                                return (ex2 - ex1) - fees
-                            else:
-                                return (ex2 - ex1) - fees
+                            ex1_val = float(t.get('ex1_value_usdt', 0) or 0)
+                            ex2_val = float(t.get('ex2_value_usdt', 0) or 0)
+                            fees = float(t.get('ex1_fees', 0) or 0) + float(t.get('ex2_fees', 0) or 0)
+                            gross = ex2_val - ex1_val
+                            net = gross - fees
+                            direction = t.get('direction', '')
+                            status = t.get('limit_watch_status', 'UNKNOWN')
+                            
+                            ts = t.get('internal_ts', '')
+                            try:
+                                time_str = datetime.fromisoformat(ts).strftime('%H:%M:%S')
+                            except:
+                                time_str = ts[-8:] if len(ts) > 8 else ts
+                            
+                            rows.append({
+                                'time': time_str,
+                                'trade_id': t.get('trade_id', '')[-8:],
+                                'direction': 'K→M' if 'K->M' in direction else 'M→K',
+                                'strategy': t.get('strategy', current_strategy),
+                                'gross': gross,
+                                'fees': fees,
+                                'net': net,
+                                'status': status,
+                                'full_data': t  # Store full data for details
+                            })
                         except:
-                            return 0
+                            pass
                     
-                    def calc_gross(row):
-                        try:
-                            ex1 = float(row.get('ex1_value_usdt', 0) or 0)
-                            ex2 = float(row.get('ex2_value_usdt', 0) or 0)
-                            direction = row.get('direction', '')
-                            if 'K->M' in direction:
-                                return ex2 - ex1
-                            else:
-                                return ex2 - ex1
-                        except:
-                            return 0
-                    
-                    def calc_fees(row):
-                        try:
-                            return float(row.get('ex1_fees', 0) or 0) + float(row.get('ex2_fees', 0) or 0)
-                        except:
-                            return 0
-                    
-                    def short_time(ts):
-                        try:
-                            return datetime.fromisoformat(ts).strftime('%H:%M:%S')
-                        except:
-                            return ts
-                    
-                    def direction_icon(d):
-                        return 'K→M' if 'K->M' in str(d) else 'M→K'
-                    
-                    def status_icon(s):
-                        icons = {'FILLED': '✅', 'PARTIAL': '⚠️', 'WATCHING': '⏳', 'CANCELLED': '❌', 'FAILED': '🔴'}
-                        return icons.get(s, '❓')
-
-                    df['time'] = df['internal_ts'].apply(short_time)
-                    df['id'] = df['trade_id'].str[-10:]
-                    df['dir'] = df['direction'].apply(direction_icon)
-                    df['qty'] = df.apply(lambda r: float(r.get('ex1_qty_filled', 0) or 0), axis=1)
-                    df['buy_ex'] = df['ex1_exchange'].str[:1]
-                    df['buy_price'] = df['ex1_price_avg'].apply(lambda x: f"${float(x or 0):.4f}")
-                    df['sell_price'] = df['ex2_price_avg'].apply(lambda x: f"${float(x or 0):.4f}")
-                    df['gross'] = df.apply(calc_gross, axis=1).apply(lambda x: f"${x:.4f}")
-                    df['fees'] = df.apply(calc_fees, axis=1).apply(lambda x: f"${x:.4f}")
-                    df['net'] = df.apply(calc_profit, axis=1).apply(lambda x: f"${x:.4f}")
-                    df['status'] = df['limit_watch_status'].apply(status_icon) + ' ' + df['limit_watch_status'].astype(str)
-                    
-                    # Build display dataframe
-                    display_df = df[['time', 'id', 'dir', 'qty', 'buy_ex', 'buy_price', 'sell_price', 'gross', 'fees', 'net', 'status']].copy()
-                    display_df.columns = ['Time', 'ID', 'Dir', 'Qty', 'Buy', 'Buy $', 'Sell $', 'Gross', 'Fees', 'Net', 'Status']
-                    
-                    # Color Net column
-                    def net_color(val):
-                        try:
-                            v = float(str(val).replace('$', ''))
-                            if v > 0: return '🟢'
-                            elif v < 0: return '🔴'
-                            return '➖'
-                        except:
-                            return '➖'
-                    
-                    display_df['P/L'] = df.apply(calc_profit, axis=1).apply(net_color)
-                    display_df = display_df[['Time', 'ID', 'Dir', 'Qty', 'Buy', 'Buy $', 'Sell $', 'Gross', 'Fees', 'Net', 'P/L', 'Status']]
-                    
-                    st.dataframe(display_df, use_container_width=True, hide_index=True)
+                    if rows:
+                        # Show table with custom HTML for scrolling
+                        table_html = """
+                        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #333; border-radius: 4px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead style="position: sticky; top: 0; background: #1a1a1a; z-index: 1;">
+                                <tr style="color: #aaa; text-align: left;">
+                                    <th style="padding: 8px; border-bottom: 1px solid #333;">Zeit</th>
+                                    <th style="padding: 8px; border-bottom: 1px solid #333;">ID</th>
+                                    <th style="padding: 8px; border-bottom: 1px solid #333;">Richtung</th>
+                                    <th style="padding: 8px; border-bottom: 1px solid #333;">Strategie</th>
+                                    <th style="padding: 8px; border-bottom: 1px solid #333; text-align: right;">Brutto</th>
+                                    <th style="padding: 8px; border-bottom: 1px solid #333; text-align: right;">Gebühren</th>
+                                    <th style="padding: 8px; border-bottom: 1px solid #333; text-align: right;">Netto</th>
+                                    <th style="padding: 8px; border-bottom: 1px solid #333;">Status</th>
+                                    <th style="padding: 8px; border-bottom: 1px solid #333;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                        """
+                        
+                        for i, r in enumerate(rows):
+                            gross_color = '#00ff00' if r['gross'] > 0 else '#ff4444'
+                            net_color = '#00ff00' if r['net'] > 0 else '#ff4444'
+                            status_emoji = {'FILLED': '✅', 'PARTIAL': '⚠️', 'WATCHING': '⏳', 'CANCELLED': '❌', 'FAILED': '🔴'}.get(r['status'], '❓')
+                            
+                            table_html += f"""
+                                <tr style="color: white; border-bottom: 1px solid #222;">
+                                    <td style="padding: 8px;">{r['time']}</td>
+                                    <td style="padding: 8px; font-family: monospace;">{r['trade_id']}</td>
+                                    <td style="padding: 8px;">{r['direction']}</td>
+                                    <td style="padding: 8px;">{r['strategy']}</td>
+                                    <td style="padding: 8px; text-align: right; color: {gross_color};">${r['gross']:.4f}</td>
+                                    <td style="padding: 8px; text-align: right;">${r['fees']:.4f}</td>
+                                    <td style="padding: 8px; text-align: right; color: {net_color}; font-weight: bold;">${r['net']:.4f}</td>
+                                    <td style="padding: 8px;">{status_emoji} {r['status']}</td>
+                                    <td style="padding: 8px;">
+                                        <button onclick="document.getElementById('details_{i}').style.display=document.getElementById('details_{i}').style.display==='none'?'block':'none'" 
+                                                style="background: #444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">Details</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="9" style="padding: 0; display: none;" id="details_{i}">
+                                        <div style="background: #111; padding: 16px; margin: 4px 0; border-radius: 4px;">
+                                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                                                <div><span style="color: #888;">Exchange 1:</span> {r['full_data'].get('ex1_exchange', 'N/A')}</div>
+                                                <div><span style="color: #888;">Order ID 1:</span> <code>{r['full_data'].get('ex1_order_id', 'N/A')}</code></div>
+                                                <div><span style="color: #888;">Qty Filled:</span> {float(r['full_data'].get('ex1_qty_filled', 0) or 0):.4f}</div>
+                                                <div><span style="color: #888;">Buy Price:</span> ${float(r['full_data'].get('ex1_price_avg', 0) or 0):.4f}</div>
+                                                <div><span style="color: #888;">Value USDT:</span> ${float(r['full_data'].get('ex1_value_usdt', 0) or 0):.4f}</div>
+                                                <div><span style="color: #888;">Fees 1:</span> ${float(r['full_data'].get('ex1_fees', 0) or 0):.4f}</div>
+                                                <div><span style="color: #888;">Exchange 2:</span> {r['full_data'].get('ex2_exchange', 'N/A')}</div>
+                                                <div><span style="color: #888;">Order ID 2:</span> <code>{r['full_data'].get('ex2_order_id', 'N/A')}</code></div>
+                                                <div><span style="color: #888;">Sell Price:</span> ${float(r['full_data'].get('ex2_price_avg', 0) or 0):.4f}</div>
+                                                <div><span style="color: #888;">Value USDT:</span> ${float(r['full_data'].get('ex2_value_usdt', 0) or 0):.4f}</div>
+                                                <div><span style="color: #888;">Fees 2:</span> ${float(r['full_data'].get('ex2_fees', 0) or 0):.4f}</div>
+                                                <div><span style="color: #888;">Limit Status:</span> {r['full_data'].get('limit_watch_status', 'N/A')}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            """
+                        
+                        table_html += "</tbody></table></div>"
+                        st.markdown(table_html, unsafe_allow_html=True)
                 else:
                     st.info("⏳ No trades yet")
             
