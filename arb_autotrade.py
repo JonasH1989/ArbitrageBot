@@ -34,12 +34,17 @@ CONFIG_FILE = '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot/config/c
 ACTIVE_FLAG_FILE = '/home/openclaw/.openclaw/logs/arb_active.flag'
 
 # Exchange API credentials
-KUCOIN_KEY = "69e6445dd56900000160af01"
-KUCOIN_SECRET = "787903d0-bb7f-4d84-b598-c07ac71180ef"
-KUCOIN_PASSPHRASE = "YtuyE5uM6hE8HC6"
-
-MEXC_KEY = "mx0vglqkp7DNxtrVO6"
-MEXC_SECRET = "880bf82a7761449fa24cc508c6e577fa"
+# Load API keys from config.yaml - use same path as settings_sync (dashboard)
+from pathlib import Path
+_config_dir = Path('/app') if Path('/app').exists() else Path(__file__).parent / 'config'
+_config_path = _config_dir / 'config.yaml'
+with open(_config_path, 'r') as _f:
+    _cfg = yaml.safe_load(_f)
+KUCOIN_KEY = _cfg.get('kucoin', {}).get('api_key', '')
+KUCOIN_SECRET = _cfg.get('kucoin', {}).get('api_secret', '')
+KUCOIN_PASSPHRASE = _cfg.get('kucoin', {}).get('api_passphrase', '')
+MEXC_KEY = _cfg.get('mexc', {}).get('api_key', '')
+MEXC_SECRET = _cfg.get('mexc', {}).get('api_secret', '')
 
 MEXC_MIN_USDT = 1.0
 KUCOIN_MIN_MPC = 10
