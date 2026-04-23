@@ -793,8 +793,11 @@ else:
                 st.write(f"**MEXC:** Maker {(m_maker*100):.2f}% | Taker {(m_taker*100):.2f}%")
                 st.write(f"**KuCoin:** Maker {(k_maker*100):.2f}% | Taker {(k_taker*100):.2f}%")
             with fee_col2:
-                st.write(f"**K→M:** {(fee_pct_km_taker):.3f}% ({(fee_pct_km_maker):.3f}%)")
-                st.write(f"**M→K:** {(fee_pct_mk_taker):.3f}% ({(fee_pct_mk_maker):.3f}%)")
+                buffer_pct = min_profit_buffer * 100
+                st.write(f"**Puffer:** {buffer_pct:.1f}%")
+            
+            st.write(f"**K→M:** Fee {(fee_pct_km_taker):.3f}% + Puffer {buffer_pct:.1f}% = **{(fee_pct_km_taker + buffer_pct):.3f}%** (Maker: {(fee_pct_km_maker + buffer_pct):.3f}%)")
+            st.write(f"**M→K:** Fee {(fee_pct_mk_taker):.3f}% + Puffer {buffer_pct:.1f}% = **{(fee_pct_mk_taker + buffer_pct):.3f}%** (Maker: {(fee_pct_mk_maker + buffer_pct):.3f}%)")
             
             if threshold_start < max(recommended_min_km, recommended_min_mk):
                 st.error(f"⚠️ **WARNUNG:** Threshold {threshold_start}% ist unter dem empfohlenen Minimum! "
