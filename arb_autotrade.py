@@ -385,12 +385,14 @@ def main():
     # Ensure logs directory exists
     os.makedirs('/home/openclaw/.openclaw/logs', exist_ok=True)
     
-    # Thresholds - load from config via settings_sync
+    # Thresholds - load from config directly (avoiding settings_sync import issues)
     try:
-        sys.path.insert(0, str(Path(__file__).parent))
-        from config.settings_sync import get_setting
-        START_THRESHOLD = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_start', 1.0)
-        STOP_THRESHOLD = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_stop', 0.5)
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config', 'config.yaml')
+        with open(config_path, 'r') as f:
+            cfg = yaml.safe_load(f)
+        pair_cfg = cfg.get('trading', {}).get('pairs', {}).get(TRADING_PAIR, {})
+        START_THRESHOLD = pair_cfg.get('threshold_start', 1.0)
+        STOP_THRESHOLD = pair_cfg.get('threshold_stop', 0.5)
         log(f"Thresholds geladen: start={START_THRESHOLD}%, stop={STOP_THRESHOLD}%")
     except Exception as e:
         log(f"Konnte thresholds nicht aus config laden: {e}, verwende defaults")
