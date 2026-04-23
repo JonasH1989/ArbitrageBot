@@ -629,7 +629,7 @@ else:
                         pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                         bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                         color = "#00c853" if pct >= threshold_start else ("#ffc107" if pct >= 0 else "#f44336")
-                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {color}; font-weight: bold;'>${k_bid_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{k_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #00c853; font-weight: bold;'>${k_bid_p:.5f}</span> <span style='color: #00c853;'>|</span> <span style='color: #00c853;'>{k_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
                 
             else:
                 st.info("Orderbook Daten nicht vollständig verfügbar")
