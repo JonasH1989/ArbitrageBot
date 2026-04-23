@@ -844,7 +844,7 @@ else:
                         coins_profit = (revenue / k_bid) - (cost / m_ask)
                         st.metric("💵 NETTO-GEWINN", f"{coins_profit:.2f} MPC", delta=f"+{coins_profit:.2f}")
         else:
-            st.warning("⚠️ Markt effizient - kein profitabler Spread")
+            pass  # No profitable spread
         
         # Show both directions for reference
         # Alert - only if threshold is met
