@@ -7,15 +7,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy bot files
-COPY arbitrage_bot.py .
-COPY arbitrage_multi.py .
+# Copy bot
+COPY arb_autotrade.py .
+COPY trade_logger.py .
 
-# Copy config directory
-COPY config/ ./config/
+# DO NOT copy config/ - API keys come from mounted volume
+RUN mkdir -p /app/config
 
-# Create directories
-RUN mkdir -p logs
-
-# Run multi-pair bot
-CMD ["python", "arbitrage_multi.py"]
+# Run bot (logs to mounted volume)
+CMD ["python3", "arb_autotrade.py"]
