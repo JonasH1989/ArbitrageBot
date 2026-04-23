@@ -16,6 +16,9 @@ COPY config/settings_sync.py .
 # Copy trade logger
 COPY trade_logger.py .
 
+# Copy static assets (logos)
+COPY static/ ./static/
+
 # DO NOT copy config/ - API keys come from mounted volume
 # Create empty config directory that will be populated at runtime
 RUN mkdir -p /app/config
