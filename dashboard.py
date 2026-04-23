@@ -453,27 +453,36 @@ with st.sidebar:
     # Sound playback
     vol = volume
     
-    if st.button("▶️ Test Sound"):
-        import time
-        # Unique timestamp to force re-render of components.html
-        ts = int(time.time() * 1000000)
-        sound_html = f"""
-        <script>
-            try {{
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                for (let i = 0; i < 3; i++) {{
-                    setTimeout(() => {{
-                        const o = ctx.createOscillator(), g = ctx.createGain();
-                        o.connect(g); g.connect(ctx.destination);
-                        o.frequency.value = 880; o.type = 'sine'; g.gain.value = {vol};
-                        o.start(); o.stop(ctx.currentTime + 0.1);
-                    }}, i * 200);
-                }}
-            }} catch(e) {{}}
-        </script>
-        <!-- {ts} -->
-        """
-        components.html(sound_html, height=0, width=0)
+    # Sound selector
+    sound_options = {
+        "🔔 Notification": "notification",
+        "💰 Bis 3%": "bis3",
+        "🚨 Ab 10%": "ab10",
+        "💵 Kaching (Trade)": "kaching"
+    }
+    selected_sound = st.selectbox("🔊 Sound auswaehlen", 
+                                   options=list(sound_options.keys()),
+                                   index=0, key="sound_select")
+    sound_key = sound_options[selected_sound]
+    
+    if st.button("▶️ Sound testen"):
+        import base64
+        sound_files = {
+            'notification': '/app/static/notification.mp3' if sound_key == 'notification' else None,
+            'bis3': '/app/static/bis3prozent.mp3',
+            'ab10': '/app/static/ab10prozent.mp3',
+            'kaching': '/app/static/kaching.mp3'
+        }
+        sound_file = sound_files.get(sound_key)
+        if sound_file:
+            try:
+                with open(sound_file, 'rb') as f:
+                    audio_bytes = f.read()
+                b64 = base64.b64encode(audio_bytes).decode()
+                audio_html = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}" />'
+                components.html(audio_html, height=0, width=0)
+            except Exception as e:
+                st.error(f"Sound fehler: {e}")
     
     st.divider()
     
