@@ -880,11 +880,11 @@ else:
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    # Spread Gap
+                    # Spread Gap - colored
+                    mk_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_mk >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_mk > 0 else "rgba(244,67,54,0.2)")
+                    mk_spread_color = "#00c853" if spread_pct_mk >= threshold_start else ("#ffc107" if spread_pct_mk > 0 else "#f44336")
                     st.markdown("---")
-                    mk_active = mk_meets_threshold
-                    mk_color = "🟢" if mk_active else "🟡" if spread_pct_mk > 0 else "🔴"
-                    st.markdown(f"**{mk_color} Spread: {spread_pct_mk:+.3f}% | ${profit_mk:+.6f}**")
+                    st.markdown(f"""<div style="background-color: {mk_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {mk_spread_color};">Spread: {spread_pct_mk:+.3f}%</div>""", unsafe_allow_html=True)
                     st.markdown("---")
                     
                     # SELL side (KuCoin - bottom)
