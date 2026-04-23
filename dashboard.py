@@ -522,7 +522,7 @@ else:
         c1, c2, c3 = st.columns(3)
         
         with c1:
-            st.success("🥇 KuCoin")
+            st.image("/app/static/kucoin_badge.png", width=24)
             st.metric("Bid", f"${k_bid:.6f}", f"Vol: {kucoin['bid_size']:.0f}")
             st.metric("Ask", f"${k_ask:.6f}", f"Vol: {kucoin['ask_size']:.0f}")
         
@@ -551,7 +551,7 @@ else:
                 st.metric("M→K Total", f"${profit_mk * vol_mk:.4f}")
         
         with c3:
-            st.success("🥈 MEXC")
+            st.image("/app/static/mexc_badge.png", width=24)
             st.metric("Bid", f"${m_bid:.6f}", f"Vol: {mexc['bid_size']:.0f}")
             st.metric("Ask", f"${m_ask:.6f}", f"Vol: {mexc['ask_size']:.0f}")
         
@@ -667,7 +667,7 @@ else:
                     available_usdt = k_usdt  # From wallet
                     max_coins_by_usdt = available_usdt / k_ask if k_ask > 0 else 0
                     max_coins = min(max_coins_by_usdt, vol_km)
-                    st.metric("Exchange", "🥇 KuCoin")
+                    st.metric("Exchange", "KuCoin")
                     st.metric("Preis (Ask)", f"${k_ask:.6f}")
                     st.metric("Verfügbar USDT", f"${available_usdt:.2f}")
                     st.metric("Kaufbar (max)", f"{max_coins:.0f} MPC")
@@ -677,12 +677,12 @@ else:
                     max_coins_by_usdt = available_usdt / m_ask if m_ask > 0 else 0
                     max_coins = min(max_coins_by_usdt, vol_mk)
                     if available_usdt > 0:
-                        st.metric("Exchange", "🥈 MEXC")
+                        st.metric("Exchange", "MEXC")
                         st.metric("Preis (Ask)", f"${m_ask:.6f}")
                         st.metric("Verfügbar USDT", f"${available_usdt:.2f}")
                         st.metric("Kaufbar (max)", f"{max_coins:.0f} MPC")
                     else:
-                        st.metric("⚠️ Exchange", "🥈 MEXC")
+                        st.metric("Exchange", "⚠️ MEXC")
                         st.metric("Preis (Ask)", f"${m_ask:.6f}")
                         st.metric("Verfügbar USDT", f"${available_usdt:.2f}")
                         st.error("KEINE USDT!")
@@ -690,12 +690,12 @@ else:
             with col_sell:
                 st.markdown("### 📤 VERKAUFEN")
                 if show_direction == "K→M":
-                    st.metric("Exchange", "🥈 MEXC")
+                    st.metric("Exchange", "MEXC")
                     st.metric("Preis (Bid)", f"${m_bid:.6f}")
                     st.metric("Max verkaufbar", f"{max_coins:.0f} MPC")
                     st.metric("Ertrag (USD)", f"${m_bid * max_coins:.4f}")
                 else:
-                    st.metric("Exchange", "🥇 KuCoin")
+                    st.metric("Exchange", "KuCoin")
                     st.metric("Preis (Bid)", f"${k_bid:.6f}")
                     st.metric("Max verkaufbar", f"{max_coins:.0f} MPC")
                     st.metric("Ertrag (USD)", f"${k_bid * max_coins:.4f}")
@@ -1005,7 +1005,7 @@ else:
     
     # KuCoin Wallet
     with col1:
-        st.image("/app/static/kucoin.jpg", width=120)
+        st.image("/app/static/kucoin_badge.png", width=80)
         if kucoin_wallet.get('ok'):
             bals = kucoin_wallet['balances']
             for sym in [base_coin, quote_coin]:
@@ -1020,7 +1020,7 @@ else:
     
     # MEXC Wallet
     with col2:
-        st.image("/app/static/mexc.jpg", width=120)
+        st.image("/app/static/mexc_badge.png", width=80)
         if mexc_wallet.get('ok'):
             bals = mexc_wallet['balances']
             # Deduplicate by summing totals per coin
