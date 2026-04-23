@@ -546,7 +546,7 @@ if st.session_state.selected_pair is None:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                if st.button("📊 Anzeigen", key=f"view_home_{i}_{pair_name}"):
+                if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
                     st.session_state.selected_pair = pair_name
                     st.rerun()
             
