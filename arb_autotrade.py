@@ -472,10 +472,10 @@ def main():
             last_limit_check = time.time()
         
         # Trade BOTH directions when profitable!
-        # Check if active
-        config = load_config()
-        active = get_setting(f"trading.pairs.{TRADING_PAIR}.enabled", False)
-        if not active:
+        # Re-read config to pick up dashboard changes
+        pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
+        
+        if not pair_enabled:
             state = STATE_WAITING
             if int(time.time()) % 30 == 0:
                 log(f"INAKTIV - keine Trades")
