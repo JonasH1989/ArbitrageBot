@@ -430,33 +430,23 @@ def main():
     # Even if config says enabled=true, we ignore that on restart
     log("=== BOT STARTET IM INAKTIV STATUS (always) ===")
     
-    # Check config for enabled setting (from Dashboard)
+    # ALWAYS START INAKTIV - safety first!
+    log("=== BOT STARTET IM INAKTIV STATUS (always) ===")
+    
+    # Check config but don't auto-start
     if get_pair_settings:
         try:
             pair_cfg = get_pair_settings(TRADING_PAIR)
             config_enabled = pair_cfg.get('enabled', False)
             log(f"Config enabled: {config_enabled}")
         except Exception as e:
-            log(f"Could not load config: {e}, using flag file")
-            config_enabled = True
-    else:
-        config_enabled = True
-    except:
-        config_enabled = True  # Default to enabled if config fails
+            log(f"Could not load config: {e}")
     
-    # Check if user manually activated via flag file
+    # Always start inactive - user must manually activate
     was_flagged = os.path.exists(ACTIVE_FLAG_FILE)
-    
-    # Start ACTIVE only if:
-    # 1. Flag file exists AND config says enabled=True
-    # 2. (Flag file is like an "emergency override")
-    if was_flagged and config_enabled:
-        log("Hinweis: Flag file erkannt + config enabled - bot stays ACTIVE")
-    elif was_flagged and not config_enabled:
-        log("Hinweis: Flag file vorhanden aber config disabled - bot stays INACTIVE")
+    if was_flagged:
+        log("Hinweis: Flag file vorhanden - wird IGNORIERT bei Start (Safety First)")
         os.remove(ACTIVE_FLAG_FILE)
-    else:
-        log(f"Flag file nicht vorhanden - bot starts INAKTIV")
     
     log("Um zu aktivieren: touch /home/openclaw/.openclaw/logs/arb_active.flag")
     log("Um zu deaktivieren: rm /home/openclaw/.openclaw/logs/arb_active.flag")
