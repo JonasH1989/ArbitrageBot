@@ -515,18 +515,27 @@ if st.session_state.selected_pair is None:
                 kucoin = get_kucoin_orderbook(pair_name)
                 mexc = get_mexc_orderbook(pair_name)
                 
-                # Calculate
-                is_profitable = False
-                if kucoin.get('ok') and mexc.get('ok'):
-                    profit_km = mexc['bid'] - kucoin['ask']
-                    profit_mk = kucoin['bid'] - mexc['ask']
-                    best = max(profit_km, profit_mk)
-                    is_profitable = best > 0
-                
+                # Status
                 enabled = pair_data.get('enabled', True)
-                tile_emoji = "🟢" if enabled else "🔴"
+                status_color = "🟢" if enabled else "🔴"
                 
-                st.subheader(f"{tile_emoji} {pair_name}")
+                st.markdown(f"### {status_color} {pair_name}")
+                
+                # Get trade stats for this pair
+                trades = get_trades(pair_name, limit=1000)
+                total_trades = len(trades)
+                total_profit = sum(
+                    (float(t.get('ex2_value_usdt', 0) or 0) - float(t.get('ex1_value_usdt', 0) or 0) - 
+                     float(t.get('ex1_fees', 0) or 0) - float(t.get('ex2_fees', 0) or 0))
+                    for t in trades
+                )
+                
+                # Summary inside tile
+                s1, s2 = st.columns(2)
+                with s1:
+                    st.caption(f"Trades: {total_trades}")
+                with s2:
+                    st.caption(f"Gewinn: ${total_profit:.4f}")
                 
                 # Prices preview
                 if kucoin.get('ok') and mexc.get('ok'):
