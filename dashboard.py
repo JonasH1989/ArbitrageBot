@@ -497,7 +497,7 @@ with st.sidebar:
 # ============================================================================
 
 if st.session_state.selected_pair is None:
-    st.subheader("📋 Paare")
+    st.subheader("📋 Home")
     
     if not pairs_config:
         st.info("Fuege oben ein Paar hinzu!")
