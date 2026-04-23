@@ -9,12 +9,12 @@ services:
     container_name: mpc-arbitrage-bot
     restart: unless-stopped
     volumes:
-      - ./config:/app/config
+      - arb-config:/app/config
       - ./logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=Europe/Berlin
-    command: ["python", "arbitrage_multi.py"]
+    command: ["python", "arb_autotrade.py"]
 
   # Dashboard
   dashboard:
@@ -26,4 +26,7 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      - ./config:/app/config
+      - arb-config:/app/config
+
+volumes:
+  arb-config:
