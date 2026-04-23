@@ -302,7 +302,7 @@ with st.sidebar:
         kucoin_key_val = config.get('kucoin', {}).get('api_key', '')
         kucoin_secret_val = config.get('kucoin', {}).get('api_secret', '')
         kucoin_pass_val = config.get('kucoin', {}).get('api_passphrase', '')
-        kucoin_key = st.text_input("API Key", value=kucoin_key_val, key="kucoin_key_field")
+        kucoin_key = st.text_input("API Key", value=kucoin_key_val, type="password", key="kucoin_key_field")
         kucoin_secret = st.text_input("API Secret", value=kucoin_secret_val, type="password", key="kucoin_secret_field")
         kucoin_pass = st.text_input("Passphrase", value=kucoin_pass_val, type="password", key="kucoin_pass_field")
         if st.button("💾 KuCoin"):
@@ -313,7 +313,7 @@ with st.sidebar:
     with st.expander("🥈 MEXC", expanded=True):
         mexc_key_val = config.get('mexc', {}).get('api_key', '')
         mexc_secret_val = config.get('mexc', {}).get('api_secret', '')
-        mexc_key = st.text_input("API Key", value=mexc_key_val, key="mexc_key_field")
+        mexc_key = st.text_input("API Key", value=mexc_key_val, type="password", key="mexc_key_field")
         mexc_secret = st.text_input("API Secret", value=mexc_secret_val, type="password", key="mexc_secret_field")
         if st.button("💾 MEXC"):
             set_api_keys('mexc', api_key=mexc_key, api_secret=mexc_secret)
@@ -840,7 +840,7 @@ else:
                     km_color = "🟢" if km_active else "🟡" if spread_pct_km > 0 else "🔴"
                     st.markdown(f"**{km_color} Spread: {spread_pct_km:+.3f}% | ${profit_km:+.6f}**")
                     
-                    # Sell side (MEXC - top)
+                    # Sell side (MEXC - top) - FLIPPED
                     st.markdown("🥈 **MEXC SELL**")
                     for i in range(20):
                         m_bid_p = mexc_bids[i][0] if i < len(mexc_bids) else 0
@@ -877,7 +877,7 @@ else:
                     st.markdown(f"### {spread_pct_km:+.3f}%")
                     st.markdown("---")
                     
-                    # Buy side (KuCoin - bottom)
+                    # Buy side (KuCoin - bottom) - FLIPPED: highest ask at top (worst for us)
                     st.markdown("🥇 **KUCOIN BUY**")
                     for i in range(20):
                         k_ask_p = kucoin_asks[i][0] if i < len(kucoin_asks) else 0
@@ -916,7 +916,7 @@ else:
                     mk_color = "🟢" if mk_active else "🟡" if spread_pct_mk > 0 else "🔴"
                     st.markdown(f"**{mk_color} Spread: {spread_pct_mk:+.3f}% | ${profit_mk:+.6f}**")
                     
-                    # Sell side (KuCoin - top)
+                    # Sell side (KuCoin - top) - FLIPPED
                     st.markdown("🥇 **KUCOIN SELL**")
                     for i in range(20):
                         k_bid_p = kucoin_bids[i][0] if i < len(kucoin_bids) else 0
@@ -952,7 +952,7 @@ else:
                     st.markdown(f"### {spread_pct_mk:+.3f}%")
                     st.markdown("---")
                     
-                    # Buy side (MEXC - bottom)
+                    # Buy side (MEXC - bottom) - FLIPPED
                     st.markdown("🥈 **MEXC BUY**")
                     for i in range(20):
                         m_ask_p = mexc_asks[i][0] if i < len(mexc_asks) else 0
