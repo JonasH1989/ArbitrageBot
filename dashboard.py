@@ -502,10 +502,15 @@ if st.session_state.selected_pair is None:
     if not pairs_config:
         st.info("Fuege oben ein Paar hinzu!")
     else:
+        # CSS for tile borders
+        st.markdown("<style>.tile-box { background: #262626; border: 1px solid #404040; border-radius: 8px; padding: 12px; margin: 4px 0; }</style>", unsafe_allow_html=True)
+        
         cols = st.columns(3)
         
         for i, (pair_name, pair_data) in enumerate(pairs_config.items()):
             with cols[i % 3]:
+                st.markdown('<div class="tile-box">', unsafe_allow_html=True)
+                
                 # Fetch data
                 kucoin = get_kucoin_orderbook(pair_name)
                 mexc = get_mexc_orderbook(pair_name)
@@ -535,6 +540,8 @@ if st.session_state.selected_pair is None:
                 if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
                     st.session_state.selected_pair = pair_name
                     st.rerun()
+                
+                st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================================
 # DETAIL VIEW - ORIGINAL DASHBOARD
