@@ -840,9 +840,9 @@ else:
                     km_color = "🟢" if km_active else "🟡" if spread_pct_km > 0 else "🔴"
                     st.markdown(f"**{km_color} Spread: {spread_pct_km:+.3f}% | ${profit_km:+.6f}**")
                     
-                    # BUY side (KuCoin - top) - highest first
+                    # BUY side (KuCoin - top) - REVERSED to show highest ask first
                     st.markdown("🥇 **KUCOIN BUY** (was wir bezahlen)")
-                    for i in range(20):
+                    for i in range(19, -1, -1):
                         k_ask_p = kucoin_asks[i][0] if i < len(kucoin_asks) else 0
                         k_ask_v = kucoin_asks[i][1] if i < len(kucoin_asks) else 0
                         
@@ -915,9 +915,9 @@ else:
                     mk_color = "🟢" if mk_active else "🟡" if spread_pct_mk > 0 else "🔴"
                     st.markdown(f"**{mk_color} Spread: {spread_pct_mk:+.3f}% | ${profit_mk:+.6f}**")
                     
-                    # BUY side (MEXC - top) - ascending (cheapest first)
+                    # BUY side (MEXC - top) - REVERSED to show highest ask first
                     st.markdown("🥈 **MEXC BUY** (was wir bezahlen)")
-                    for i in range(20):
+                    for i in range(19, -1, -1):
                         m_ask_p = mexc_asks[i][0] if i < len(mexc_asks) else 0
                         m_ask_v = mexc_asks[i][1] if i < len(mexc_asks) else 0
                         
