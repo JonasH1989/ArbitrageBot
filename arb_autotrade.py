@@ -433,8 +433,8 @@ def main():
     
     # Read enabled status from config
     config = load_config()
-    pair_enabled = get_setting(f'trading.pairs.{pair}.enabled', False)
-    log(f"Pair {pair} enabled: {pair_enabled}")
+    pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
+    log(f"Pair {TRADING_PAIR} enabled: {pair_enabled}")
     
     while True:
         prices = get_prices()
