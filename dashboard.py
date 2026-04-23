@@ -292,6 +292,47 @@ def get_kucoin_fees(api_key: str, api_secret: str, passphrase: str, symbol: str 
     except:
         return {'ok': False, 'maker_fee_rate': 0.001, 'taker_fee_rate': 0.001}
 
+def get_kucoin_token_fees(api_key: str, api_secret: str, passphrase: str):
+    """Get KuCoin actual token fees (maker/taker for all symbols)"""
+    try:
+        import hashlib
+        import hmac
+        import base64
+        import time
+        
+        now = int(time.time() * 1000)
+        method = 'GET'
+        path = '/api/v1/trade-fees'
+        body = ''
+        
+        message = f'{now}{method}{path}{body}'
+        mac = hmac.new(api_secret.encode(), message.encode(), hashlib.sha256)
+        signature = base64.b64encode(mac.digest()).decode()
+        
+        headers = {
+            'KC-API-KEY': api_key,
+            'KC-API-SIGN': signature,
+            'KC-API-TIMESTAMP': str(now),
+            'KC-API-PASSPHRASE': passphrase,
+            'KC-API-KEY-VERSION': '1'
+        }
+        
+        resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get('code') == '200000':
+                fees = {}
+                for item in data.get('data', []):
+                    sym = item.get('symbol', '')
+                    fees[sym] = {
+                        'maker_fee_rate': float(item.get('makerFeeRate', 0)),
+                        'taker_fee_rate': float(item.get('takerFeeRate', 0))
+                    }
+                return {'ok': True, 'fees': fees}
+        return {'ok': False, 'fees': {}}
+    except:
+        return {'ok': False, 'fees': {}}
+
 def get_mexc_fees(api_key: str, api_secret: str, symbol: str = 'MPCUSDT'):
     """Get MEXC actual fee rates via API"""
     try:
@@ -579,21 +620,27 @@ else:
         trade_possible_mk = mk_meets_threshold
         
         # Get real fees from APIs
-        k_fee = get_kucoin_fees(kucoin_key, kucoin_secret, kucoin_pass, pair) if (kucoin_key and kucoin_secret and kucoin_pass) else {'ok': False, 'taker_fee_rate': 0.001}
+        k_fee = get_kucoin_fees(kucoin_key, kucoin_secret, kucoin_pass, pair) if (kucoin_key and kucoin_secret and kucoin_pass) else {'ok': False, 'maker_fee_rate': 0.001, 'taker_fee_rate': 0.001}
         m_fee = get_mexc_fees(mexc_key, mexc_secret, pair.replace('-', ''))
         
+        k_maker = k_fee.get('maker_fee_rate', 0.001)
         k_taker = k_fee.get('taker_fee_rate', 0.001)
+        m_maker = m_fee.get('maker_fee_rate', 0.002)
         m_taker = m_fee.get('taker_fee_rate', 0.002)
         
-        min_profit_buffer = 0.0002
+        min_profit_buffer = 0.001  # 0.1%
         if k_ask > 0 and m_ask > 0:
-            # Real fee: buy side fee + sell side fee
-            fee_pct_km = (k_taker + m_taker) * 100  # Combined fee for K→M
-            fee_pct_mk = (m_taker + k_taker) * 100  # Combined fee for M→K
-            recommended_min_km = fee_pct_km + min_profit_buffer * 100
-            recommended_min_mk = fee_pct_mk + min_profit_buffer * 100
+            # Fee for K→M: Buy on KuCoin (taker), Sell on MEXC (taker)
+            fee_pct_km_taker = (k_taker + m_taker) * 100
+            fee_pct_km_maker = (k_maker + m_maker) * 100
+            # Fee for M→K: Buy on MEXC (taker), Sell on KuCoin (taker)
+            fee_pct_mk_taker = (m_taker + k_taker) * 100
+            fee_pct_mk_maker = (m_maker + k_maker) * 100
+            recommended_min_km = fee_pct_km_taker + min_profit_buffer * 100
+            recommended_min_mk = fee_pct_mk_taker + min_profit_buffer * 100
         else:
-            fee_pct_km = fee_pct_mk = 0.3
+            fee_pct_km_taker = fee_pct_mk_taker = 0.3
+            fee_pct_km_maker = fee_pct_mk_maker = 0.15
             recommended_min_km = recommended_min_mk = 0.4
         
         coins_km = (vol_km * profit_km / k_ask) if k_ask > 0 else 0
@@ -743,10 +790,11 @@ else:
             st.markdown("---")
             fee_col1, fee_col2 = st.columns(2)
             with fee_col1:
-                st.write(f"**MEXC-Takerfee:** {(m_taker*100):.2f}%")
-                st.write(f"**KuCoin-Takerfee:** {(k_taker*100):.2f}%")
+                st.write(f"**MEXC:** Maker {(m_maker*100):.2f}% | Taker {(m_taker*100):.2f}%")
+                st.write(f"**KuCoin:** Maker {(k_maker*100):.2f}% | Taker {(k_taker*100):.2f}%")
             with fee_col2:
-                st.write(f"**Puffer:** {(min_profit_buffer*100):.1f}%")
+                st.write(f"**K→M:** {(fee_pct_km_taker):.3f}% ({(fee_pct_km_maker):.3f}%)")
+                st.write(f"**M→K:** {(fee_pct_mk_taker):.3f}% ({(fee_pct_mk_maker):.3f}%)")
             
             if threshold_start < max(recommended_min_km, recommended_min_mk):
                 st.error(f"⚠️ **WARNUNG:** Threshold {threshold_start}% ist unter dem empfohlenen Minimum! "
