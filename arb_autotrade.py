@@ -447,8 +447,8 @@ def main():
     
     # Read enabled status from config
     config = load_config()
-    bot_enabled = config.get('bot', {}).get('enabled', False)
-    log(f"Bot enabled: {bot_enabled}")
+    pair_enabled = get_setting(f'trading.pairs.{pair}.enabled', False)
+    log(f"Pair {pair} enabled: {pair_enabled}")
     
     while True:
         prices = get_prices()
@@ -484,7 +484,7 @@ def main():
         # Trade BOTH directions when profitable!
         # Check if active
         config = load_config()
-        active = config.get("bot", {}).get("enabled", False)
+        active = get_setting(f"trading.pairs.{pair}.enabled", False)
         if not active:
             state = STATE_WAITING
             if int(time.time()) % 30 == 0:

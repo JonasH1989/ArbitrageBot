@@ -936,11 +936,6 @@ else:
         # PAIR SETTINGS (compact at bottom)
         # =========================================================================
         
-        # Bot master on/off
-        config = load_config()
-        bot_enabled = config.get('bot', {}).get('enabled', False)
-        st.checkbox("🤖 Bot AKTIV", value=bot_enabled, key="bot_master_enabled", on_change=lambda: set_bot_enabled(st.session_state.bot_master_enabled))
-        
         with st.expander("⚙️ Paar-Einstellungen", expanded=False):
             s1, s2, s3, s4, s5 = st.columns([1, 1, 1, 1, 1])
             
