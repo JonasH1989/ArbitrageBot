@@ -607,7 +607,8 @@ else:
                     st.markdown(f"<div style='background-color: {mk_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {mk_spread_color};'>Spread: {spread_pct_mk:+.3f}%</div>", unsafe_allow_html=True)
                     st.markdown("---")
                     
-                    st.markdown('🥇 <img src="/app/static/kucoin_icon.png" width="20" style="vertical-align:middle"/> **KUCOIN SELL**')
+                    st.image("/app/static/kucoin_icon.png", width=20)
+                    st.markdown('**KUCOIN SELL**')
                     for i in range(20):
                         k_bid_p = kucoin_bids[i][0] if i < len(kucoin_bids) else 0
                         k_bid_v = kucoin_bids[i][1] if i < len(kucoin_bids) else 0
