@@ -401,7 +401,7 @@ if st.session_state.selected_pair is None:
                 box = st.container()
                 
                 with box:
-                    st.markdown('<div style="border: 2px solid #888; border-radius: 10px; padding: 10px; background: #fafafa;">', unsafe_allow_html=True)
+                    st.markdown('<div style="border: 2px solid #555; border-radius: 10px; padding: 10px; background: #1e1e1e;">', unsafe_allow_html=True)
                     
                     # Fetch data
                 kucoin = get_kucoin_orderbook(pair_name)
@@ -435,10 +435,7 @@ if st.session_state.selected_pair is None:
                         st.session_state.selected_pair = pair_name
                         st.rerun()
                 with c2:
-                    new_state = not enabled
-                    if st.button("⏸" if enabled else "▶️", key=f"tgl_{pair_name}"):
-                        set_pair_settings(pair_name, enabled=new_state)
-                        st.rerun()
+                    st.write("")  # Toggle now in detail view
                 with c3:
                     # Delete confirmation
                     confirm_key = f"confirm_del_{pair_name}"
