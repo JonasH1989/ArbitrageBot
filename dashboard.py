@@ -683,7 +683,7 @@ else:
             st.caption("Hinweis: Fees sind geschätzt (0.1% + 0.1% Taker). Auto-Set später verfügbar.")
         
         # Wallets
-        with st.expander("💰 Wallets", expanded=True):
+        with st.expander("💰 Wallets", expanded=False):
             st.subheader("💰 Wallets")
             
             col1, col2 = st.columns(2)
