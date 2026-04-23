@@ -428,12 +428,12 @@ if st.session_state.selected_pair is None:
                     with c2:
                         st.caption(f"M: ${mexc['bid']:.6f}")
                 
+                st.markdown('</div>', unsafe_allow_html=True)
+                
                 # View button
                 if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
                     st.session_state.selected_pair = pair_name
                     st.rerun()
-                    
-                    st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================================
 # DETAIL VIEW - ORIGINAL DASHBOARD
