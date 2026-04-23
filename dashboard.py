@@ -557,7 +557,7 @@ else:
                 
                 with col_km:
                     st.markdown("**KuCoin → MEXC**")
-                    c1, c2 = st.columns([1, 4])
+                    c1, c2 = st.columns([1, 8])
                     with c1:
                         st.image("/app/static/kucoin_icon.png", width=20)
                     with c2:
@@ -578,7 +578,7 @@ else:
                     st.markdown(f"<div style='background-color: {km_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {km_spread_color};'>Spread: {spread_pct_km:+.3f}%</div>", unsafe_allow_html=True)
                     st.markdown("---")
                     
-                    c1, c2 = st.columns([1, 4])
+                    c1, c2 = st.columns([1, 8])
                     with c1:
                         st.image("/app/static/mexc_icon.png", width=20)
                     with c2:
@@ -595,7 +595,7 @@ else:
                 
                 with col_mk:
                     st.markdown("**MEXC → KuCoin**")
-                    c1, c2 = st.columns([1, 4])
+                    c1, c2 = st.columns([1, 8])
                     with c1:
                         st.image("/app/static/mexc_icon.png", width=20)
                     with c2:
@@ -616,7 +616,7 @@ else:
                     st.markdown(f"<div style='background-color: {mk_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {mk_spread_color};'>Spread: {spread_pct_mk:+.3f}%</div>", unsafe_allow_html=True)
                     st.markdown("---")
                     
-                    c1, c2 = st.columns([1, 4])
+                    c1, c2 = st.columns([1, 8])
                     with c1:
                         st.image("/app/static/kucoin_icon.png", width=20)
                     with c2:
