@@ -16,6 +16,10 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent / "config"))
 from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, get_alert_settings, set_alert_settings, get_api_keys, set_api_keys, get_all_pairs, add_pair, remove_pair
 
+
+# Logo paths
+KUCoin_LOGO = "static/kucoin.png"
+MEXC_LOGO = "static/mexc.png"
 st.set_page_config(page_title="Arbitrage Bot", page_icon="📊", layout="wide")
 
 CONFIG_FILE = 'config/config.yaml'
@@ -771,10 +775,10 @@ else:
                 col_km, col_mk = st.columns(2)
                 
                 with col_km:
-                    st.markdown("#### 🥇 KuCoin ← → 🥈 MEXC  (K→M)")
+                    st.markdown("**KuCoin ← → MEXC (K→M)**")
                     
                     # BUY side (KuCoin - top) - REVERSED to show highest ask first
-                    st.markdown("🥇 **KUCOIN BUY** (was wir bezahlen)")
+                    st.markdown("**KUCOIN BUY** (was wir bezahlen)")
                     for i in range(19, -1, -1):
                         k_ask_p = kucoin_asks[i][0] if i < len(kucoin_asks) else 0
                         k_ask_v = kucoin_asks[i][1] if i < len(kucoin_asks) else 0
@@ -810,7 +814,7 @@ else:
                     st.markdown("---")
                     
                     # SELL side (MEXC - bottom) - sorted HIGH to LOW (what we get)
-                    st.markdown("🥈 **MEXC SELL** (was wir bekommen)")
+                    st.markdown("**MEXC SELL** (was wir bekommen)")
                     for i in range(20):
                         m_bid_p = mexc_bids[i][0] if i < len(mexc_bids) else 0
                         m_bid_v = mexc_bids[i][1] if i < len(mexc_bids) else 0
@@ -839,10 +843,10 @@ else:
                         """, unsafe_allow_html=True)
                 
                 with col_mk:
-                    st.markdown("#### 🥈 MEXC ← → 🥇 KuCoin  (M→K)")
+                    st.markdown("**MEXC ← → KuCoin (M→K)**")
                     
                     # BUY side (MEXC - top) - REVERSED to show highest ask first
-                    st.markdown("🥈 **MEXC BUY** (was wir bezahlen)")
+                    st.markdown("**MEXC BUY** (was wir bezahlen)")
                     for i in range(19, -1, -1):
                         m_ask_p = mexc_asks[i][0] if i < len(mexc_asks) else 0
                         m_ask_v = mexc_asks[i][1] if i < len(mexc_asks) else 0
@@ -878,7 +882,7 @@ else:
                     st.markdown("---")
                     
                     # SELL side (KuCoin - bottom)
-                    st.markdown("🥇 **KUCOIN SELL** (was wir bekommen)")
+                    st.markdown("**KUCOIN SELL** (was wir bekommen)")
                     for i in range(20):
                         k_bid_p = kucoin_bids[i][0] if i < len(kucoin_bids) else 0
                         k_bid_v = kucoin_bids[i][1] if i < len(kucoin_bids) else 0
@@ -1001,7 +1005,7 @@ else:
     
     # KuCoin Wallet
     with col1:
-        st.markdown("#### 🥇 KuCoin")
+        st.image("static/kucoin.png", width=120)
         if kucoin_wallet.get('ok'):
             bals = kucoin_wallet['balances']
             for sym in [base_coin, quote_coin]:
@@ -1016,7 +1020,7 @@ else:
     
     # MEXC Wallet
     with col2:
-        st.markdown("#### 🥈 MEXC")
+        st.image("static/mexc.png", width=120)
         if mexc_wallet.get('ok'):
             bals = mexc_wallet['balances']
             # Deduplicate by summing totals per coin
