@@ -77,6 +77,11 @@ def kucoin_sig(secret, ts, method, path, body=''):
     mac = hmac.new(secret.encode(), message.encode(), hashlib.sha256)
     return base64.b64encode(mac.digest()).decode()
 
+def kucoin_passphrase_enc(secret, passphrase):
+    """Encrypt passphrase for KuCoin API v2"""
+    mac = hmac.new(secret.encode(), passphrase.encode(), hashlib.sha256)
+    return base64.b64encode(mac.digest()).decode()
+
 def get_prices():
     try:
         resp_k = requests.get('https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=MPC-USDT', timeout=5)
@@ -103,7 +108,8 @@ def execute_market_buy_kucoin(qty):
         'KC-API-KEY': KUCOIN_KEY,
         'KC-API-SIGN': sig,
         'KC-API-TIMESTAMP': ts,
-        'KC-API-PASSPHRASE': KUCOIN_PASSPHRASE,
+        'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+        'KC-API-KEY-VERSION': '2',
         'Content-Type': 'application/json'
     }
     
@@ -120,7 +126,8 @@ def execute_limit_sell_kucoin(qty, price):
         'KC-API-KEY': KUCOIN_KEY,
         'KC-API-SIGN': sig,
         'KC-API-TIMESTAMP': ts,
-        'KC-API-PASSPHRASE': KUCOIN_PASSPHRASE,
+        'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+        'KC-API-KEY-VERSION': '2',
         'Content-Type': 'application/json'
     }
     
@@ -333,7 +340,7 @@ def check_limit_order_fills():
                     'KC-API-KEY': KUCOIN_KEY,
                     'KC-API-SIGN': sig,
                     'KC-API-TIMESTAMP': ts,
-                    'KC-API-PASSPHRASE': KUCOIN_PASSPHRASE,
+                    'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
                 }
                 
                 resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
