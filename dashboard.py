@@ -543,7 +543,7 @@ if st.session_state.selected_pair is None:
 else:
     pair = st.session_state.selected_pair
     
-    if st.button("← Zurueck zu Paaren"):
+    if st.button("← Home"):
         st.session_state.selected_pair = None
         st.rerun()
     
