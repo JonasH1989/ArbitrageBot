@@ -11,6 +11,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY arb_autotrade.py .
 COPY trade_logger.py .
 
+# Copy settings_sync for config access
+COPY config/settings_sync.py /app/config/
+
 # DO NOT copy config/ - API keys come from mounted volume
 RUN mkdir -p /app/config
 
