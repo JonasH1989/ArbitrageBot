@@ -428,33 +428,10 @@ if st.session_state.selected_pair is None:
                     with c2:
                         st.caption(f"M: ${mexc['bid']:.6f}")
                 
-                # Buttons
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    if st.button("📊", key=f"view_{pair_name}"):
-                        st.session_state.selected_pair = pair_name
-                        st.rerun()
-                with c2:
-                    st.write("")  # Toggle now in detail view
-                with c3:
-                    # Delete confirmation
-                    confirm_key = f"confirm_del_{pair_name}"
-                    if st.session_state.get(confirm_key, False):
-                        st.warning(f"{pair_name} loeschen?")
-                        c_yes, c_no = st.columns(2)
-                        with c_yes:
-                            if st.button("Ja", key=f"yes_{pair_name}"):
-                                remove_pair(pair_name)
-                                st.session_state[confirm_key] = False
-                                st.rerun()
-                        with c_no:
-                            if st.button("Nein", key=f"no_{pair_name}"):
-                                st.session_state[confirm_key] = False
-                                st.rerun()
-                    else:
-                        if st.button("🗑️", key=f"del_{pair_name}"):
-                            st.session_state[confirm_key] = True
-                            st.rerun()
+                # View button
+                if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
+                    st.session_state.selected_pair = pair_name
+                    st.rerun()
                     
                     st.markdown('</div>', unsafe_allow_html=True)
 
