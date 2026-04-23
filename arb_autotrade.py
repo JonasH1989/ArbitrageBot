@@ -427,8 +427,8 @@ def main():
     # If flag exists, user wants to start - but we still start inactive first
     was_flagged = os.path.exists(ACTIVE_FLAG_FILE)
     if was_flagged:
-        log("Hinweis: Flag file erkannt, aber trotzdem INAKTIV gestartet (Sicherheit)")
-        os.remove(ACTIVE_FLAG_FILE)  # Clear it
+        log("Hinweis: Flag file erkannt - bot stays ACTIVE")
+        # KEEP the flag file - user wants trading active!
     
     log("Um zu aktivieren: touch /home/openclaw/.openclaw/logs/arb_active.flag")
     log("Um zu deaktivieren: rm /home/openclaw/.openclaw/logs/arb_active.flag")
