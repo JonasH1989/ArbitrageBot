@@ -550,11 +550,6 @@ if st.session_state.selected_pair is None:
                     st.session_state.selected_pair = pair_name
                     st.rerun()
             
-            # View button below tile
-            if st.button("📊 Anzeigen", key=f"view_home_{i}_{pair_name}"):
-                st.session_state.selected_pair = pair_name
-                st.rerun()
-
 # ============================================================================
 # DETAIL VIEW - ORIGINAL DASHBOARD
 # ============================================================================
