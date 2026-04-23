@@ -674,20 +674,6 @@ else:
                 st.success(f"✅ Threshold OK")
         
         # Wallet
-        with st.expander("⚠️ Fee Empfehlung", expanded=False):
-            fee_col1, fee_col2 = st.columns(2)
-            with fee_col1:
-                st.write(f"**K→M:** Fees ≈ {fee_pct_km:.3f}%")
-                st.write(f"**M→K:** Fees ≈ {fee_pct_mk:.3f}%")
-            with fee_col2:
-                st.write(f"**Min. Threshold:** ≥{max(recommended_min_km, recommended_min_mk):.2f}%")
-                st.write(f"**Aktueller Threshold:** {threshold_start}%")
-            if threshold_start < max(recommended_min_km, recommended_min_mk):
-                st.error(f"⚠️ **WARNUNG:** Threshold {threshold_start}% ist unter dem empfohlenen Minimum!")
-            else:
-                st.success(f"✅ Threshold {threshold_start}% ist ausreichend.")
-        
-        # Wallet
         with st.expander("💰 Wallet", expanded=False):
             w1, w2 = st.columns(2)
             with w1:
