@@ -557,8 +557,7 @@ else:
                 
                 with col_km:
                     st.markdown("**KuCoin → MEXC**")
-                    st.image("/app/static/kucoin_icon.png", width=20)
-                    st.markdown('**KUCOIN BUY**')
+                    st.markdown('🥇 **KUCOIN BUY**')
                     for i in range(19, -1, -1):
                         k_ask_p = kucoin_asks[i][0] if i < len(kucoin_asks) else 0
                         k_ask_v = kucoin_asks[i][1] if i < len(kucoin_asks) else 0
@@ -575,8 +574,7 @@ else:
                     st.markdown(f"<div style='background-color: {km_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {km_spread_color};'>Spread: {spread_pct_km:+.3f}%</div>", unsafe_allow_html=True)
                     st.markdown("---")
                     
-                    st.image("/app/static/mexc_icon.png", width=20)
-                    st.markdown('**MEXC SELL**')
+                    st.markdown('🥈 **MEXC SELL**')
                     for i in range(20):
                         m_bid_p = mexc_bids[i][0] if i < len(mexc_bids) else 0
                         m_bid_v = mexc_bids[i][1] if i < len(mexc_bids) else 0
@@ -589,8 +587,7 @@ else:
                 
                 with col_mk:
                     st.markdown("**MEXC → KuCoin**")
-                    st.image("/app/static/mexc_icon.png", width=20)
-                    st.markdown('**MEXC BUY**')
+                    st.markdown('🥈 **MEXC BUY**')
                     for i in range(19, -1, -1):
                         m_ask_p = mexc_asks[i][0] if i < len(mexc_asks) else 0
                         m_ask_v = mexc_asks[i][1] if i < len(mexc_asks) else 0
@@ -607,8 +604,7 @@ else:
                     st.markdown(f"<div style='background-color: {mk_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {mk_spread_color};'>Spread: {spread_pct_mk:+.3f}%</div>", unsafe_allow_html=True)
                     st.markdown("---")
                     
-                    st.image("/app/static/kucoin_icon.png", width=20)
-                    st.markdown('**KUCOIN SELL**')
+                    st.markdown('🥇 **KUCOIN SELL**')
                     for i in range(20):
                         k_bid_p = kucoin_bids[i][0] if i < len(kucoin_bids) else 0
                         k_bid_v = kucoin_bids[i][1] if i < len(kucoin_bids) else 0
