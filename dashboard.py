@@ -569,8 +569,8 @@ else:
                         profit = m_bid_p - k_ask_p
                         pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
                         bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
-                        color = "#00c853" if pct >= threshold_start else ("#ffc107" if pct >= 0 else "#f44336")
-                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {color}; font-weight: bold;'>${k_ask_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{k_ask_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
+                        price_color = "#f44336"  # RED - what we pay on BUY side
+                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {price_color}; font-weight: bold;'>${k_ask_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{k_ask_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
                     
                     km_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_km >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_km > 0 else "rgba(244,67,54,0.2)")
                     km_spread_color = "#00c853" if spread_pct_km >= threshold_start else ("#ffc107" if spread_pct_km > 0 else "#f44336")
@@ -590,8 +590,8 @@ else:
                         profit = m_bid_p - k_ask_p
                         pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
                         bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
-                        color = "#00c853" if pct >= threshold_start else ("#ffc107" if pct >= 0 else "#f44336")
-                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {color}; font-weight: bold;'>${m_bid_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{m_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
+                        price_color = "#00c853"  # GREEN - what we get on SELL side
+                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {price_color}; font-weight: bold;'>${m_bid_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{m_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
                 
                 with col_mk:
                     st.markdown("**MEXC → KuCoin**")
@@ -607,8 +607,8 @@ else:
                         profit = k_bid_p - m_ask_p
                         pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                         bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
-                        color = "#00c853" if pct >= threshold_start else ("#ffc107" if pct >= 0 else "#f44336")
-                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {color}; font-weight: bold;'>${m_ask_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{m_ask_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
+                        price_color = "#f44336"  # RED - what we pay on BUY side
+                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {price_color}; font-weight: bold;'>${m_ask_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{m_ask_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
                     
                     mk_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_mk >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_mk > 0 else "rgba(244,67,54,0.2)")
                     mk_spread_color = "#00c853" if spread_pct_mk >= threshold_start else ("#ffc107" if spread_pct_mk > 0 else "#f44336")
