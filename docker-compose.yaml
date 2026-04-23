@@ -25,6 +25,7 @@ services:
     restart: unless-stopped
     ports:
       - "8501:8501"
+      - "192.168.113.14:8502:8501"
     volumes:
       - arb-config:/app/config
 
