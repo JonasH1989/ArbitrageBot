@@ -922,22 +922,20 @@ else:
         # PAIR SETTINGS (compact at bottom)
         # =========================================================================
         
-        st.divider()
-        st.subheader("⚙️ Paar-Einstellungen")
-        
-        s1, s2, s3, s4, s5 = st.columns([1, 1, 1, 1, 1])
-        
-        with s1:
-            ts = pair_data.get('threshold_start', 1.0)
-            ts_new = st.number_input("Start %", 0.0, 50.0, ts, 0.05, key=f"pts_{pair}")
-            if ts_new != ts:
-                set_pair_settings(pair, threshold_start=ts_new)
-        
-        with s2:
-            tss = pair_data.get('threshold_stop', 0.5)
-            tss_new = st.number_input("Stop %", 0.0, max(0.1, ts_new), tss, 0.05, key=f"ptss_{pair}")
-            if tss_new != tss:
-                set_pair_settings(pair, threshold_stop=tss_new)
+        with st.expander("⚙️ Paar-Einstellungen", expanded=False):
+            s1, s2, s3, s4, s5 = st.columns([1, 1, 1, 1, 1])
+            
+            with s1:
+                ts = pair_data.get('threshold_start', 1.0)
+                ts_new = st.number_input("Start %", 0.0, 50.0, ts, 0.05, key=f"pts_{pair}")
+                if ts_new != ts:
+                    set_pair_settings(pair, threshold_start=ts_new)
+            
+            with s2:
+                tss = pair_data.get('threshold_stop', 0.5)
+                tss_new = st.number_input("Stop %", 0.0, max(0.1, ts_new), tss, 0.05, key=f"ptss_{pair}")
+                if tss_new != tss:
+                    set_pair_settings(pair, threshold_stop=tss_new)
         
         with s3:
             ae = pair_data.get('alert_enabled', True)
@@ -976,11 +974,10 @@ else:
     # WALLET - KuCoin + MEXC side by side (wrapped in container to prevent duplicates)
     # =========================================================================
     
-    st.divider()
-    with st.container():
+    with st.expander("💰 Wallets", expanded=True):
         st.subheader("💰 Wallets")
-    
-    col1, col2 = st.columns(2)
+        
+        col1, col2 = st.columns(2)
     
     # Extract base and quote from pair
     pair_parts = pair.split('-')
