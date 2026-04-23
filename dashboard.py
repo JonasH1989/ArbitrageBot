@@ -292,11 +292,34 @@ def get_kucoin_fees(api_key: str, api_secret: str, passphrase: str, symbol: str 
     except:
         return {'ok': False, 'maker_fee_rate': 0.001, 'taker_fee_rate': 0.001}
 
-def get_mexc_fees(api_key: str, api_secret: str):
-    """Get MEXC actual fee rates - MEXC has flat 0.2% taker fee"""
-    # MEXC doesn't have a public API for fee rates, but their standard rate is 0.2%
-    # Market makers get lower fees but we use taker rate for safety
-    return {'ok': True, 'maker_fee_rate': 0.001, 'taker_fee_rate': 0.002}
+def get_mexc_fees(api_key: str, api_secret: str, symbol: str = 'MPCUSDT'):
+    """Get MEXC actual fee rates via API"""
+    try:
+        import hashlib
+        import hmac
+        import time
+        
+        ts = int(time.time() * 1000)
+        path = f'/api/v3/tradeFee'
+        query = f'symbol={symbol}&timestamp={ts}'
+        
+        signature = hmac.new(api_secret.encode(), query.encode(), hashlib.sha256).hexdigest()
+        
+        headers = {'X-MEXC-APIKEY': api_key}
+        
+        resp = requests.get(f'https://api.mexc.com{path}?{query}&signature={signature}', headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get('code') == 0:
+                d = data.get('data', {})
+                return {
+                    'ok': True,
+                    'maker_fee_rate': float(d.get('makerCommission', 0.002)),
+                    'taker_fee_rate': float(d.get('takerCommission', 0.002))
+                }
+        return {'ok': False, 'maker_fee_rate': 0.002, 'taker_fee_rate': 0.002}
+    except:
+        return {'ok': False, 'maker_fee_rate': 0.002, 'taker_fee_rate': 0.002}
 
 # ============================================================================
 # Session State
@@ -557,7 +580,7 @@ else:
         
         # Get real fees from APIs
         k_fee = get_kucoin_fees(kucoin_key, kucoin_secret, kucoin_pass, pair) if (kucoin_key and kucoin_secret and kucoin_pass) else {'ok': False, 'taker_fee_rate': 0.001}
-        m_fee = get_mexc_fees(mexc_key, mexc_secret)
+        m_fee = get_mexc_fees(mexc_key, mexc_secret, pair.replace('-', ''))
         
         k_taker = k_fee.get('taker_fee_rate', 0.001)
         m_taker = m_fee.get('taker_fee_rate', 0.002)
