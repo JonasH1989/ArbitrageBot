@@ -19,7 +19,7 @@ from datetime import datetime
 import os
 
 # Import settings_sync for config access
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config'))
+sys.path.insert(0, '/app')
 try:
     from settings_sync import get_setting, get_pair_settings, load_config
 except ImportError:
