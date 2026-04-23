@@ -397,11 +397,33 @@ if st.session_state.selected_pair is None:
         
         for i, (pair_name, pair_data) in enumerate(pairs_config.items()):
             with cols[i % 3]:
+                # Fetch data
+                kucoin = get_kucoin_orderbook(pair_name)
+                mexc = get_mexc_orderbook(pair_name)
+                
+                # Calculate
+                is_profitable = False
+                if kucoin.get('ok') and mexc.get('ok'):
+                    profit_km = mexc['bid'] - kucoin['ask']
+                    profit_mk = kucoin['bid'] - mexc['ask']
+                    best = max(profit_km, profit_mk)
+                    is_profitable = best > 0
+                
                 enabled = pair_data.get('enabled', True)
                 tile_emoji = "🟢" if enabled else "🔴"
                 
-                # Simple clickable header
-                if st.button(f"{tile_emoji} {pair_name}", key=f"view_{pair_name}"):
+                st.subheader(f"{tile_emoji} {pair_name}")
+                
+                # Prices preview
+                if kucoin.get('ok') and mexc.get('ok'):
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        st.caption(f"K: ${kucoin['bid']:.6f}")
+                    with c2:
+                        st.caption(f"M: ${mexc['bid']:.6f}")
+                
+                # View button
+                if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
                     st.session_state.selected_pair = pair_name
                     st.rerun()
 
