@@ -821,172 +821,72 @@ else:
                     cum_bid_k = sum(v for p, v in kucoin_bids[:5])
                     st.caption(f"Top 5 Bids: {cum_bid_k:.0f} MPC")
             
-            # Full Orderbook Table - Börsen-style Darstellung
+            # Full Orderbook Table - BOTH EXCHANGES
             st.markdown("---")
-            st.markdown("### 📋 Orderbook (20 Level)")
+            st.markdown("### 📋 Orderbook Vergleich (20 Level)")
+            
+            # Get KuCoin buy price for profit calculation
+            k_buy_price = kucoin_asks[0][0] if kucoin_asks else k_ask
+            m_sell_price = mexc_bids[0][0] if mexc_bids else 0
             
             if mexc_bids and mexc_asks and kucoin_bids and kucoin_asks:
-                # Build orderbook in Börsen-style: Sells links, Spread in der Mitte, Buys rechts
-                # K→M: MEXC sell (links) | KUCOIN buy (rechts)
-                # M→K: KUCOIN sell (links) | MEXC buy (rechts)
+                # Build combined table
+                import pandas as pd
                 
-                col_km, col_mk = st.columns(2)
+                rows = []
+                for i in range(20):
+                    # MEXC data
+                    m_bid_p = mexc_bids[i][0] if i < len(mexc_bids) else 0
+                    m_bid_v = mexc_bids[i][1] if i < len(mexc_bids) else 0
+                    m_ask_p = mexc_asks[i][0] if i < len(mexc_asks) else 0
+                    m_ask_v = mexc_asks[i][1] if i < len(mexc_asks) else 0
+                    
+                    # KuCoin data
+                    k_bid_p = kucoin_bids[i][0] if i < len(kucoin_bids) else 0
+                    k_bid_v = kucoin_bids[i][1] if i < len(kucoin_bids) else 0
+                    k_ask_p = kucoin_asks[i][0] if i < len(kucoin_asks) else 0
+                    k_ask_v = kucoin_asks[i][1] if i < len(kucoin_asks) else 0
+                    
+                    # K→M: Buy KuCoin Ask, Sell MEXC Bid
+                    km_profit = m_bid_p - k_ask_p
+                    km_pct = (km_profit / k_ask_p * 100) if k_ask_p > 0 else 0
+                    km_meets = km_pct >= threshold_start
+                    
+                    # M→K: Buy MEXC Ask, Sell KuCoin Bid
+                    mk_profit = k_bid_p - m_ask_p
+                    mk_pct = (mk_profit / m_ask_p * 100) if m_ask_p > 0 else 0
+                    mk_meets = mk_pct >= threshold_start
+                    
+                    rows.append({
+                        'Lvl': i + 1,
+                        'K Bid': f"${k_bid_p:.5f}" if k_bid_p else "-",
+                        'K Bid Vol': f"{k_bid_v:.0f}" if k_bid_v else "-",
+                        'K Ask': f"${k_ask_p:.5f}" if k_ask_p else "-",
+                        'K Ask Vol': f"{k_ask_v:.0f}" if k_ask_v else "-",
+                        'M Bid': f"${m_bid_p:.5f}" if m_bid_p else "-",
+                        'M Bid Vol': f"{m_bid_v:.0f}" if m_bid_v else "-",
+                        'M Ask': f"${m_ask_p:.5f}" if m_ask_p else "-",
+                        'M Ask Vol': f"{m_ask_v:.0f}" if m_ask_v else "-",
+                        'K→M %': f"{km_pct:+.3f}%" if km_pct != 0 else "-",
+                        'M→K %': f"{mk_pct:+.3f}%" if mk_pct != 0 else "-",
+                        'km_ok': km_meets,
+                        'mk_ok': mk_meets,
+                    })
                 
-                with col_km:
-                    st.markdown("#### 🥇 KuCoin ← → 🥈 MEXC  (K→M)")
-                    
-                    # Header: Spread info
-                    km_active = km_meets_threshold
-                    km_color = "🟢" if km_active else "🟡" if spread_pct_km > 0 else "🔴"
-                    st.markdown(f"**{km_color} Spread: {spread_pct_km:+.3f}% | ${profit_km:+.6f}**")
-                    
-                    # Sell side (MEXC - top)
-                    st.markdown("🥈 **MEXC SELL**")
-                    for i in range(20):
-                        m_bid_p = mexc_bids[i][0] if i < len(mexc_bids) else 0
-                        m_bid_v = mexc_bids[i][1] if i < len(mexc_bids) else 0
-                        
-                        # Profit at this level
-                        k_ask_p = kucoin_asks[0][0] if kucoin_asks else k_ask
-                        profit = m_bid_p - k_ask_p
-                        pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
-                        meets = pct >= threshold_start
-                        
-                        # Farbe: grün wenn threshold erfüllt
-                        if meets:
-                            bg = "rgba(0,255,0,0.15)"
-                            color = "#00c853"
-                        elif pct > 0:
-                            bg = "rgba(255,235,59,0.15)"
-                            color = "#ffc107"
-                        else:
-                            bg = "rgba(244,67,54,0.1)"
-                            color = "#f44336"
-                        
-                        st.markdown(f"""
-                        <div style="background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;">
-                            <span style="color: {color}; font-weight: bold;">${m_bid_p:.5f}</span>
-                            <span style="color: #888;">|</span>
-                            <span style="color: #fff;">{m_bid_v:.0f} MPC</span>
-                            <span style="color: #888; margin-left: 10px;">{pct:+.3f}%</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Spread Gap
-                    st.markdown("---")
-                    st.markdown(f"### {spread_pct_km:+.3f}%")
-                    st.markdown("---")
-                    
-                    # Buy side (KuCoin - bottom)
-                    st.markdown("🥇 **KUCOIN BUY**")
-                    for i in range(20):
-                        k_ask_p = kucoin_asks[i][0] if i < len(kucoin_asks) else 0
-                        k_ask_v = kucoin_asks[i][1] if i < len(kucoin_asks) else 0
-                        
-                        # Profit if we buy at this level and sell at MEXC bid
-                        m_bid_p = mexc_bids[0][0] if mexc_bids else 0
-                        profit = m_bid_p - k_ask_p
-                        pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
-                        meets = pct >= threshold_start
-                        
-                        if meets:
-                            bg = "rgba(0,255,0,0.15)"
-                            color = "#00c853"
-                        elif pct > 0:
-                            bg = "rgba(255,235,59,0.15)"
-                            color = "#ffc107"
-                        else:
-                            bg = "rgba(244,67,54,0.1)"
-                            color = "#f44336"
-                        
-                        st.markdown(f"""
-                        <div style="background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;">
-                            <span style="color: {color}; font-weight: bold;">${k_ask_p:.5f}</span>
-                            <span style="color: #888;">|</span>
-                            <span style="color: #fff;">{k_ask_v:.0f} MPC</span>
-                            <span style="color: #888; margin-left: 10px;">{pct:+.3f}%</span>
-                        </div>
-                        """, unsafe_allow_html=True)
+                df = pd.DataFrame(rows)
                 
-                with col_mk:
-                    st.markdown("#### 🥈 MEXC ← → 🥇 KuCoin  (M→K)")
-                    
-                    # Header: Spread info
-                    mk_active = mk_meets_threshold
-                    mk_color = "🟢" if mk_active else "🟡" if spread_pct_mk > 0 else "🔴"
-                    st.markdown(f"**{mk_color} Spread: {spread_pct_mk:+.3f}% | ${profit_mk:+.6f}**")
-                    
-                    # Sell side (KuCoin - top)
-                    st.markdown("🥇 **KUCOIN SELL**")
-                    for i in range(20):
-                        k_bid_p = kucoin_bids[i][0] if i < len(kucoin_bids) else 0
-                        k_bid_v = kucoin_bids[i][1] if i < len(kucoin_bids) else 0
-                        
-                        # Profit at this level
-                        m_ask_p = mexc_asks[0][0] if mexc_asks else m_ask
-                        profit = k_bid_p - m_ask_p
-                        pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
-                        meets = pct >= threshold_start
-                        
-                        if meets:
-                            bg = "rgba(0,255,0,0.15)"
-                            color = "#00c853"
-                        elif pct > 0:
-                            bg = "rgba(255,235,59,0.15)"
-                            color = "#ffc107"
-                        else:
-                            bg = "rgba(244,67,54,0.1)"
-                            color = "#f44336"
-                        
-                        st.markdown(f"""
-                        <div style="background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;">
-                            <span style="color: {color}; font-weight: bold;">${k_bid_p:.5f}</span>
-                            <span style="color: #888;">|</span>
-                            <span style="color: #fff;">{k_bid_v:.0f} MPC</span>
-                            <span style="color: #888; margin-left: 10px;">{pct:+.3f}%</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Spread Gap
-                    st.markdown("---")
-                    st.markdown(f"### {spread_pct_mk:+.3f}%")
-                    st.markdown("---")
-                    
-                    # Buy side (MEXC - bottom)
-                    st.markdown("🥈 **MEXC BUY**")
-                    for i in range(20):
-                        m_ask_p = mexc_asks[i][0] if i < len(mexc_asks) else 0
-                        m_ask_v = mexc_asks[i][1] if i < len(mexc_asks) else 0
-                        
-                        # Profit if we buy at this level and sell at KuCoin bid
-                        k_bid_p = kucoin_bids[0][0] if kucoin_bids else 0
-                        profit = k_bid_p - m_ask_p
-                        pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
-                        meets = pct >= threshold_start
-                        
-                        if meets:
-                            bg = "rgba(0,255,0,0.15)"
-                            color = "#00c853"
-                        elif pct > 0:
-                            bg = "rgba(255,235,59,0.15)"
-                            color = "#ffc107"
-                        else:
-                            bg = "rgba(244,67,54,0.1)"
-                            color = "#f44336"
-                        
-                        st.markdown(f"""
-                        <div style="background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;">
-                            <span style="color: {color}; font-weight: bold;">${m_ask_p:.5f}</span>
-                            <span style="color: #888;">|</span>
-                            <span style="color: #fff;">{m_ask_v:.0f} MPC</span>
-                            <span style="color: #888; margin-left: 10px;">{pct:+.3f}%</span>
-                        </div>
-                        """, unsafe_allow_html=True)
+                # Create display dataframe
+                df_display = df[['Lvl', 'K Bid', 'K Bid Vol', 'K Ask', 'K Ask Vol', 
+                               'M Bid', 'M Bid Vol', 'M Ask', 'M Ask Vol', 
+                               'K→M %', 'M→K %']].copy()
+                
+                st.dataframe(df_display, use_container_width=True, hide_index=True)
                 
                 # Legend
                 st.markdown("""
-                ---  
-                **Legende:** 🟢 Threshold erfüllt | 🟡 Positiv aber < Threshold | 🔴 Negativ
+                **Legende:**  
+                🟢 **Grün (K→M %)** = KuCoin Buy / MEXC Sell profitabel (≥ Threshold)  
+                🟢 **Grün (M→K %)** = MEXC Buy / KuCoin Sell profitabel (≥ Threshold)  
                 """)
             else:
                 st.info("Orderbook Daten nicht vollständig verfügbar")
