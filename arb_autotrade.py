@@ -18,6 +18,13 @@ import json as json_lib
 from datetime import datetime
 import os
 
+# Import settings_sync for config access
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config'))
+try:
+    from settings_sync import get_pair_settings
+except ImportError:
+    get_pair_settings = None
+
 # Import the harmonized trade logger
 from trade_logger import (
     harmonize_kucoin_order,
@@ -423,12 +430,33 @@ def main():
     # Even if config says enabled=true, we ignore that on restart
     log("=== BOT STARTET IM INAKTIV STATUS (always) ===")
     
-    # Check if user manually activated via flag file BEFORE we set inactive
-    # If flag exists, user wants to start - but we still start inactive first
+    # Check config for enabled setting (from Dashboard)
+    if get_pair_settings:
+        try:
+            pair_cfg = get_pair_settings(TRADING_PAIR)
+            config_enabled = pair_cfg.get('enabled', False)
+            log(f"Config enabled: {config_enabled}")
+        except Exception as e:
+            log(f"Could not load config: {e}, using flag file")
+            config_enabled = True
+    else:
+        config_enabled = True
+    except:
+        config_enabled = True  # Default to enabled if config fails
+    
+    # Check if user manually activated via flag file
     was_flagged = os.path.exists(ACTIVE_FLAG_FILE)
-    if was_flagged:
-        log("Hinweis: Flag file erkannt - bot stays ACTIVE")
-        # KEEP the flag file - user wants trading active!
+    
+    # Start ACTIVE only if:
+    # 1. Flag file exists AND config says enabled=True
+    # 2. (Flag file is like an "emergency override")
+    if was_flagged and config_enabled:
+        log("Hinweis: Flag file erkannt + config enabled - bot stays ACTIVE")
+    elif was_flagged and not config_enabled:
+        log("Hinweis: Flag file vorhanden aber config disabled - bot stays INACTIVE")
+        os.remove(ACTIVE_FLAG_FILE)
+    else:
+        log(f"Flag file nicht vorhanden - bot starts INAKTIV")
     
     log("Um zu aktivieren: touch /home/openclaw/.openclaw/logs/arb_active.flag")
     log("Um zu deaktivieren: rm /home/openclaw/.openclaw/logs/arb_active.flag")
