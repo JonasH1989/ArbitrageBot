@@ -43,7 +43,7 @@ ACTIVE_FLAG_FILE = '/home/openclaw/.openclaw/logs/arb_active.flag'
 # Exchange API credentials
 # Load API keys from config.yaml - use same path as settings_sync (dashboard)
 from pathlib import Path
-_config_dir = Path('/app') if Path('/app').exists() else Path(__file__).parent / 'config'
+_config_dir = Path('/app/config') if Path('/app/config').exists() else Path(__file__).parent / 'config'
 _config_path = _config_dir / 'config.yaml'
 with open(_config_path, 'r') as _f:
     _cfg = yaml.safe_load(_f)
