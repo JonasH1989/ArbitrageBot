@@ -556,7 +556,7 @@ else:
                 col_km, col_mk = st.columns(2)
                 
                 with col_km:
-                    st.markdown("**KuCoin ← → MEXC (K→M)**")
+                    st.markdown("**KuCoin → MEXC**")
                     st.markdown("**KUCOIN BUY**")
                     for i in range(19, -1, -1):
                         k_ask_p = kucoin_asks[i][0] if i < len(kucoin_asks) else 0
@@ -586,7 +586,7 @@ else:
                         st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {color}; font-weight: bold;'>${m_bid_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{m_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
                 
                 with col_mk:
-                    st.markdown("**MEXC ← → KuCoin (M→K)**")
+                    st.markdown("**MEXC → KuCoin**")
                     st.markdown("**MEXC BUY**")
                     for i in range(19, -1, -1):
                         m_ask_p = mexc_asks[i][0] if i < len(mexc_asks) else 0
