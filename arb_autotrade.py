@@ -36,9 +36,12 @@ from trade_logger import (
     get_trades,
 )
 
-LOG_FILE = '/home/openclaw/.openclaw/logs/arb_autotrade.log'
+from pathlib import Path
+
+LOG_DIR = Path('/app/logs') if Path('/app/logs').exists() else Path('/home/openclaw/.openclaw/logs')
+LOG_FILE = LOG_DIR / 'arb_autotrade.log'
 CONFIG_FILE = '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot/config/config.yaml'
-ACTIVE_FLAG_FILE = '/home/openclaw/.openclaw/logs/arb_active.flag'
+ACTIVE_FLAG_FILE = LOG_DIR / 'arb_active.flag'
 
 # Exchange API credentials
 # Load API keys from config.yaml - use same path as settings_sync (dashboard)
