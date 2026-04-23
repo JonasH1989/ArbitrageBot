@@ -663,8 +663,17 @@ else:
                 new_strat_val = 'usdt' if new_strat == "💰 USDT" else 'coins'
                 if new_strat_val != strat:
                     set_pair_settings(pair, strategy=new_strat_val)
+            
+            # Fee Info
+            st.markdown("---")
+            st.write(f"**Fee K→M:** {fee_pct_km:.3f}% | **Fee M→K:** {fee_pct_mk:.3f}%")
+            st.write(f"**Min. Threshold:** ≥{max(recommended_min_km, recommended_min_mk):.2f}% | **Aktuell:** {threshold_start}%")
+            if threshold_start < max(recommended_min_km, recommended_min_mk):
+                st.error(f"⚠️ Threshold {threshold_start}% unter Minimum!")
+            else:
+                st.success(f"✅ Threshold OK")
         
-        # Fee Empfehlung
+        # Wallet
         with st.expander("⚠️ Fee Empfehlung", expanded=False):
             fee_col1, fee_col2 = st.columns(2)
             with fee_col1:
