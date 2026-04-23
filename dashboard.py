@@ -503,21 +503,16 @@ if st.session_state.selected_pair is None:
         st.info("Fuege oben ein Paar hinzu!")
     else:
         # CSS for tile borders
-        st.markdown("<style>.tile-box { background: #262626; border: 1px solid #404040; border-radius: 8px; padding: 12px; margin: 4px 0; }</style>", unsafe_allow_html=True)
-        
+
         cols = st.columns(3)
         
+        # Use columns with styled containers
         for i, (pair_name, pair_data) in enumerate(pairs_config.items()):
             with cols[i % 3]:
-                st.markdown('<div class="tile-box">', unsafe_allow_html=True)
-                
-                # Status
+                # Get trade stats for this pair
                 enabled = pair_data.get('enabled', True)
                 status_color = "🟢" if enabled else "🔴"
                 
-                st.markdown(f"### {status_color} {pair_name}")
-                
-                # Get trade stats for this pair
                 trades = get_trades(pair_name, limit=1000)
                 total_trades = len(trades)
                 total_profit = sum(
@@ -526,19 +521,24 @@ if st.session_state.selected_pair is None:
                     for t in trades
                 )
                 
-                # Summary inside tile
-                s1, s2 = st.columns(2)
-                with s1:
-                    st.caption(f"Trades: {total_trades}")
-                with s2:
-                    st.caption(f"Gewinn: ${total_profit:.4f}")
+                # Build tile as HTML
+                st.markdown(f"""
+                <div style="background: #262626; border: 1px solid #404040; border-radius: 8px; padding: 16px; margin: 4px 0;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <span style="font-size: 24px;">{status_color}</span>
+                        <span style="font-size: 20px; font-weight: bold; color: white;">{pair_name}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px; color: #aaa;">
+                        <span>Trades: {total_trades}</span>
+                        <span>Gewinn: ${total_profit:.4f}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
                 
                 # View button
                 if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
                     st.session_state.selected_pair = pair_name
                     st.rerun()
-                
-                st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================================
 # DETAIL VIEW - ORIGINAL DASHBOARD
