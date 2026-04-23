@@ -767,10 +767,14 @@ else:
                 with col_km:
                     st.markdown("#### 🥇 KuCoin ← → 🥈 MEXC  (K→M)")
                     
-                    # Header: Spread info
-                    km_active = km_meets_threshold
-                    km_color = "🟢" if km_active else "🟡" if spread_pct_km > 0 else "🔴"
-                    st.markdown(f"**{km_color} Spread: {spread_pct_km:+.3f}% | ${profit_km:+.6f}**")
+                    # Header: Spread info (use orderbook prices for consistency)
+                    k_ask_best = kucoin_asks[0][0] if kucoin_asks else k_ask
+                    m_bid_best = mexc_bids[0][0] if mexc_bids else m_bid
+                    profit_km_ob = m_bid_best - k_ask_best
+                    spread_pct_km_ob = (profit_km_ob / k_ask_best * 100) if k_ask_best > 0 else 0
+                    km_active = spread_pct_km_ob >= threshold_start
+                    km_color = "🟢" if km_active else "🟡" if spread_pct_km_ob > 0 else "🔴"
+                    st.markdown(f"**{km_color} Spread: {spread_pct_km_ob:+.3f}% | ${profit_km_ob:+.6f}**")
                     
                     # BUY side (KuCoin - top) - REVERSED to show highest ask first
                     st.markdown("🥇 **KUCOIN BUY** (was wir bezahlen)")
@@ -803,11 +807,11 @@ else:
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    # Spread Gap - colored
-                    km_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_km >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_km > 0 else "rgba(244,67,54,0.2)")
-                    km_spread_color = "#00c853" if spread_pct_km >= threshold_start else ("#ffc107" if spread_pct_km > 0 else "#f44336")
+                    # Spread Gap - colored (use orderbook-consistent values)
+                    km_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_km_ob >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_km_ob > 0 else "rgba(244,67,54,0.2)")
+                    km_spread_color = "#00c853" if spread_pct_km_ob >= threshold_start else ("#ffc107" if spread_pct_km_ob > 0 else "#f44336")
                     st.markdown("---")
-                    st.markdown(f"""<div style="background-color: {km_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {km_spread_color};">Spread: {spread_pct_km:+.3f}%</div>""", unsafe_allow_html=True)
+                    st.markdown(f"""<div style="background-color: {km_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {km_spread_color};">Spread: {spread_pct_km_ob:+.3f}%</div>""", unsafe_allow_html=True)
                     st.markdown("---")
                     
                     # SELL side (MEXC - bottom) - sorted HIGH to LOW (what we get)
@@ -844,10 +848,14 @@ else:
                 with col_mk:
                     st.markdown("#### 🥈 MEXC ← → 🥇 KuCoin  (M→K)")
                     
-                    # Header: Spread info
-                    mk_active = mk_meets_threshold
-                    mk_color = "🟢" if mk_active else "🟡" if spread_pct_mk > 0 else "🔴"
-                    st.markdown(f"**{mk_color} Spread: {spread_pct_mk:+.3f}% | ${profit_mk:+.6f}**")
+                    # Header: Spread info (use orderbook prices for consistency)
+                    m_ask_best = mexc_asks[0][0] if mexc_asks else m_ask
+                    k_bid_best = kucoin_bids[0][0] if kucoin_bids else k_bid
+                    profit_mk_ob = k_bid_best - m_ask_best
+                    spread_pct_mk_ob = (profit_mk_ob / m_ask_best * 100) if m_ask_best > 0 else 0
+                    mk_active = spread_pct_mk_ob >= threshold_start
+                    mk_color = "🟢" if mk_active else "🟡" if spread_pct_mk_ob > 0 else "🔴"
+                    st.markdown(f"**{mk_color} Spread: {spread_pct_mk_ob:+.3f}% | ${profit_mk_ob:+.6f}**")
                     
                     # BUY side (MEXC - top) - REVERSED to show highest ask first
                     st.markdown("🥈 **MEXC BUY** (was wir bezahlen)")
@@ -880,11 +888,11 @@ else:
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    # Spread Gap - colored
-                    mk_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_mk >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_mk > 0 else "rgba(244,67,54,0.2)")
-                    mk_spread_color = "#00c853" if spread_pct_mk >= threshold_start else ("#ffc107" if spread_pct_mk > 0 else "#f44336")
+                    # Spread Gap - colored (use orderbook-consistent values)
+                    mk_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_mk_ob >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_mk_ob > 0 else "rgba(244,67,54,0.2)")
+                    mk_spread_color = "#00c853" if spread_pct_mk_ob >= threshold_start else ("#ffc107" if spread_pct_mk_ob > 0 else "#f44336")
                     st.markdown("---")
-                    st.markdown(f"""<div style="background-color: {mk_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {mk_spread_color};">Spread: {spread_pct_mk:+.3f}%</div>""", unsafe_allow_html=True)
+                    st.markdown(f"""<div style="background-color: {mk_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {mk_spread_color};">Spread: {spread_pct_mk_ob:+.3f}%</div>""", unsafe_allow_html=True)
                     st.markdown("---")
                     
                     # SELL side (KuCoin - bottom)
