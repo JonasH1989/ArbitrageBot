@@ -1,0 +1,28 @@
+# API Keys - MUST be provided by user via mounted volume or environment
+# NEVER commit real API keys to git!
+kucoin:
+  api_key: ""
+  api_secret: ""
+  api_passphrase: ""
+
+mexc:
+  api_key: ""
+  api_secret: ""
+
+trading:
+  min_volume: 10
+  pairs:
+    MPC-USDT:
+      enabled: false
+      alert_enabled: true
+      strategy: usdt
+      threshold_start: 0.6
+      threshold_stop: 0.5
+
+alert:
+  enabled: true
+  volume: 0.3
+
+thresholds:
+  start: 0.5
+  stop: 0.3
