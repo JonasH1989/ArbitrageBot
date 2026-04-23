@@ -682,17 +682,72 @@ else:
             
             st.caption("Hinweis: Fees sind geschätzt (0.1% + 0.1% Taker). Auto-Set später verfügbar.")
         
-        # Wallet
-        with st.expander("💰 Wallet", expanded=False):
-            w1, w2 = st.columns(2)
-            with w1:
-                st.markdown("### KuCoin")
-                st.metric("USDT", f"${k_usdt:.2f}")
-                st.metric(base_coin, f"{k_mpc:.2f}")
-            with w2:
-                st.markdown("### MEXC")
-                st.metric("USDT", f"${m_usdt:.2f}")
-                st.metric(base_coin, f"{m_mpc:.2f}")
+        # Wallets
+        with st.expander("💰 Wallets", expanded=True):
+            st.subheader("💰 Wallets")
+            
+            col1, col2 = st.columns(2)
+        
+        # Extract base and quote from pair
+        pair_parts = pair.split('-')
+        base_coin_local = pair_parts[0] if len(pair_parts) > 0 else ''
+        quote_coin_local = pair_parts[1] if len(pair_parts) > 1 else ''
+        
+        kucoin_key_local = config.get('kucoin', {}).get('api_key', '')
+        kucoin_secret_local = config.get('kucoin', {}).get('api_secret', '')
+        kucoin_pass_local = config.get('kucoin', {}).get('api_passphrase', '')
+        mexc_key_local = config.get('mexc', {}).get('api_key', '')
+        mexc_secret_local = config.get('mexc', {}).get('api_secret', '')
+        
+        # Fetch wallet data
+        kucoin_wallet = {'ok': False, 'balances': {}}
+        mexc_wallet = {'ok': False, 'balances': {}}
+        
+        if kucoin_key_local and kucoin_secret_local and kucoin_pass_local:
+            kucoin_wallet = get_kucoin_balances(kucoin_key_local, kucoin_secret_local, kucoin_pass_local)
+        
+        if mexc_key_local and mexc_secret_local:
+            mexc_wallet = get_mexc_balances(mexc_key_local, mexc_secret_local)
+        
+        # KuCoin Wallet
+        with col1:
+            st.image("/app/static/kucoin_icon.png", width=40); st.text("KuCoin")
+            if kucoin_wallet.get('ok'):
+                bals = kucoin_wallet['balances']
+                for sym in [base_coin_local, quote_coin_local]:
+                    if sym:
+                        if sym in bals:
+                            bal = bals[sym]
+                            st.metric(sym, f"{bal['available']:.2f}", f"Total: {bal['total']:.2f}")
+                        else:
+                            st.metric(sym, "0.00", "Total: 0.00")
+            else:
+                st.caption("KuCoin API Keys nicht konfiguriert")
+        
+        # MEXC Wallet
+        with col2:
+            st.image("/app/static/mexc_icon.png", width=40); st.text("MEXC")
+            if mexc_wallet.get('ok'):
+                bals = mexc_wallet['balances']
+                unique_balances = {}
+                for sym, bal in bals.items():
+                    if bal['total'] > 0:
+                        if sym not in unique_balances:
+                            unique_balances[sym] = bal
+                        else:
+                            unique_balances[sym] = {
+                                'available': unique_balances[sym]['available'] + bal['available'],
+                                'total': unique_balances[sym]['total'] + bal['total']
+                            }
+                for sym in [base_coin_local, quote_coin_local]:
+                    if sym:
+                        if sym in unique_balances:
+                            bal = unique_balances[sym]
+                            st.metric(sym, f"{bal['available']:.2f}", f"Total: {bal['total']:.2f}")
+                        else:
+                            st.metric(sym, "0.00", "Total: 0.00")
+            else:
+                st.caption("MEXC API Keys nicht konfiguriert")
         
         # Log
         with st.expander("📜 Log", expanded=False):
@@ -805,118 +860,6 @@ else:
     if st.button("🔄 Aktualisieren"):
         st.rerun()
     
-    # =========================================================================
-    # WALLET - KuCoin + MEXC side by side (wrapped in container to prevent duplicates)
-    # =========================================================================
-    
-    with st.expander("💰 Wallets", expanded=True):
-        st.subheader("💰 Wallets")
-        
-        col1, col2 = st.columns(2)
-    
-    # Extract base and quote from pair
-    pair_parts = pair.split('-')
-    base_coin = pair_parts[0] if len(pair_parts) > 0 else ''
-    quote_coin = pair_parts[1] if len(pair_parts) > 1 else ''
-    
-    kucoin_key = config.get('kucoin', {}).get('api_key', '')
-    kucoin_secret = config.get('kucoin', {}).get('api_secret', '')
-    kucoin_pass = config.get('kucoin', {}).get('api_passphrase', '')
-    mexc_key = config.get('mexc', {}).get('api_key', '')
-    mexc_secret = config.get('mexc', {}).get('api_secret', '')
-    
-    # Fetch wallet data BEFORE displaying (so it's available for portfolio logging)
-    kucoin_wallet = {'ok': False, 'balances': {}}
-    mexc_wallet = {'ok': False, 'balances': {}}
-    
-    if kucoin_key and kucoin_secret and kucoin_pass:
-        kucoin_wallet = get_kucoin_balances(kucoin_key, kucoin_secret, kucoin_pass)
-    
-    if mexc_key and mexc_secret:
-        mexc_wallet = get_mexc_balances(mexc_key, mexc_secret)
-    
-    # KuCoin Wallet
-    with col1:
-        st.image("/app/static/kucoin_icon.png", width=40); st.text("KuCoin")
-        if kucoin_wallet.get('ok'):
-            bals = kucoin_wallet['balances']
-            for sym in [base_coin, quote_coin]:
-                if sym:
-                    if sym in bals:
-                        bal = bals[sym]
-                        st.metric(sym, f"{bal['available']:.2f}", f"Total: {bal['total']:.2f}")
-                    else:
-                        st.metric(sym, "0.00", "Total: 0.00")
-        else:
-            st.caption("KuCoin API Keys nicht konfiguriert")
-    
-    # MEXC Wallet
-    with col2:
-        st.image("/app/static/mexc_icon.png", width=40); st.text("MEXC")
-        if mexc_wallet.get('ok'):
-            bals = mexc_wallet['balances']
-            # Deduplicate by summing totals per coin
-            unique_balances = {}
-            for sym, bal in bals.items():
-                if bal['total'] > 0:
-                    if sym not in unique_balances:
-                        unique_balances[sym] = bal
-                    else:
-                        # Sum available and total
-                        unique_balances[sym] = {
-                            'available': unique_balances[sym]['available'] + bal['available'],
-                            'total': unique_balances[sym]['total'] + bal['total']
-                        }
-            # Show both coins for the pair (even if 0)
-            for sym in [base_coin, quote_coin]:
-                if sym:
-                    if sym in unique_balances:
-                        bal = unique_balances[sym]
-                        st.metric(sym, f"{bal['available']:.2f}", f"Total: {bal['total']:.2f}")
-                    else:
-                        st.metric(sym, "0.00", "Total: 0.00")
-        else:
-            st.caption("MEXC API Keys nicht konfiguriert")
-
-    # Portfolio logging not yet implemented
-    # try:
-    #     k_bal = {'MPC': 0, 'USDT': 0}
-    #     m_bal = {'MPC': 0, 'USDT': 0}
-    #     if kucoin_wallet.get('ok'):
-    #         for sym, bal in kucoin_wallet.get('balances', {}).items():
-    #             if sym in ['MPC', 'USDT']:
-    #                 k_bal[sym] = bal.get('total', 0)
-    #     if mexc_wallet.get('ok'):
-    #         for sym, bal in mexc_wallet.get('balances', {}).items():
-    #             if sym in ['MPC', 'USDT']:
-    #                 m_bal[sym] = bal.get('total', 0)
-    #     
-    #     changed = check_and_log_portfolio(k_bal, m_bal, strategy=current_strategy, threshold=threshold_start)
-    #     if changed:
-    #         st.info(f"📝 Portfolio-Änderung erkannt und geloggt!")
-    # except Exception as e:
-    #     st.warning(f"⚠️ Portfolio-Log Fehler: {e}")
-
-    # Auto-detect new trades from exchange APIs
-    try:
-        if kucoin_key and kucoin_secret and kucoin_pass:
-            k_trades = get_kucoin_trades(kucoin_key, kucoin_secret, kucoin_pass, pair.replace('-', '-'), limit=5)
-            if not k_trades.get('ok'):
-                k_trades = {'trades': []}
-        else:
-            k_trades = {'trades': []}
-        
-        if mexc_key and mexc_secret:
-            m_trades = get_mexc_trades(mexc_key, mexc_secret, pair.replace('-', ''), limit=5)
-            if not m_trades.get('ok'):
-                m_trades = {'trades': []}
-        else:
-            m_trades = {'trades': []}
-        # detect_and_log_trades not yet implemented
-        pass
-    except Exception as e:
-        st.warning(f"⚠️ Trade-Detection Fehler: {e}")
-
 # =========================================================================
 # TRADE LOG SECTION - ONLY IN DETAIL VIEW (FULL WIDTH)
 # =========================================================================
