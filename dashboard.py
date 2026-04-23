@@ -640,13 +640,13 @@ else:
             
             with s1:
                 ts = pair_data.get('threshold_start', 1.0)
-                ts_new = st.number_input("Start %", 0.0, 50.0, ts, 0.05, key=f"pts_{pair}")
+                ts_new = st.number_input("Start Threshold in %", 0.0, 50.0, ts, 0.05, key=f"pts_{pair}")
                 if ts_new != ts:
                     set_pair_settings(pair, threshold_start=ts_new)
             
             with s2:
                 tss = pair_data.get('threshold_stop', 0.5)
-                tss_new = st.number_input("Stop %", 0.0, max(0.1, ts_new), tss, 0.05, key=f"ptss_{pair}")
+                tss_new = st.number_input("Stop Threshold in %", 0.0, max(0.1, ts_new), tss, 0.05, key=f"ptss_{pair}")
                 if tss_new != tss:
                     set_pair_settings(pair, threshold_stop=tss_new)
             
@@ -659,8 +659,8 @@ else:
             with s4:
                 strat = pair_data.get('strategy', 'usdt')
                 strat_idx = 0 if strat == 'usdt' else 1
-                new_strat = st.radio("Strategie", ["💰 USDT", "🪙 Coins"], index=strat_idx, key=f"pstr_{pair}")
-                new_strat_val = 'usdt' if new_strat == "💰 USDT" else 'coins'
+                new_strat = st.radio("Gewinn Strategie", ["USDT", "Coins"], index=strat_idx, key=f"pstr_{pair}")
+                new_strat_val = 'usdt' if new_strat == "USDT" else 'coins'
                 if new_strat_val != strat:
                     set_pair_settings(pair, strategy=new_strat_val)
             
