@@ -720,19 +720,16 @@ else:
             st.markdown("---")
             fee_col1, fee_col2 = st.columns(2)
             with fee_col1:
-                st.write(f"**K→M:** Fees ≈ {fee_pct_km:.3f}%")
-                st.write(f"**M→K:** Fees ≈ {fee_pct_mk:.3f}%")
+                st.write(f"**MEXC-Takerfee:** {(m_taker*100):.2f}%")
+                st.write(f"**KuCoin-Takerfee:** {(k_taker*100):.2f}%")
             with fee_col2:
-                st.write(f"**Min. Threshold:** ≥{max(recommended_min_km, recommended_min_mk):.2f}%")
-                st.write(f"**Aktueller Threshold:** {threshold_start}%")
+                st.write(f"**Puffer:** {(min_profit_buffer*100):.1f}%")
             
             if threshold_start < max(recommended_min_km, recommended_min_mk):
                 st.error(f"⚠️ **WARNUNG:** Threshold {threshold_start}% ist unter dem empfohlenen Minimum! "
                         f"Gebühren könnten den Gewinn auffressen.")
             else:
                 st.success(f"✅ Threshold {threshold_start}% ist ausreichend.")
-            
-            st.caption("Hinweis: Fees sind geschätzt (0.1% + 0.1% Taker). Auto-Set später verfügbar.")
         
         # Wallets
         with st.expander("💰 Wallets", expanded=False):
