@@ -21,7 +21,7 @@ import os
 # Import settings_sync for config access
 sys.path.insert(0, '/app')
 try:
-    from settings_sync import get_setting, get_pair_settings, load_config
+    from settings_sync import get_setting, set_setting, get_pair_settings, load_config
 except ImportError:
     get_setting = None
     get_pair_settings = None
