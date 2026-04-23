@@ -416,7 +416,7 @@ if st.session_state.selected_pair is None:
                     is_profitable = best > 0
                 
                 enabled = pair_data.get('enabled', True)
-                tile_emoji = "🟢" if is_profitable and enabled else "⬜"
+                tile_emoji = "🟢" if enabled else "🔴"
                 
                 st.subheader(f"{tile_emoji} {pair_name}")
                 
@@ -436,7 +436,7 @@ if st.session_state.selected_pair is None:
                         st.rerun()
                 with c2:
                     new_state = not enabled
-                    if st.button("🔄" if enabled else "▶️", key=f"tgl_{pair_name}"):
+                    if st.button("⏸" if enabled else "▶️", key=f"tgl_{pair_name}"):
                         set_pair_settings(pair_name, enabled=new_state)
                         st.rerun()
                 with c3:
