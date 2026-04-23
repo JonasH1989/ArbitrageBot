@@ -840,7 +840,7 @@ else:
                     km_color = "🟢" if km_active else "🟡" if spread_pct_km > 0 else "🔴"
                     st.markdown(f"**{km_color} Spread: {spread_pct_km:+.3f}% | ${profit_km:+.6f}**")
                     
-                    # BUY side (KuCoin - top) - sorted HIGH to LOW
+                    # BUY side (KuCoin - top) - highest first
                     st.markdown("🥇 **KUCOIN BUY** (was wir bezahlen)")
                     for i in range(20):
                         k_ask_p = kucoin_asks[i][0] if i < len(kucoin_asks) else 0
@@ -915,7 +915,7 @@ else:
                     mk_color = "🟢" if mk_active else "🟡" if spread_pct_mk > 0 else "🔴"
                     st.markdown(f"**{mk_color} Spread: {spread_pct_mk:+.3f}% | ${profit_mk:+.6f}**")
                     
-                    # BUY side (MEXC - top)
+                    # BUY side (MEXC - top) - ascending (cheapest first)
                     st.markdown("🥈 **MEXC BUY** (was wir bezahlen)")
                     for i in range(20):
                         m_ask_p = mexc_asks[i][0] if i < len(mexc_asks) else 0
@@ -939,9 +939,9 @@ else:
                         
                         st.markdown(f"""
                         <div style="background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;">
-                            <span style="color: {color}; font-weight: bold;">${k_bid_p:.5f}</span>
+                            <span style="color: {color}; font-weight: bold;">${m_ask_p:.5f}</span>
                             <span style="color: #888;">|</span>
-                            <span style="color: #fff;">{k_bid_v:.0f} MPC</span>
+                            <span style="color: #fff;">{m_ask_v:.0f} MPC</span>
                             <span style="color: #888; margin-left: 10px;">{pct:+.3f}%</span>
                         </div>
                         """, unsafe_allow_html=True)
