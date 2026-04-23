@@ -299,6 +299,21 @@ thresholds = config['trading'].get('thresholds', {'start': 0.2, 'stop': 0.1})
 with st.sidebar:
     st.header("⚙️ Einstellungen")
     
+    # Bot on/off toggle at TOP of sidebar
+    config = load_config()
+    bot_enabled = config.get('bot', {}).get('enabled', False)
+    
+    st.markdown("### 🤖 Bot Status")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🟢 Start" if not bot_enabled else "⏸ Pause", use_container_width=True, key="bot_toggle"):
+            set_bot_enabled(not bot_enabled)
+            st.rerun()
+    with col2:
+        st.markdown(f"**{'AKTIV' if bot_enabled else 'PAUSED'}**")
+    
+    st.divider()
+    
     # Exchange Settings FIRST
     st.markdown("### 🔗 Exchanges")
     
