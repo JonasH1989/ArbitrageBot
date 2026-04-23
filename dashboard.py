@@ -882,7 +882,9 @@ else:
                     
                     # Spread Gap
                     st.markdown("---")
-                    st.markdown(f"### {spread_pct_mk:+.3f}%")
+                    mk_active = mk_meets_threshold
+                    mk_color = "🟢" if mk_active else "🟡" if spread_pct_mk > 0 else "🔴"
+                    st.markdown(f"**{mk_color} Spread: {spread_pct_mk:+.3f}% | ${profit_mk:+.6f}**")
                     st.markdown("---")
                     
                     # SELL side (KuCoin - bottom)
