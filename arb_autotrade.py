@@ -385,9 +385,17 @@ def main():
     # Ensure logs directory exists
     os.makedirs('/home/openclaw/.openclaw/logs', exist_ok=True)
     
-    # Thresholds
-    START_THRESHOLD = 1.0  # Enter trade when spread >= this %
-    STOP_THRESHOLD = 0.5   # Stop running when spread < this %
+    # Thresholds - load from config via settings_sync
+    try:
+        sys.path.insert(0, str(Path(__file__).parent))
+        from config.settings_sync import get_setting
+        START_THRESHOLD = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_start', 1.0)
+        STOP_THRESHOLD = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_stop', 0.5)
+        log(f"Thresholds geladen: start={START_THRESHOLD}%, stop={STOP_THRESHOLD}%")
+    except Exception as e:
+        log(f"Konnte thresholds nicht aus config laden: {e}, verwende defaults")
+        START_THRESHOLD = 1.0
+        STOP_THRESHOLD = 0.5
     
     # State machine
     STATE_WAITING = 'WAITING'
@@ -397,8 +405,17 @@ def main():
     last_trade_time = 0
     last_limit_check = 0
     
-    # Start INAKTIV - must be manually activated
-    log("=== BOT STARTET IM INAKTIV STATUS ===")
+    # ALWAYS START INAKTIV - safety first!
+    # Even if config says enabled=true, we ignore that on restart
+    log("=== BOT STARTET IM INAKTIV STATUS (always) ===")
+    
+    # Check if user manually activated via flag file BEFORE we set inactive
+    # If flag exists, user wants to start - but we still start inactive first
+    was_flagged = os.path.exists(ACTIVE_FLAG_FILE)
+    if was_flagged:
+        log("Hinweis: Flag file erkannt, aber trotzdem INAKTIV gestartet (Sicherheit)")
+        os.remove(ACTIVE_FLAG_FILE)  # Clear it
+    
     log("Um zu aktivieren: touch /home/openclaw/.openclaw/logs/arb_active.flag")
     log("Um zu deaktivieren: rm /home/openclaw/.openclaw/logs/arb_active.flag")
     

@@ -728,168 +728,46 @@ else:
             st.warning("⚠️ Markt effizient - kein profitabler Spread")
         
         # Show both directions for reference
-        with st.expander("📊 Orderbook (20 Level)", expanded=True):
-            # Fetch orderbooks
-            try:
-                # MEXC 20-level orderbook
-                mexc_ob_resp = requests.get("https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=20", timeout=5)
-                mexc_ob = mexc_ob_resp.json() if mexc_ob_resp.status_code == 200 else {'bids': [], 'asks': []}
-                mexc_bids = [(float(p), float(v)) for p, v in mexc_ob.get('bids', [])[:20]]
-                mexc_asks = [(float(p), float(v)) for p, v in mexc_ob.get('asks', [])[:20]]
-            except:
-                mexc_bids, mexc_asks = [], []
-            
-            # KuCoin 20-level orderbook (size is IN THE PATH like level2_20)
-            try:
-                kucoin_ob_resp = requests.get("https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol=MPC-USDT", timeout=5)
-                kucoin_ob = kucoin_ob_resp.json() if kucoin_ob_resp.status_code == 200 else {}
-                kucoin_bids = [(float(p), float(v)) for p, v in kucoin_ob.get('data', {}).get('bids', [])[:20]]
-                kucoin_asks = [(float(p), float(v)) for p, v in kucoin_ob.get('data', {}).get('asks', [])[:20]]
-            except:
-                kucoin_bids, kucoin_asks = [], []
-            
-            # Spread header
-            spread_km_pct = spread_pct_km
-            spread_km_dollar = profit_km
-            spread_mk_pct = spread_pct_mk
-            spread_mk_dollar = profit_mk
-            
-            # Create orderbook display
-            st.markdown("### 📊 Orderbook Vergleich")
-            
-            # KUCOIN → MEXC Direction (Buy KuCoin, Sell MEXC)
-            st.markdown("#### 🥇 KuCoin ← → 🥈 MEXC  (K→M Direction)")
-            
-            # Show which side is highlighted based on threshold
-            km_active = km_meets_threshold
-            
-            col_ob1, col_ob2, col_ob3 = st.columns([1, 2, 2])
-            
-            with col_ob1:
-                st.markdown(f"**Threshold:** {threshold_start}%")
-                if km_active:
-                    st.success("✅ Trade OK")
+        with st.expander("📊 Alle Richtungen (Details)"):
+            d1, d2 = st.columns(2)
+            with d1:
+                st.markdown("#### KUCOIN → MEXC")
+                st.write(f"🥇 KuCoin **Ask:** `${k_ask:.6f}`  |  🥈 MEXC **Bid:** `${m_bid:.6f}`")
+                spread_km_color = "🔴" if profit_km <= 0 else ("🟡" if spread_pct_km < threshold_start else "🟢")
+                st.write(f"{spread_km_color} Spread: {spread_pct_km:+.3f}% (${profit_km:+.6f})")
+                st.write(f"   Threshold: {threshold_start}%")
+                if km_profitable and spread_pct_km >= threshold_start:
+                    st.success(f"✅ Trade möglich!")
+                elif km_profitable:
+                    st.warning(f"⚠️ Positiv aber < Threshold")
                 else:
-                    st.warning("⏳ < Threshold")
-                st.markdown(f"**Spread:** {spread_km_pct:+.3f}%")
-                st.markdown(f"**$/Coin:** ${spread_km_dollar:+.6f}")
-            
-            with col_ob2:
-                st.markdown("🥇 **KuCoin (Buy Side)**")
-                if kucoin_asks:
-                    st.markdown(f"Ask: `${kucoin_asks[0][0]:.6f}` (Vol: {kucoin_asks[0][1]:.0f})")
-                    cum_ask = sum(v for p, v in kucoin_asks[:5])
-                    st.caption(f"Top 5 Asks: {cum_ask:.0f} MPC")
+                    st.error(f"❌ Negativer Spread")
+                st.write(f"Volume: {vol_km:.0f} MPC")
+                if current_strategy == 'usdt':
+                    st.write(f"Total: ${profit_km * vol_km:+.4f}")
                 else:
-                    st.markdown(f"Ask: `${k_ask:.6f}` (Vol: {kucoin.get('ask_size', 0):.0f})")
-            
-            with col_ob3:
-                st.markdown("🥈 **MEXC (Sell Side)**")
-                if mexc_bids:
-                    st.markdown(f"Bid: `${mexc_bids[0][0]:.6f}` (Vol: {mexc_bids[0][1]:.2f})")
-                    cum_bid = sum(v for p, v in mexc_bids[:5])
-                    st.caption(f"Top 5 Bids: {cum_bid:.0f} MPC")
-            
-            # MEXC → KUCOIN Direction (Buy MEXC, Sell KuCoin)
-            st.markdown("---")
-            st.markdown("#### 🥈 MEXC ← → 🥇 KuCoin  (M→K Direction)")
-            
-            mk_active = mk_meets_threshold
-            
-            col_ob4, col_ob5, col_ob6 = st.columns([1, 2, 2])
-            
-            with col_ob4:
-                st.markdown(f"**Threshold:** {threshold_start}%")
-                if mk_active:
-                    st.success("✅ Trade OK")
+                    # Only show positive MPC gain for this direction
+                    mpc_gain_km = coins_km if km_profitable and spread_pct_km >= threshold_start else 0
+                    st.write(f"MPC-Gewinn: {mpc_gain_km:+.4f} MPC")
+            with d2:
+                st.markdown("#### MEXC → KUCOIN")
+                st.write(f"🥈 MEXC **Ask:** `${m_ask:.6f}`  |  🥇 KuCoin **Bid:** `${k_bid:.6f}`")
+                spread_mk_color = "🔴" if profit_mk <= 0 else ("🟡" if spread_pct_mk < threshold_start else "🟢")
+                st.write(f"{spread_mk_color} Spread: {spread_pct_mk:+.3f}% (${profit_mk:+.6f})")
+                st.write(f"   Threshold: {threshold_start}%")
+                if mk_profitable and spread_pct_mk >= threshold_start:
+                    st.success(f"✅ Trade möglich!")
+                elif mk_profitable:
+                    st.warning(f"⚠️ Positiv aber < Threshold")
                 else:
-                    st.warning("⏳ < Threshold")
-                st.markdown(f"**Spread:** {spread_mk_pct:+.3f}%")
-                st.markdown(f"**$/Coin:** ${spread_mk_dollar:+.6f}")
-            
-            with col_ob5:
-                st.markdown("🥈 **MEXC (Buy Side)**")
-                if mexc_asks:
-                    st.markdown(f"Ask: `${mexc_asks[0][0]:.6f}` (Vol: {mexc_asks[0][1]:.2f} MPC)")
-                    cum_ask_m = sum(v for p, v in mexc_asks[:5])
-                    st.caption(f"Top 5 Asks: {cum_ask_m:.0f} MPC")
-            
-            with col_ob6:
-                st.markdown("🥇 **KuCoin (Sell Side)**")
-                if kucoin_bids:
-                    st.markdown(f"Bid: `${kucoin_bids[0][0]:.6f}` (Vol: {kucoin_bids[0][1]:.0f} MPC)")
-                    cum_bid_k = sum(v for p, v in kucoin_bids[:5])
-                    st.caption(f"Top 5 Bids: {cum_bid_k:.0f} MPC")
-            
-            # Full Orderbook Table - BOTH EXCHANGES
-            st.markdown("---")
-            st.markdown("### 📋 Orderbook Vergleich (20 Level)")
-            
-            # Get KuCoin buy price for profit calculation
-            k_buy_price = kucoin_asks[0][0] if kucoin_asks else k_ask
-            m_sell_price = mexc_bids[0][0] if mexc_bids else 0
-            
-            if mexc_bids and mexc_asks and kucoin_bids and kucoin_asks:
-                # Build combined table
-                import pandas as pd
-                
-                rows = []
-                for i in range(20):
-                    # MEXC data
-                    m_bid_p = mexc_bids[i][0] if i < len(mexc_bids) else 0
-                    m_bid_v = mexc_bids[i][1] if i < len(mexc_bids) else 0
-                    m_ask_p = mexc_asks[i][0] if i < len(mexc_asks) else 0
-                    m_ask_v = mexc_asks[i][1] if i < len(mexc_asks) else 0
-                    
-                    # KuCoin data
-                    k_bid_p = kucoin_bids[i][0] if i < len(kucoin_bids) else 0
-                    k_bid_v = kucoin_bids[i][1] if i < len(kucoin_bids) else 0
-                    k_ask_p = kucoin_asks[i][0] if i < len(kucoin_asks) else 0
-                    k_ask_v = kucoin_asks[i][1] if i < len(kucoin_asks) else 0
-                    
-                    # K→M: Buy KuCoin Ask, Sell MEXC Bid
-                    km_profit = m_bid_p - k_ask_p
-                    km_pct = (km_profit / k_ask_p * 100) if k_ask_p > 0 else 0
-                    km_meets = km_pct >= threshold_start
-                    
-                    # M→K: Buy MEXC Ask, Sell KuCoin Bid
-                    mk_profit = k_bid_p - m_ask_p
-                    mk_pct = (mk_profit / m_ask_p * 100) if m_ask_p > 0 else 0
-                    mk_meets = mk_pct >= threshold_start
-                    
-                    rows.append({
-                        'Lvl': i + 1,
-                        'K Bid': f"${k_bid_p:.5f}" if k_bid_p else "-",
-                        'K Bid Vol': f"{k_bid_v:.0f}" if k_bid_v else "-",
-                        'K Ask': f"${k_ask_p:.5f}" if k_ask_p else "-",
-                        'K Ask Vol': f"{k_ask_v:.0f}" if k_ask_v else "-",
-                        'M Bid': f"${m_bid_p:.5f}" if m_bid_p else "-",
-                        'M Bid Vol': f"{m_bid_v:.0f}" if m_bid_v else "-",
-                        'M Ask': f"${m_ask_p:.5f}" if m_ask_p else "-",
-                        'M Ask Vol': f"{m_ask_v:.0f}" if m_ask_v else "-",
-                        'K→M %': f"{km_pct:+.3f}%" if km_pct != 0 else "-",
-                        'M→K %': f"{mk_pct:+.3f}%" if mk_pct != 0 else "-",
-                        'km_ok': km_meets,
-                        'mk_ok': mk_meets,
-                    })
-                
-                df = pd.DataFrame(rows)
-                
-                # Create display dataframe
-                df_display = df[['Lvl', 'K Bid', 'K Bid Vol', 'K Ask', 'K Ask Vol', 
-                               'M Bid', 'M Bid Vol', 'M Ask', 'M Ask Vol', 
-                               'K→M %', 'M→K %']].copy()
-                
-                st.dataframe(df_display, use_container_width=True, hide_index=True)
-                
-                # Legend
-                st.markdown("""
-                **Legende:**  
-                🟢 **Grün (K→M %)** = KuCoin Buy / MEXC Sell profitabel (≥ Threshold)  
-                🟢 **Grün (M→K %)** = MEXC Buy / KuCoin Sell profitabel (≥ Threshold)  
-                """)
-            else:
-                st.info("Orderbook Daten nicht vollständig verfügbar")
+                    st.error(f"❌ Negativer Spread")
+                st.write(f"Volume: {vol_mk:.0f} MPC")
+                if current_strategy == 'usdt':
+                    st.write(f"Total: ${profit_mk * vol_mk:+.4f}")
+                else:
+                    # Only show positive MPC gain for this direction
+                    mpc_gain_mk = coins_mk if mk_profitable and spread_pct_mk >= threshold_start else 0
+                    st.write(f"MPC-Gewinn: {mpc_gain_mk:+.4f} MPC")
         
         # =========================================================================
         # PAIR SETTINGS (compact at bottom)
