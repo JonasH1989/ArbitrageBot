@@ -445,14 +445,10 @@ def main():
         except Exception as e:
             log(f"Could not load config: {e}")
     
-    # Always start inactive - user must manually activate
-    was_flagged = os.path.exists(ACTIVE_FLAG_FILE)
-    if was_flagged:
-        log("Hinweis: Flag file vorhanden - wird IGNORIERT bei Start (Safety First)")
-        os.remove(ACTIVE_FLAG_FILE)
-    
-    log("Um zu aktivieren: touch /home/openclaw/.openclaw/logs/arb_active.flag")
-    log("Um zu deaktivieren: rm /home/openclaw/.openclaw/logs/arb_active.flag")
+    # Read enabled status from config
+    config = load_config()
+    bot_enabled = config.get('bot', {}).get('enabled', False)
+    log(f"Bot enabled: {bot_enabled}")
     
     while True:
         prices = get_prices()
@@ -487,7 +483,8 @@ def main():
         
         # Trade BOTH directions when profitable!
         # Check if active
-        active = is_active()
+        config = load_config()
+        active = config.get("bot", {}).get("enabled", False)
         if not active:
             state = STATE_WAITING
             if int(time.time()) % 30 == 0:
