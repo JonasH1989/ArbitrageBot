@@ -823,7 +823,6 @@ else:
             
             # Full Orderbook Table - Börsen-style Darstellung
             st.markdown("---")
-            st.markdown("### 📋 Orderbook (20 Level)")
             
             if mexc_bids and mexc_asks and kucoin_bids and kucoin_asks:
                 # Build orderbook in Börsen-style: Sells links, Spread in der Mitte, Buys rechts
@@ -871,9 +870,10 @@ else:
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    # Spread Gap
+                    # Spread Gap - colored
+                    km_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_km >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_km > 0 else "rgba(244,67,54,0.2)")
                     st.markdown("---")
-                    st.markdown(f"### {spread_pct_km:+.3f}%")
+                    st.markdown(f"""<div style="background-color: {km_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold;">{spread_pct_km:+.3f}%</div>""", unsafe_allow_html=True)
                     st.markdown("---")
                     
                     # SELL side (MEXC - bottom) - sorted HIGH to LOW (what we get)
