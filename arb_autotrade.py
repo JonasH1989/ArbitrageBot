@@ -470,7 +470,7 @@ def main():
         # Trade BOTH directions when profitable!
         # Check if active
         config = load_config()
-        active = get_setting(f"trading.pairs.{pair}.enabled", False)
+        active = get_setting(f"trading.pairs.{TRADING_PAIR}.enabled", False)
         if not active:
             state = STATE_WAITING
             if int(time.time()) % 30 == 0:
