@@ -473,10 +473,18 @@ else:
         st.session_state.selected_pair = None
         st.rerun()
     
-    # Status indicator
+    # Status indicator + Bot toggle in header row
     pair_enabled = pair_data.get('enabled', False)
     status_emoji = "🟢" if pair_enabled else "🔴"
-    st.header(f"{status_emoji} {pair}")
+    
+    col_status, col_checkbox = st.columns([1, 2])
+    with col_status:
+        st.header(f"{status_emoji} {pair}")
+    with col_checkbox:
+        new_enabled = st.checkbox("Bot AKTIV", value=pair_enabled, key="bot_enable_checkbox")
+        if new_enabled != pair_enabled:
+            set_pair_settings(pair, enabled=new_enabled)
+            st.rerun()
     
     # Get data
     kucoin = get_kucoin_orderbook(pair)
@@ -969,10 +977,7 @@ else:
                     set_pair_settings(pair, strategy=new_strat_val)
             
             with s5:
-                enabled = pair_data.get('enabled', True)
-                en_new = st.checkbox("🟢 Aktiv", value=enabled, key=f"pen_{pair}")
-                if en_new != enabled:
-                    set_pair_settings(pair, enabled=en_new)
+                st.write("")  # Empty - enabled moved to header
         
         # Alert - only if threshold is met
         pair_alert = pair_data.get('alert_enabled', True)
