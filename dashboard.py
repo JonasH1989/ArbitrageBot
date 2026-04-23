@@ -1071,6 +1071,7 @@ else:
         if pair_alert and alert_enabled and (trade_possible_km or trade_possible_mk):
             st.warning("🚨 Profitabel!")
             st.warning("🚨 Profitabel!")
+            play_sound()
     
     else:
         st.error("Daten nicht verfuegbar")
