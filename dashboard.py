@@ -18,8 +18,8 @@ from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_
 
 
 # Logo paths
-KUCoin_LOGO = "static/kucoin.jpg"
-MEXC_LOGO = "static/mexc.jpg"
+KUCoin_LOGO = "/app/static/kucoin.jpg"
+MEXC_LOGO = "/app/static/mexc.jpg"
 st.set_page_config(page_title="Arbitrage Bot", page_icon="📊", layout="wide")
 
 CONFIG_FILE = 'config/config.yaml'
@@ -1005,7 +1005,7 @@ else:
     
     # KuCoin Wallet
     with col1:
-        st.image("static/kucoin.jpg", width=120)
+        st.image("/app/static/kucoin.jpg", width=120)
         if kucoin_wallet.get('ok'):
             bals = kucoin_wallet['balances']
             for sym in [base_coin, quote_coin]:
@@ -1020,7 +1020,7 @@ else:
     
     # MEXC Wallet
     with col2:
-        st.image("static/mexc.jpg", width=120)
+        st.image("/app/static/mexc.jpg", width=120)
         if mexc_wallet.get('ok'):
             bals = mexc_wallet['balances']
             # Deduplicate by summing totals per coin
