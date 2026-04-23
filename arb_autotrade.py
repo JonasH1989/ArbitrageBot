@@ -21,7 +21,7 @@ import os
 # Import settings_sync for config access
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config'))
 try:
-    from settings_sync import get_pair_settings
+    from settings_sync import get_setting, get_pair_settings, load_config
 except ImportError:
     get_pair_settings = None
 
@@ -428,22 +428,6 @@ def main():
     trade_in_progress = False
     last_trade_time = 0
     last_limit_check = 0
-    
-    # ALWAYS START INAKTIV - safety first!
-    # Even if config says enabled=true, we ignore that on restart
-    log("=== BOT STARTET IM INAKTIV STATUS (always) ===")
-    
-    # ALWAYS START INAKTIV - safety first!
-    log("=== BOT STARTET IM INAKTIV STATUS (always) ===")
-    
-    # Check config but don't auto-start
-    if get_pair_settings:
-        try:
-            pair_cfg = get_pair_settings(TRADING_PAIR)
-            config_enabled = pair_cfg.get('enabled', False)
-            log(f"Config enabled: {config_enabled}")
-        except Exception as e:
-            log(f"Could not load config: {e}")
     
     # Read enabled status from config
     config = load_config()
