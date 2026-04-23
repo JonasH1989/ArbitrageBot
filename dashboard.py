@@ -840,45 +840,8 @@ else:
                     km_color = "🟢" if km_active else "🟡" if spread_pct_km > 0 else "🔴"
                     st.markdown(f"**{km_color} Spread: {spread_pct_km:+.3f}% | ${profit_km:+.6f}**")
                     
-                    # Sell side (MEXC - top) - FLIPPED
-                    st.markdown("🥈 **MEXC SELL**")
-                    for i in range(20):
-                        m_bid_p = mexc_bids[i][0] if i < len(mexc_bids) else 0
-                        m_bid_v = mexc_bids[i][1] if i < len(mexc_bids) else 0
-                        
-                        # Profit at this level
-                        k_ask_p = kucoin_asks[0][0] if kucoin_asks else k_ask
-                        profit = m_bid_p - k_ask_p
-                        pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
-                        meets = pct >= threshold_start
-                        
-                        # Farbe: grün wenn threshold erfüllt
-                        if meets:
-                            bg = "rgba(0,255,0,0.15)"
-                            color = "#00c853"
-                        elif pct > 0:
-                            bg = "rgba(255,235,59,0.15)"
-                            color = "#ffc107"
-                        else:
-                            bg = "rgba(244,67,54,0.1)"
-                            color = "#f44336"
-                        
-                        st.markdown(f"""
-                        <div style="background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;">
-                            <span style="color: {color}; font-weight: bold;">${m_bid_p:.5f}</span>
-                            <span style="color: #888;">|</span>
-                            <span style="color: #fff;">{m_bid_v:.0f} MPC</span>
-                            <span style="color: #888; margin-left: 10px;">{pct:+.3f}%</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Spread Gap
-                    st.markdown("---")
-                    st.markdown(f"### {spread_pct_km:+.3f}%")
-                    st.markdown("---")
-                    
-                    # Buy side (KuCoin - bottom) - FLIPPED: highest ask at top (worst for us)
-                    st.markdown("🥇 **KUCOIN BUY**")
+                    # BUY side (KuCoin - top) - sorted HIGH to LOW
+                    st.markdown("🥇 **KUCOIN BUY** (was wir bezahlen)")
                     for i in range(20):
                         k_ask_p = kucoin_asks[i][0] if i < len(kucoin_asks) else 0
                         k_ask_v = kucoin_asks[i][1] if i < len(kucoin_asks) else 0
@@ -907,6 +870,42 @@ else:
                             <span style="color: #888; margin-left: 10px;">{pct:+.3f}%</span>
                         </div>
                         """, unsafe_allow_html=True)
+                    
+                    # Spread Gap
+                    st.markdown("---")
+                    st.markdown(f"### {spread_pct_km:+.3f}%")
+                    st.markdown("---")
+                    
+                    # SELL side (MEXC - bottom) - sorted HIGH to LOW (what we get)
+                    st.markdown("🥈 **MEXC SELL** (was wir bekommen)")
+                    for i in range(20):
+                        m_bid_p = mexc_bids[i][0] if i < len(mexc_bids) else 0
+                        m_bid_v = mexc_bids[i][1] if i < len(mexc_bids) else 0
+                        
+                        # Profit at this level
+                        k_ask_p = kucoin_asks[0][0] if kucoin_asks else k_ask
+                        profit = m_bid_p - k_ask_p
+                        pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
+                        meets = pct >= threshold_start
+                        
+                        if meets:
+                            bg = "rgba(0,255,0,0.15)"
+                            color = "#00c853"
+                        elif pct > 0:
+                            bg = "rgba(255,235,59,0.15)"
+                            color = "#ffc107"
+                        else:
+                            bg = "rgba(244,67,54,0.1)"
+                            color = "#f44336"
+                        
+                        st.markdown(f"""
+                        <div style="background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;">
+                            <span style="color: {color}; font-weight: bold;">${m_bid_p:.5f}</span>
+                            <span style="color: #888;">|</span>
+                            <span style="color: #fff;">{m_bid_v:.0f} MPC</span>
+                            <span style="color: #888; margin-left: 10px;">{pct:+.3f}%</span>
+                        </div>
+                        """, unsafe_allow_html=True)
                 
                 with col_mk:
                     st.markdown("#### 🥈 MEXC ← → 🥇 KuCoin  (M→K)")
@@ -916,14 +915,14 @@ else:
                     mk_color = "🟢" if mk_active else "🟡" if spread_pct_mk > 0 else "🔴"
                     st.markdown(f"**{mk_color} Spread: {spread_pct_mk:+.3f}% | ${profit_mk:+.6f}**")
                     
-                    # Sell side (KuCoin - top) - FLIPPED
-                    st.markdown("🥇 **KUCOIN SELL**")
+                    # BUY side (MEXC - top)
+                    st.markdown("🥈 **MEXC BUY** (was wir bezahlen)")
                     for i in range(20):
-                        k_bid_p = kucoin_bids[i][0] if i < len(kucoin_bids) else 0
-                        k_bid_v = kucoin_bids[i][1] if i < len(kucoin_bids) else 0
+                        m_ask_p = mexc_asks[i][0] if i < len(mexc_asks) else 0
+                        m_ask_v = mexc_asks[i][1] if i < len(mexc_asks) else 0
                         
-                        # Profit at this level
-                        m_ask_p = mexc_asks[0][0] if mexc_asks else m_ask
+                        # Profit if we buy at MEXC and sell at KuCoin
+                        k_bid_p = kucoin_bids[0][0] if kucoin_bids else 0
                         profit = k_bid_p - m_ask_p
                         pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                         meets = pct >= threshold_start
@@ -952,14 +951,14 @@ else:
                     st.markdown(f"### {spread_pct_mk:+.3f}%")
                     st.markdown("---")
                     
-                    # Buy side (MEXC - bottom) - FLIPPED
-                    st.markdown("🥈 **MEXC BUY**")
+                    # SELL side (KuCoin - bottom)
+                    st.markdown("🥇 **KUCOIN SELL** (was wir bekommen)")
                     for i in range(20):
-                        m_ask_p = mexc_asks[i][0] if i < len(mexc_asks) else 0
-                        m_ask_v = mexc_asks[i][1] if i < len(mexc_asks) else 0
+                        k_bid_p = kucoin_bids[i][0] if i < len(kucoin_bids) else 0
+                        k_bid_v = kucoin_bids[i][1] if i < len(kucoin_bids) else 0
                         
-                        # Profit if we buy at this level and sell at KuCoin bid
-                        k_bid_p = kucoin_bids[0][0] if kucoin_bids else 0
+                        # Profit at this level
+                        m_ask_p = mexc_asks[0][0] if mexc_asks else m_ask
                         profit = k_bid_p - m_ask_p
                         pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                         meets = pct >= threshold_start
@@ -976,9 +975,9 @@ else:
                         
                         st.markdown(f"""
                         <div style="background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;">
-                            <span style="color: {color}; font-weight: bold;">${m_ask_p:.5f}</span>
+                            <span style="color: {color}; font-weight: bold;">${k_bid_p:.5f}</span>
                             <span style="color: #888;">|</span>
-                            <span style="color: #fff;">{m_ask_v:.0f} MPC</span>
+                            <span style="color: #fff;">{k_bid_v:.0f} MPC</span>
                             <span style="color: #888; margin-left: 10px;">{pct:+.3f}%</span>
                         </div>
                         """, unsafe_allow_html=True)
