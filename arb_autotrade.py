@@ -23,7 +23,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'con
 try:
     from settings_sync import get_setting, get_pair_settings, load_config
 except ImportError:
+    get_setting = None
     get_pair_settings = None
+    load_config = None
 
 # Import the harmonized trade logger
 from trade_logger import (
