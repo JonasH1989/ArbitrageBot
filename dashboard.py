@@ -518,35 +518,37 @@ if st.session_state.selected_pair is None:
         
         # Use columns with styled containers
         for i, pair_name in enumerate(pairs_config.keys()):
-            # Get fresh pair_data directly from settings
-            pair_data = get_pair_settings(pair_name)
-            enabled = pair_data.get('enabled', True)
-            status_color = "🟢" if enabled else "🔴"
-            
-            trades = get_trades(pair_name, limit=1000)
-            total_trades = len(trades)
-            total_profit = sum(
-                (float(t.get('ex2_value_usdt', 0) or 0) - float(t.get('ex1_value_usdt', 0) or 0) - 
-                 float(t.get('ex1_fees', 0) or 0) - float(t.get('ex2_fees', 0) or 0))
-                for t in trades
-            )
-            
-            # Build complete tile as HTML including button placeholder
-            st.markdown(f"""
-            <div style="background: #262626; border: 1px solid #404040; border-radius: 8px; padding: 16px; margin: 4px 0;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                    <span style="font-size: 24px;">{status_color}</span>
-                    <span style="font-size: 20px; font-weight: bold; color: white;">{pair_name}</span>
+            with cols[i % 3]:
+                # Get fresh pair_data directly from settings
+                pair_data = get_pair_settings(pair_name)
+                enabled = pair_data.get('enabled', True)
+                status_color = "🟢" if enabled else "🔴"
+                
+                trades = get_trades(pair_name, limit=1000)
+                total_trades = len(trades)
+                total_profit = sum(
+                    (float(t.get('ex2_value_usdt', 0) or 0) - float(t.get('ex1_value_usdt', 0) or 0) - 
+                     float(t.get('ex1_fees', 0) or 0) - float(t.get('ex2_fees', 0) or 0))
+                    for t in trades
+                )
+                
+                # Build complete tile as HTML
+                st.markdown(f"""
+                <div style="background: #262626; border: 1px solid #404040; border-radius: 8px; padding: 16px; margin: 4px 0;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <span style="font-size: 24px;">{status_color}</span>
+                        <span style="font-size: 20px; font-weight: bold; color: white;">{pair_name}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px; color: #aaa;">
+                        <span>Trades: {total_trades}</span>
+                        <span>Gewinn: ${total_profit:.4f}</span>
+                    </div>
                 </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; color: #aaa;">
-                    <span>Trades: {total_trades}</span>
-                    <span>Gewinn: ${total_profit:.4f}</span>
-                </div>
-                <div style="background: #1a1a2e; padding: 8px; border-radius: 6px; text-align: center;">
-                    <span style="color: white;">Button placeholder</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+                
+                if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
+                    st.session_state.selected_pair = pair_name
+                    st.rerun()
             
             # View button below tile
             if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
