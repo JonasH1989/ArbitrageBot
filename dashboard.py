@@ -806,10 +806,13 @@ else:
                         pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
                         meets = pct >= threshold_start
                         
-                        # BIDs = green when positive (we sell at higher price)
-                        if pct >= 0:
+                        # Color based on threshold, not just positivity
+                        if pct >= threshold_start:
                             bg = "rgba(0,255,0,0.15)"
                             color = "#00c853"
+                        elif pct >= 0:
+                            bg = "rgba(255,235,59,0.15)"
+                            color = "#ffc107"
                         else:
                             bg = "rgba(244,67,54,0.1)"
                             color = "#f44336"
@@ -842,10 +845,13 @@ else:
                         pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
                         meets = pct >= threshold_start
                         
-                        # BIDs = green when positive (we sell at higher price)
-                        if pct >= 0:
+                        # Color based on threshold, not just positivity
+                        if pct >= threshold_start:
                             bg = "rgba(0,255,0,0.15)"
                             color = "#00c853"
+                        elif pct >= 0:
+                            bg = "rgba(255,235,59,0.15)"
+                            color = "#ffc107"
                         else:
                             bg = "rgba(244,67,54,0.1)"
                             color = "#f44336"
@@ -874,10 +880,13 @@ else:
                         pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                         meets = pct >= threshold_start
                         
-                        # BIDs = green when positive (we sell at higher price)
-                        if pct >= 0:
+                        # Color based on threshold, not just positivity
+                        if pct >= threshold_start:
                             bg = "rgba(0,255,0,0.15)"
                             color = "#00c853"
+                        elif pct >= 0:
+                            bg = "rgba(255,235,59,0.15)"
+                            color = "#ffc107"
                         else:
                             bg = "rgba(244,67,54,0.1)"
                             color = "#f44336"
@@ -910,10 +919,13 @@ else:
                         pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                         meets = pct >= threshold_start
                         
-                        # BIDs = green when positive (we sell at higher price)
-                        if pct >= 0:
+                        # Color based on threshold, not just positivity
+                        if pct >= threshold_start:
                             bg = "rgba(0,255,0,0.15)"
                             color = "#00c853"
+                        elif pct >= 0:
+                            bg = "rgba(255,235,59,0.15)"
+                            color = "#ffc107"
                         else:
                             bg = "rgba(244,67,54,0.1)"
                             color = "#f44336"
