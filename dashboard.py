@@ -773,9 +773,6 @@ else:
                 with col_km:
                     st.markdown("#### 🥇 KuCoin ← → 🥈 MEXC  (K→M)")
                     
-                    # Header: Reuse the same spread values calculated at the top
-                    st.markdown(f"**{km_color} Spread: {spread_km_pct:+.3f}% | ${spread_km_dollar:+.6f}**")
-                    
                     # BUY side (KuCoin - top) - REVERSED to show highest ask first
                     st.markdown("🥇 **KUCOIN BUY** (was wir bezahlen)")
                     for i in range(19, -1, -1):
@@ -788,12 +785,10 @@ else:
                         pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
                         meets = pct >= threshold_start
                         
-                        if meets:
+                        # BIDs = green when positive (we sell at higher price)
+                        if pct >= 0:
                             bg = "rgba(0,255,0,0.15)"
                             color = "#00c853"
-                        elif pct > 0:
-                            bg = "rgba(255,235,59,0.15)"
-                            color = "#ffc107"
                         else:
                             bg = "rgba(244,67,54,0.1)"
                             color = "#f44336"
@@ -826,12 +821,10 @@ else:
                         pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
                         meets = pct >= threshold_start
                         
-                        if meets:
+                        # BIDs = green when positive (we sell at higher price)
+                        if pct >= 0:
                             bg = "rgba(0,255,0,0.15)"
                             color = "#00c853"
-                        elif pct > 0:
-                            bg = "rgba(255,235,59,0.15)"
-                            color = "#ffc107"
                         else:
                             bg = "rgba(244,67,54,0.1)"
                             color = "#f44336"
@@ -863,12 +856,10 @@ else:
                         pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                         meets = pct >= threshold_start
                         
-                        if meets:
+                        # BIDs = green when positive (we sell at higher price)
+                        if pct >= 0:
                             bg = "rgba(0,255,0,0.15)"
                             color = "#00c853"
-                        elif pct > 0:
-                            bg = "rgba(255,235,59,0.15)"
-                            color = "#ffc107"
                         else:
                             bg = "rgba(244,67,54,0.1)"
                             color = "#f44336"
@@ -901,12 +892,10 @@ else:
                         pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                         meets = pct >= threshold_start
                         
-                        if meets:
+                        # BIDs = green when positive (we sell at higher price)
+                        if pct >= 0:
                             bg = "rgba(0,255,0,0.15)"
                             color = "#00c853"
-                        elif pct > 0:
-                            bg = "rgba(255,235,59,0.15)"
-                            color = "#ffc107"
                         else:
                             bg = "rgba(244,67,54,0.1)"
                             color = "#f44336"
