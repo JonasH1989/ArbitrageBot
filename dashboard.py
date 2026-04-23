@@ -473,7 +473,10 @@ else:
         st.session_state.selected_pair = None
         st.rerun()
     
-    st.header(f"📈 {pair}")
+    # Status indicator
+    pair_enabled = pair_data.get('enabled', False)
+    status_emoji = "🟢" if pair_enabled else "🔴"
+    st.header(f"{status_emoji} {pair}")
     
     # Get data
     kucoin = get_kucoin_orderbook(pair)
