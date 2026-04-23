@@ -1069,9 +1069,17 @@ else:
         # Alert - only if threshold is met
         pair_alert = pair_data.get('alert_enabled', True)
         if pair_alert and alert_enabled and (trade_possible_km or trade_possible_mk):
+            # Determine spread and play appropriate sound
+            spread_pct = max(spread_pct_km, spread_pct_mk)
+            if spread_pct >= 10:
+                play_sound('ab10')
+            elif spread_pct >= 3:
+                play_sound('bis3')
+            else:
+                play_sound('notification')
+            
             st.warning("🚨 Profitabel!")
             st.warning("🚨 Profitabel!")
-            play_sound()
     
     else:
         st.error("Daten nicht verfuegbar")
