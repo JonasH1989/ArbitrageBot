@@ -872,8 +872,9 @@ else:
                     
                     # Spread Gap - colored
                     km_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_km >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_km > 0 else "rgba(244,67,54,0.2)")
+                    km_spread_color = "#00c853" if spread_pct_km >= threshold_start else ("#ffc107" if spread_pct_km > 0 else "#f44336")
                     st.markdown("---")
-                    st.markdown(f"""<div style="background-color: {km_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold;">{spread_pct_km:+.3f}%</div>""", unsafe_allow_html=True)
+                    st.markdown(f"""<div style="background-color: {km_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {km_spread_color};">Spread: {spread_pct_km:+.3f}%</div>""", unsafe_allow_html=True)
                     st.markdown("---")
                     
                     # SELL side (MEXC - bottom) - sorted HIGH to LOW (what we get)
