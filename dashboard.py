@@ -455,7 +455,6 @@ with st.sidebar:
     
     # Sound selector
     sound_options = {
-        "🔔 Notification": "notification",
         "💰 Bis 3%": "bis3",
         "🚨 Ab 10%": "ab10",
         "💵 Kaching (Trade)": "kaching"
@@ -468,7 +467,6 @@ with st.sidebar:
     if st.button("▶️ Sound testen"):
         import base64
         sound_files = {
-            'notification': '/app/static/notification.mp3' if sound_key == 'notification' else None,
             'bis3': '/app/static/bis3prozent.mp3',
             'ab10': '/app/static/ab10prozent.mp3',
             'kaching': '/app/static/kaching.mp3'
