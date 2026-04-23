@@ -557,7 +557,8 @@ else:
                 
                 with col_km:
                     st.markdown("**KuCoin → MEXC**")
-                    st.markdown('🥇 <img src="/app/static/kucoin_icon.png" width="20" style="vertical-align:middle"/> **KUCOIN BUY**')
+                    st.image("/app/static/kucoin_icon.png", width=20)
+                    st.markdown('**KUCOIN BUY**')
                     for i in range(19, -1, -1):
                         k_ask_p = kucoin_asks[i][0] if i < len(kucoin_asks) else 0
                         k_ask_v = kucoin_asks[i][1] if i < len(kucoin_asks) else 0
@@ -574,7 +575,8 @@ else:
                     st.markdown(f"<div style='background-color: {km_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {km_spread_color};'>Spread: {spread_pct_km:+.3f}%</div>", unsafe_allow_html=True)
                     st.markdown("---")
                     
-                    st.markdown('<img src="/app/static/mexc_icon.png" width="20" style="vertical-align:middle"/> **MEXC SELL**')
+                    st.image("/app/static/mexc_icon.png", width=20)
+                    st.markdown('**MEXC SELL**')
                     for i in range(20):
                         m_bid_p = mexc_bids[i][0] if i < len(mexc_bids) else 0
                         m_bid_v = mexc_bids[i][1] if i < len(mexc_bids) else 0
@@ -587,7 +589,8 @@ else:
                 
                 with col_mk:
                     st.markdown("**MEXC → KuCoin**")
-                    st.markdown('<img src="/app/static/mexc_icon.png" width="20" style="vertical-align:middle"/> **MEXC BUY**')
+                    st.image("/app/static/mexc_icon.png", width=20)
+                    st.markdown('**MEXC BUY**')
                     for i in range(19, -1, -1):
                         m_ask_p = mexc_asks[i][0] if i < len(mexc_asks) else 0
                         m_ask_v = mexc_asks[i][1] if i < len(mexc_asks) else 0
