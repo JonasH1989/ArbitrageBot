@@ -302,7 +302,7 @@ with st.sidebar:
     # Exchange Settings FIRST
     st.markdown("### 🔗 Exchanges")
     
-    with st.expander("🥇 KuCoin", expanded=True):
+    with st.expander("KuCoin", expanded=True):
         kucoin_key_val = config.get('kucoin', {}).get('api_key', '')
         kucoin_secret_val = config.get('kucoin', {}).get('api_secret', '')
         kucoin_pass_val = config.get('kucoin', {}).get('api_passphrase', '')
@@ -314,7 +314,7 @@ with st.sidebar:
             st.success("Gespeichert!")
             st.rerun()
     
-    with st.expander("🥈 MEXC", expanded=True):
+    with st.expander("MEXC", expanded=True):
         mexc_key_val = config.get('mexc', {}).get('api_key', '')
         mexc_secret_val = config.get('mexc', {}).get('api_secret', '')
         mexc_key = st.text_input("API Key", value=mexc_key_val, type="password", key="mexc_key_field")
@@ -522,7 +522,7 @@ else:
         c1, c2, c3 = st.columns(3)
         
         with c1:
-            st.markdown("### KuCoin")
+            st.image("/app/static/kucoin_icon.png", width=24)
             st.metric("Bid", f"${k_bid:.6f}", f"Vol: {kucoin['bid_size']:.0f}")
             st.metric("Ask", f"${k_ask:.6f}", f"Vol: {kucoin['ask_size']:.0f}")
         
@@ -551,7 +551,7 @@ else:
                 st.metric("M→K Total", f"${profit_mk * vol_mk:.4f}")
         
         with c3:
-            st.markdown("### MEXC")
+            st.image("/app/static/mexc_icon.png", width=24)
             st.metric("Bid", f"${m_bid:.6f}", f"Vol: {mexc['bid_size']:.0f}")
             st.metric("Ask", f"${m_ask:.6f}", f"Vol: {mexc['ask_size']:.0f}")
         
