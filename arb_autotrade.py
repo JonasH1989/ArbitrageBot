@@ -54,7 +54,7 @@ MEXC_KEY = _cfg.get('mexc', {}).get('api_key', '')
 MEXC_SECRET = _cfg.get('mexc', {}).get('api_secret', '')
 
 MEXC_MIN_USDT = 1.0
-KUCOIN_MIN_USDT = 1.0  # KuCoin also has ~1 USDT minimum per order
+KUCOIN_MIN_MPC = 85  # Minimum ~85 MPC per order (≈1 USDT at ~$0.012)
 
 TRADING_PAIR = "MPC-USDT"
 
