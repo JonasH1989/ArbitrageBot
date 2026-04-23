@@ -467,13 +467,13 @@ if st.session_state.selected_pair is None:
 
 else:
     pair = st.session_state.selected_pair
-    pair_data = pairs_config.get(pair, {})
     
     if st.button("← Zurueck zu Paaren"):
         st.session_state.selected_pair = None
         st.rerun()
     
-    # Status indicator + Bot toggle inline
+    # Reload pair_data directly from config (NOT from cached pairs_config)
+    pair_data = get_pair_settings(pair)
     pair_enabled = pair_data.get('enabled', False)
     status_emoji = "🟢" if pair_enabled else "🔴"
     
