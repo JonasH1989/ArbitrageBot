@@ -532,9 +532,38 @@ else:
         with st.expander("📊 Übersicht", expanded=True):
             st.info("Charts und Visualisierung kommen hier.")
         
-        # Orderbook
+        # Orderbook - simple view
         with st.expander("📋 Orderbook", expanded=False):
-            # Fetch orderbooks
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.image("/app/static/kucoin_icon.png", width=24); st.text("KuCoin")
+                st.metric("Bid", f"${k_bid:.6f}", f"Vol: {kucoin['bid_size']:.0f}")
+                st.metric("Ask", f"${k_ask:.6f}", f"Vol: {kucoin['ask_size']:.0f}")
+            with c2:
+                st.markdown("### ⚖️ Spread")
+                if profit_km > 0:
+                    st.markdown("🟢 **KUCOIN → MEXC**")
+                else:
+                    st.markdown("🔴 **KUCOIN → MEXC**")
+                st.metric("Profit/Coin", f"${profit_km:.6f}")
+                st.markdown("---")
+                if profit_mk > 0:
+                    st.markdown("🟢 **MEXC → KUCOIN**")
+                else:
+                    st.markdown("🔴 **MEXC → KUCOIN**")
+                st.metric("Profit/Coin", f"${profit_mk:.6f}")
+                st.divider()
+                if profit_km > 0:
+                    st.metric("K→M Total", f"${profit_km * vol_km:.4f}")
+                if profit_mk > 0:
+                    st.metric("M→K Total", f"${profit_mk * vol_mk:.4f}")
+            with c3:
+                st.image("/app/static/mexc_icon.png", width=24); st.text("MEXC")
+                st.metric("Bid", f"${m_bid:.6f}", f"Vol: {mexc['bid_size']:.0f}")
+                st.metric("Ask", f"${m_ask:.6f}", f"Vol: {mexc['ask_size']:.0f}")
+        
+        # Orderbook - 20 Level detailed view
+        with st.expander("📊 Orderbook (20 Level)", expanded=False):
             try:
                 mexc_ob_resp = requests.get("https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=20", timeout=5)
                 mexc_ob = mexc_ob_resp.json() if mexc_ob_resp.status_code == 200 else {'bids': [], 'asks': []}
@@ -565,11 +594,13 @@ else:
                         pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
                         bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                         color = "#00c853" if pct >= threshold_start else ("#ffc107" if pct >= 0 else "#f44336")
-                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px;'><span style='color: {color};'>${k_ask_p:.5f}</span> | {k_ask_v:.0f} MPC | {pct:+.3f}%</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {color}; font-weight: bold;'>${k_ask_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{k_ask_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
                     
                     km_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_km >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_km > 0 else "rgba(244,67,54,0.2)")
                     km_spread_color = "#00c853" if spread_pct_km >= threshold_start else ("#ffc107" if spread_pct_km > 0 else "#f44336")
-                    st.markdown(f"<div style='background-color: {km_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 18px; font-weight: bold; color: {km_spread_color};'>Spread: {spread_pct_km:+.3f}%</div>", unsafe_allow_html=True)
+                    st.markdown("---")
+                    st.markdown(f"<div style='background-color: {km_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {km_spread_color};'>Spread: {spread_pct_km:+.3f}%</div>", unsafe_allow_html=True)
+                    st.markdown("---")
                     
                     st.markdown("**MEXC SELL**")
                     for i in range(20):
@@ -580,7 +611,7 @@ else:
                         pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
                         bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                         color = "#00c853" if pct >= threshold_start else ("#ffc107" if pct >= 0 else "#f44336")
-                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px;'><span style='color: {color};'>${m_bid_p:.5f}</span> | {m_bid_v:.0f} MPC | {pct:+.3f}%</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {color}; font-weight: bold;'>${m_bid_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{m_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
                 
                 with col_mk:
                     st.markdown("**MEXC ← → KuCoin (M→K)**")
@@ -593,11 +624,13 @@ else:
                         pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                         bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                         color = "#00c853" if pct >= threshold_start else ("#ffc107" if pct >= 0 else "#f44336")
-                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px;'><span style='color: {color};'>${m_ask_p:.5f}</span> | {m_ask_v:.0f} MPC | {pct:+.3f}%</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {color}; font-weight: bold;'>${m_ask_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{m_ask_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
                     
                     mk_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_mk >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_mk > 0 else "rgba(244,67,54,0.2)")
                     mk_spread_color = "#00c853" if spread_pct_mk >= threshold_start else ("#ffc107" if spread_pct_mk > 0 else "#f44336")
-                    st.markdown(f"<div style='background-color: {mk_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 18px; font-weight: bold; color: {mk_spread_color};'>Spread: {spread_pct_mk:+.3f}%</div>", unsafe_allow_html=True)
+                    st.markdown("---")
+                    st.markdown(f"<div style='background-color: {mk_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {mk_spread_color};'>Spread: {spread_pct_mk:+.3f}%</div>", unsafe_allow_html=True)
+                    st.markdown("---")
                     
                     st.markdown("**KUCOIN SELL**")
                     for i in range(20):
@@ -608,8 +641,9 @@ else:
                         pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                         bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                         color = "#00c853" if pct >= threshold_start else ("#ffc107" if pct >= 0 else "#f44336")
-                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px;'><span style='color: {color};'>${k_bid_p:.5f}</span> | {k_bid_v:.0f} MPC | {pct:+.3f}%</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {color}; font-weight: bold;'>${k_bid_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{k_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
                 
+                st.markdown("---")
                 st.markdown("**Legende:** 🟢 Threshold erfüllt | 🟡 Positiv aber < Threshold | 🔴 Negativ")
             else:
                 st.info("Orderbook Daten nicht vollständig verfügbar")
