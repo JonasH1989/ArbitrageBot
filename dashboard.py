@@ -299,17 +299,6 @@ thresholds = config['trading'].get('thresholds', {'start': 0.2, 'stop': 0.1})
 with st.sidebar:
     st.header("⚙️ Einstellungen")
     
-    # Bot on/off toggle at TOP of sidebar
-    config = load_config()
-    bot_enabled = config.get('bot', {}).get('enabled', False)
-    
-    st.markdown("### 🤖 Bot Status")
-    bot_enabled = st.checkbox("Bot AKTIV", value=bot_enabled, key="bot_enabled_checkbox")
-    if bot_enabled != config.get('bot', {}).get('enabled', False):
-        set_bot_enabled(bot_enabled)
-    
-    st.divider()
-    
     # Exchange Settings FIRST
     st.markdown("### 🔗 Exchanges")
     
@@ -947,6 +936,11 @@ else:
         # PAIR SETTINGS (compact at bottom)
         # =========================================================================
         
+        # Bot master on/off
+        config = load_config()
+        bot_enabled = config.get('bot', {}).get('enabled', False)
+        st.checkbox("🤖 Bot AKTIV", value=bot_enabled, key="bot_master_enabled", on_change=lambda: set_bot_enabled(st.session_state.bot_master_enabled))
+        
         with st.expander("⚙️ Paar-Einstellungen", expanded=False):
             s1, s2, s3, s4, s5 = st.columns([1, 1, 1, 1, 1])
             
@@ -961,26 +955,26 @@ else:
                 tss_new = st.number_input("Stop %", 0.0, max(0.1, ts_new), tss, 0.05, key=f"ptss_{pair}")
                 if tss_new != tss:
                     set_pair_settings(pair, threshold_stop=tss_new)
-        
-        with s3:
-            ae = pair_data.get('alert_enabled', True)
-            ae_new = st.checkbox("🔔 Alert", value=ae, key=f"pae_{pair}")
-            if ae_new != ae:
-                set_pair_settings(pair, alert_enabled=ae_new)
-        
-        with s4:
-            strat = pair_data.get('strategy', 'usdt')
-            strat_idx = 0 if strat == 'usdt' else 1
-            new_strat = st.radio("Strategie", ["💰 USDT", "🪙 Coins"], index=strat_idx, key=f"pstr_{pair}")
-            new_strat_val = 'usdt' if new_strat == "💰 USDT" else 'coins'
-            if new_strat_val != strat:
-                set_pair_settings(pair, strategy=new_strat_val)
-        
-        with s5:
-            enabled = pair_data.get('enabled', True)
-            en_new = st.checkbox("🟢 Aktiv", value=enabled, key=f"pen_{pair}")
-            if en_new != enabled:
-                set_pair_settings(pair, enabled=en_new)
+            
+            with s3:
+                ae = pair_data.get('alert_enabled', True)
+                ae_new = st.checkbox("🔔 Alert", value=ae, key=f"pae_{pair}")
+                if ae_new != ae:
+                    set_pair_settings(pair, alert_enabled=ae_new)
+            
+            with s4:
+                strat = pair_data.get('strategy', 'usdt')
+                strat_idx = 0 if strat == 'usdt' else 1
+                new_strat = st.radio("Strategie", ["💰 USDT", "🪙 Coins"], index=strat_idx, key=f"pstr_{pair}")
+                new_strat_val = 'usdt' if new_strat == "💰 USDT" else 'coins'
+                if new_strat_val != strat:
+                    set_pair_settings(pair, strategy=new_strat_val)
+            
+            with s5:
+                enabled = pair_data.get('enabled', True)
+                en_new = st.checkbox("🟢 Aktiv", value=enabled, key=f"pen_{pair}")
+                if en_new != enabled:
+                    set_pair_settings(pair, enabled=en_new)
         
         # Alert - only if threshold is met
         pair_alert = pair_data.get('alert_enabled', True)
