@@ -630,17 +630,14 @@ else:
         
         min_profit_buffer = 0.001  # 0.1%
         if k_ask > 0 and m_ask > 0:
-            # Fee for K→M: Buy on KuCoin (taker), Sell on MEXC (taker)
-            fee_pct_km_taker = (k_taker + m_taker) * 100
-            fee_pct_km_maker = (k_maker + m_maker) * 100
-            # Fee for M→K: Buy on MEXC (taker), Sell on KuCoin (taker)
-            fee_pct_mk_taker = (m_taker + k_taker) * 100
-            fee_pct_mk_maker = (m_maker + k_maker) * 100
-            recommended_min_km = fee_pct_km_taker + min_profit_buffer * 100
-            recommended_min_mk = fee_pct_mk_taker + min_profit_buffer * 100
+            # Fee for K→M: Buy on KuCoin (Taker), Sell on MEXC (Maker)
+            fee_pct_km = (k_taker + m_maker) * 100
+            # Fee for M→K: Buy on MEXC (Taker), Sell on KuCoin (Maker)
+            fee_pct_mk = (m_taker + k_maker) * 100
+            recommended_min_km = fee_pct_km + min_profit_buffer * 100
+            recommended_min_mk = fee_pct_mk + min_profit_buffer * 100
         else:
-            fee_pct_km_taker = fee_pct_mk_taker = 0.3
-            fee_pct_km_maker = fee_pct_mk_maker = 0.15
+            fee_pct_km = fee_pct_mk = 0.3
             recommended_min_km = recommended_min_mk = 0.4
         
         coins_km = (vol_km * profit_km / k_ask) if k_ask > 0 else 0
@@ -796,8 +793,8 @@ else:
                 buffer_pct = min_profit_buffer * 100
                 st.write(f"**Puffer:** {buffer_pct:.1f}%")
             
-            st.write(f"**K→M:** Fee {(fee_pct_km_taker):.3f}% + Puffer {buffer_pct:.1f}% = **{(fee_pct_km_taker + buffer_pct):.3f}%** (Maker: {(fee_pct_km_maker + buffer_pct):.3f}%)")
-            st.write(f"**M→K:** Fee {(fee_pct_mk_taker):.3f}% + Puffer {buffer_pct:.1f}% = **{(fee_pct_mk_taker + buffer_pct):.3f}%** (Maker: {(fee_pct_mk_maker + buffer_pct):.3f}%)")
+            st.write(f"**K→M:** {(k_taker*100):.2f}% + {(m_maker*100):.2f}% + Puffer {buffer_pct:.1f}% = **{(fee_pct_km + buffer_pct):.3f}%**")
+            st.write(f"**M→K:** {(m_taker*100):.2f}% + {(k_maker*100):.2f}% + Puffer {buffer_pct:.1f}% = **{(fee_pct_mk + buffer_pct):.3f}%**")
             
             if threshold_start < max(recommended_min_km, recommended_min_mk):
                 st.error(f"⚠️ **WARNUNG:** Threshold {threshold_start}% ist unter dem empfohlenen Minimum! "
