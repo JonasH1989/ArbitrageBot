@@ -551,6 +551,8 @@ else:
                 kucoin_bids, kucoin_asks = [], []
             
             if mexc_bids and mexc_asks and kucoin_bids and kucoin_asks:
+                st.markdown("**Legende:** 🟢 Threshold erfüllt | 🟡 Positiv aber < Threshold | 🔴 Negativ")
+                st.markdown("---")
                 col_km, col_mk = st.columns(2)
                 
                 with col_km:
@@ -613,8 +615,6 @@ else:
                         color = "#00c853" if pct >= threshold_start else ("#ffc107" if pct >= 0 else "#f44336")
                         st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: {color}; font-weight: bold;'>${k_bid_p:.5f}</span> <span style='color: #888;'>|</span> <span style='color: #fff;'>{k_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
                 
-                st.markdown("---")
-                st.markdown("**Legende:** 🟢 Threshold erfüllt | 🟡 Positiv aber < Threshold | 🔴 Negativ")
             else:
                 st.info("Orderbook Daten nicht vollständig verfügbar")
         
