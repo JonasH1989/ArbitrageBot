@@ -981,11 +981,12 @@ else:
         st.rerun()
     
     # =========================================================================
-    # WALLET - KuCoin + MEXC side by side
+    # WALLET - KuCoin + MEXC side by side (wrapped in container to prevent duplicates)
     # =========================================================================
     
     st.divider()
-    st.subheader("💰 Wallets")
+    with st.container():
+        st.subheader("💰 Wallets")
     
     col1, col2 = st.columns(2)
     
