@@ -841,9 +841,6 @@ else:
                 with col_mk:
                     st.markdown("#### 🥈 MEXC ← → 🥇 KuCoin  (M→K)")
                     
-                    # Header: Reuse the same spread values calculated at the top
-                    st.markdown(f"**{mk_color} Spread: {spread_mk_pct:+.3f}% | ${spread_mk_dollar:+.6f}**")
-                    
                     # BUY side (MEXC - top) - REVERSED to show highest ask first
                     st.markdown("🥈 **MEXC BUY** (was wir bezahlen)")
                     for i in range(19, -1, -1):
