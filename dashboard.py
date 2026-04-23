@@ -522,7 +522,7 @@ else:
         c1, c2, c3 = st.columns(3)
         
         with c1:
-            st.image("/app/static/kucoin_icon.png", width=24)
+            st.image("/app/static/kucoin_icon.png", width=24); st.text("KuCoin")
             st.metric("Bid", f"${k_bid:.6f}", f"Vol: {kucoin['bid_size']:.0f}")
             st.metric("Ask", f"${k_ask:.6f}", f"Vol: {kucoin['ask_size']:.0f}")
         
@@ -551,7 +551,7 @@ else:
                 st.metric("M→K Total", f"${profit_mk * vol_mk:.4f}")
         
         with c3:
-            st.image("/app/static/mexc_icon.png", width=24)
+            st.image("/app/static/mexc_icon.png", width=24); st.text("MEXC")
             st.metric("Bid", f"${m_bid:.6f}", f"Vol: {mexc['bid_size']:.0f}")
             st.metric("Ask", f"${m_ask:.6f}", f"Vol: {mexc['ask_size']:.0f}")
         
@@ -1002,7 +1002,7 @@ else:
     
     # KuCoin Wallet
     with col1:
-        st.image("/app/static/kucoin_badge.png", width=80)
+        st.image("/app/static/kucoin_icon.png", width=40); st.text("KuCoin")
         if kucoin_wallet.get('ok'):
             bals = kucoin_wallet['balances']
             for sym in [base_coin, quote_coin]:
@@ -1017,7 +1017,7 @@ else:
     
     # MEXC Wallet
     with col2:
-        st.image("/app/static/mexc_badge.png", width=80)
+        st.image("/app/static/mexc_icon.png", width=40); st.text("MEXC")
         if mexc_wallet.get('ok'):
             bals = mexc_wallet['balances']
             # Deduplicate by summing totals per coin
