@@ -253,6 +253,51 @@ def get_mexc_trades(api_key: str, api_secret: str, symbol: str = 'MPCUSDT', limi
     except Exception as e:
         return {'ok': False, 'trades': [], 'error': str(e)}
 
+def get_kucoin_fees(api_key: str, api_secret: str, passphrase: str, symbol: str = 'MPC-USDT'):
+    """Get KuCoin actual fee rates for a symbol"""
+    try:
+        import hashlib
+        import hmac
+        import base64
+        import time
+        
+        now = int(time.time() * 1000)
+        method = 'GET'
+        path = f'/api/v1/base-fee?symbol={symbol}'
+        body = ''
+        
+        message = f'{now}{method}{path}{body}'
+        mac = hmac.new(api_secret.encode(), message.encode(), hashlib.sha256)
+        signature = base64.b64encode(mac.digest()).decode()
+        
+        headers = {
+            'KC-API-KEY': api_key,
+            'KC-API-SIGN': signature,
+            'KC-API-TIMESTAMP': str(now),
+            'KC-API-PASSPHRASE': passphrase,
+            'KC-API-KEY-VERSION': '1'
+        }
+        
+        resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get('code') == '200000':
+                d = data.get('data', {})
+                return {
+                    'ok': True,
+                    'maker_fee_rate': float(d.get('makerFeeRate', 0)),
+                    'taker_fee_rate': float(d.get('takerFeeRate', 0))
+                }
+        return {'ok': False, 'maker_fee_rate': 0.001, 'taker_fee_rate': 0.001}
+    except:
+        return {'ok': False, 'maker_fee_rate': 0.001, 'taker_fee_rate': 0.001}
+
+def get_mexc_fees(api_key: str, api_secret: str):
+    """Get MEXC actual fee rates - MEXC has flat 0.2% taker fee"""
+    # MEXC doesn't have a public API for fee rates, but their standard rate is 0.2%
+    # Market makers get lower fees but we use taker rate for safety
+    return {'ok': True, 'maker_fee_rate': 0.001, 'taker_fee_rate': 0.002}
+
 # ============================================================================
 # Session State
 # ============================================================================
@@ -510,16 +555,23 @@ else:
         trade_possible_km = km_meets_threshold
         trade_possible_mk = mk_meets_threshold
         
-        fee_taker = 0.001
+        # Get real fees from APIs
+        k_fee = get_kucoin_fees(kucoin_key, kucoin_secret, kucoin_pass, pair) if (kucoin_key and kucoin_secret and kucoin_pass) else {'ok': False, 'taker_fee_rate': 0.001}
+        m_fee = get_mexc_fees(mexc_key, mexc_secret)
+        
+        k_taker = k_fee.get('taker_fee_rate', 0.001)
+        m_taker = m_fee.get('taker_fee_rate', 0.002)
+        
         min_profit_buffer = 0.0002
         if k_ask > 0 and m_ask > 0:
-            fee_pct_km = fee_taker * (k_ask + m_bid) / k_ask * 100
+            # Real fee: buy side fee + sell side fee
+            fee_pct_km = (k_taker + m_taker) * 100  # Combined fee for K→M
+            fee_pct_mk = (m_taker + k_taker) * 100  # Combined fee for M→K
             recommended_min_km = fee_pct_km + min_profit_buffer * 100
-            fee_pct_mk = fee_taker * (m_ask + k_bid) / m_ask * 100
             recommended_min_mk = fee_pct_mk + min_profit_buffer * 100
         else:
-            fee_pct_km = fee_pct_mk = 0.2
-            recommended_min_km = recommended_min_mk = 0.3
+            fee_pct_km = fee_pct_mk = 0.3
+            recommended_min_km = recommended_min_mk = 0.4
         
         coins_km = (vol_km * profit_km / k_ask) if k_ask > 0 else 0
         coins_mk = (vol_mk * profit_mk / m_ask) if m_ask > 0 else 0
