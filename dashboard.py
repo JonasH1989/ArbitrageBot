@@ -397,13 +397,7 @@ if st.session_state.selected_pair is None:
         
         for i, (pair_name, pair_data) in enumerate(pairs_config.items()):
             with cols[i % 3]:
-                # Box with border using container
-                box = st.container()
-                
-                with box:
-                    st.markdown('<div style="border: 2px solid #555; border-radius: 10px; padding: 10px; background: #1e1e1e;">', unsafe_allow_html=True)
-                    
-                    # Fetch data
+                # Fetch data
                 kucoin = get_kucoin_orderbook(pair_name)
                 mexc = get_mexc_orderbook(pair_name)
                 
@@ -427,8 +421,6 @@ if st.session_state.selected_pair is None:
                         st.caption(f"K: ${kucoin['bid']:.6f}")
                     with c2:
                         st.caption(f"M: ${mexc['bid']:.6f}")
-                
-                st.markdown('</div>', unsafe_allow_html=True)
                 
                 # View button
                 if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
