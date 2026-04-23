@@ -491,6 +491,16 @@ with st.sidebar:
             st.rerun()
     else:
         st.info("Alle vorhanden!")
+    
+    # Delete pair
+    st.markdown("### ➖ Paar entfernen")
+    if pairs_config:
+        pair_to_delete = st.selectbox("Paar", list(pairs_config.keys()), key="delete_pair_select")
+        if st.button("🗑️ Entfernen", key="delete_pair_btn"):
+            remove_pair(pair_to_delete)
+            st.rerun()
+    else:
+        st.info("Keine Paare vorhanden!")
 
 # ============================================================================
 # TILE OVERVIEW
