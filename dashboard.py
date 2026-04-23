@@ -507,9 +507,10 @@ if st.session_state.selected_pair is None:
         cols = st.columns(3)
         
         # Use columns with styled containers
-        for i, (pair_name, pair_data) in enumerate(pairs_config.items()):
+        for i, pair_name in enumerate(pairs_config.keys()):
             with cols[i % 3]:
-                # Get trade stats for this pair
+                # Get fresh pair_data directly from settings
+                pair_data = get_pair_settings(pair_name)
                 enabled = pair_data.get('enabled', True)
                 status_color = "🟢" if enabled else "🔴"
                 
