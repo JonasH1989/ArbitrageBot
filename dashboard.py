@@ -856,10 +856,6 @@ else:
     else:
         st.error("Daten nicht verfuegbar")
     
-    st.divider()
-    if st.button("🔄 Aktualisieren"):
-        st.rerun()
-    
 # =========================================================================
 # TRADE LOG SECTION - ONLY IN DETAIL VIEW (FULL WIDTH)
 # =========================================================================
