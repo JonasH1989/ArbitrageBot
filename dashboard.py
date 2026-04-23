@@ -473,14 +473,14 @@ else:
         st.session_state.selected_pair = None
         st.rerun()
     
-    # Status indicator + Bot toggle in header row
+    # Status indicator + Bot toggle inline
     pair_enabled = pair_data.get('enabled', False)
     status_emoji = "🟢" if pair_enabled else "🔴"
     
-    col_status, col_checkbox = st.columns([1, 2])
-    with col_status:
-        st.header(f"{status_emoji} {pair}")
-    with col_checkbox:
+    col1, col2 = st.columns([4, 1])
+    with col1:
+        st.markdown(f"## {status_emoji} {pair}")
+    with col2:
         new_enabled = st.checkbox("Bot AKTIV", value=pair_enabled, key="bot_enable_checkbox")
         if new_enabled != pair_enabled:
             set_pair_settings(pair, enabled=new_enabled)
