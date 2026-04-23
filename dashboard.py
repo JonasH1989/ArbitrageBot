@@ -511,10 +511,6 @@ if st.session_state.selected_pair is None:
             with cols[i % 3]:
                 st.markdown('<div class="tile-box">', unsafe_allow_html=True)
                 
-                # Fetch data
-                kucoin = get_kucoin_orderbook(pair_name)
-                mexc = get_mexc_orderbook(pair_name)
-                
                 # Status
                 enabled = pair_data.get('enabled', True)
                 status_color = "🟢" if enabled else "🔴"
@@ -536,14 +532,6 @@ if st.session_state.selected_pair is None:
                     st.caption(f"Trades: {total_trades}")
                 with s2:
                     st.caption(f"Gewinn: ${total_profit:.4f}")
-                
-                # Prices preview
-                if kucoin.get('ok') and mexc.get('ok'):
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        st.caption(f"K: ${kucoin['bid']:.6f}")
-                    with c2:
-                        st.caption(f"M: ${mexc['bid']:.6f}")
                 
                 # View button
                 if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
