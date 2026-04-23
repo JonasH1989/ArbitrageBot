@@ -10,6 +10,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy dashboard
 COPY dashboard.py .
 
+# Copy config directory
+COPY config/ ./config/
+
+# Copy settings_sync (standalone module)
+COPY config/settings_sync.py .
+
 # Copy trade logger
 COPY trade_logger.py .
 
