@@ -460,6 +460,9 @@ def main():
     set_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
     
     while True:
+        # Re-read pair_enabled from config each cycle (in case Dashboard changed it)
+        pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
+        
         prices = get_prices()
         if not prices:
             time.sleep(1)
