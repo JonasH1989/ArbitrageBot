@@ -8,6 +8,7 @@ import streamlit.components.v1 as components
 import requests
 import yaml
 from datetime import datetime
+from pathlib import Path
 import os
 import pandas as pd
 from trade_logger import *
@@ -1192,4 +1193,6 @@ with st.sidebar:
             st.caption(f"Log error: {e}")
     else:
         st.caption("warten auf logs...")
+
+    st.markdown("[📊 Log öffnen →](http://192.168.180.46:8501/?page=log)")
 
