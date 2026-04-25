@@ -112,8 +112,8 @@ def kucoin_passphrase_enc(secret, passphrase):
     mac = hmac.new(secret.encode(), passphrase.encode(), hashlib.sha256)
     return base64.b64encode(mac.digest()).decode()
 
-def get_orderbook_volume():
-    """Get real orderbook volume from both exchanges"""
+def get_orderbook_levels():
+    """Get detailed orderbook levels from both exchanges for multi-level spread check"""
     try:
         # MEXC depth API - get top 10 levels
         resp_m = requests.get('https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=10', timeout=5)
@@ -123,24 +123,38 @@ def get_orderbook_volume():
         resp_k = requests.get('https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol=MPC-USDT', timeout=5)
         k_depth = resp_k.json().get('data', {})
         
-        # MEXC: Calculate cumulative volume at ask (buying MPC)
-        mexc_available = 0
+        # Parse MEXC asks (sorted low to high - we need to buy)
+        mexc_asks = []
         if 'asks' in m_depth:
-            for price, qty in m_depth['asks'][:5]:  # top 5 levels
-                mexc_available += float(qty)
+            for price, qty in m_depth['asks'][:10]:
+                mexc_asks.append({'price': float(price), 'qty': float(qty)})
         
-        # KuCoin: Calculate cumulative volume at bid (selling MPC)
-        kucoin_available = 0
+        # Parse KuCoin bids (sorted high to low - we need to sell)
+        kucoin_bids = []
         if 'bids' in k_depth:
-            for price, qty in k_depth.get('bids', [])[:5]:  # top 5 levels
-                kucoin_available += float(qty)
+            for price, qty in k_depth.get('bids', [])[:10]:
+                kucoin_bids.append({'price': float(price), 'qty': float(qty)})
+        
+        # For K->M direction we also need KuCoin asks and MEXC bids
+        # KuCoin asks (sorted low to high)
+        kucoin_asks = []
+        for price, qty in k_depth.get('asks', [])[:5]:
+            kucoin_asks.append({'price': float(price), 'qty': float(qty)})
+        
+        # MEXC bids (sorted high to low) - need to parse from m_depth
+        mexc_bids = []
+        if 'bids' in m_depth:
+            for price, qty in m_depth['bids'][:5]:
+                mexc_bids.append({'price': float(price), 'qty': float(qty)})
         
         return {
-            'mexc_available': mexc_available,
-            'kucoin_available': kucoin_available
+            'mexc_asks': mexc_asks,
+            'kucoin_bids': kucoin_bids,
+            'kucoin_asks': kucoin_asks,
+            'mexc_bids': mexc_bids
         }
     except Exception as e:
-        log(f"Error getting orderbook volume: {e}")
+        log(f"Error getting orderbook levels: {e}")
         return None
 
 def get_prices():
@@ -510,32 +524,58 @@ def main():
         spread_km = m['bid'] - k['ask']
         spread_pct_km = (spread_km / k['ask']) * 100 if k['ask'] > 0 else 0
         
-        # Determine volume - get real orderbook data first
-        ob_volume = get_orderbook_volume()
+        # Get real orderbook levels
+        ob_data = get_orderbook_levels()
         
-        if ob_volume:
-            # Use real orderbook volume, but ensure we have enough for minimum order
-            mexc_min_qty = round((MEXC_MIN_USDT + 0.1) / m['ask']) if m['ask'] > 0 else 85
-            kucoin_min_qty = KUCOIN_MIN_MPC
+        # Calculate minimum trade quantity
+        mexc_min_qty = round((MEXC_MIN_USDT + 0.1) / m['ask']) if m['ask'] > 0 else 85
+        kucoin_min_qty = KUCOIN_MIN_MPC
+        min_trade_qty = max(mexc_min_qty, kucoin_min_qty)
+        
+        # Find all tradeable spreads at various price levels
+        tradeable_spreads = []
+        if ob_data:
+            # Check M->K direction (Buy MEXC, Sell KuCoin)
+            for m_ask in ob_data['mexc_asks']:
+                for k_bid in ob_data['kucoin_bids']:
+                    spread = k_bid['price'] - m_ask['price']
+                    spread_pct = (spread / m_ask['price']) * 100 if m_ask['price'] > 0 else 0
+                    
+                    if spread_pct >= START_THRESHOLD and m_ask['qty'] >= min_trade_qty and k_bid['qty'] >= min_trade_qty:
+                        tradeable_spreads.append({
+                            'dir': 'M→K',
+                            'buy': m_ask['price'],
+                            'sell': k_bid['price'],
+                            'pct': spread_pct,
+                            'vol': min(m_ask['qty'], k_bid['qty'])
+                        })
+                        break  # Found valid level, move on
             
-            # The minimum quantity we can trade is the max of the two minimums
-            min_trade_qty = max(mexc_min_qty, kucoin_min_qty)
-            
-            # Check if both sides have enough volume
-            has_enough_mexc = ob_volume['mexc_available'] >= min_trade_qty
-            has_enough_kucoin = ob_volume['kucoin_available'] >= min_trade_qty
-            
-            vol_for_mexc = min_trade_qty
-            vol_for_kucoin = min_trade_qty
-            
-            # Log the volume check
-            if int(time.time()) % 15 == 0:
-                log_condition("MEXC has enough volume", has_enough_mexc,
-                    details=f"available={ob_volume['mexc_available']:.0f} MPC")
-                log_condition("KuCoin has enough volume", has_enough_kucoin,
-                    details=f"available={ob_volume['kucoin_available']:.0f} MPC")
-        else:
-            # Fallback to calculated if orderbook fails
+            # Check K->M direction (Buy KuCoin, Sell MEXC)
+            for k_ask in ob_data.get('kucoin_asks', [])[:5]:
+                for m_bid in ob_data.get('mexc_bids', [])[:5]:
+                    spread = m_bid['price'] - k_ask['price']
+                    spread_pct = (spread / k_ask['price']) * 100 if k_ask['price'] > 0 else 0
+                    
+                    if spread_pct >= START_THRESHOLD and k_ask['qty'] >= min_trade_qty and m_bid['qty'] >= min_trade_qty:
+                        tradeable_spreads.append({
+                            'dir': 'K→M',
+                            'buy': k_ask['price'],
+                            'sell': m_bid['price'],
+                            'pct': spread_pct,
+                            'vol': min(k_ask['qty'], m_bid['qty'])
+                        })
+                        break
+        
+        # Log volume check every 15s
+        if int(time.time()) % 15 == 0 and ob_data:
+            total_mexc_vol = sum(x['qty'] for x in ob_data['mexc_asks'][:5])
+            total_kucoin_vol = sum(x['qty'] for x in ob_data['kucoin_bids'][:5])
+            log(f"Orderbook: MEXC top5={total_mexc_vol:.0f} MPC, KuCoin top5={total_kucoin_vol:.0f} MPC, min_needed={min_trade_qty}")
+            log(f"Tradeable spreads: {len(tradeable_spreads)} options found")
+        
+        if not ob_data:
+            # Fallback
             vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 86
             vol_for_kucoin = max(KUCOIN_MIN_MPC, vol_for_mexc)
         
@@ -589,7 +629,15 @@ def main():
                 state = STATE_RUNNING
                 trade_in_progress = True
                 
-                if spread_pct_km >= spread_pct_mk:
+                # Execute best tradeable spread
+                if tradeable_spreads:
+                    best = max(tradeable_spreads, key=lambda x: x['pct'])
+                    log(f"🚀 Executing trade: {best['dir']} @ {best['pct']:.3f}% | Vol={best['vol']:.0f} MPC")
+                    if best['dir'] == 'K→M':
+                        success, trade_id = execute_trade_K_to_M(best['vol'], best['buy'], best['sell'])
+                    else:
+                        success, trade_id = execute_trade_M_to_K(best['vol'], best['buy'], best['sell'])
+                elif spread_pct_km >= spread_pct_mk:
                     success, trade_id = execute_trade_K_to_M(vol_for_kucoin, k['ask'], m['bid'])
                 else:
                     success, trade_id = execute_trade_M_to_K(vol_for_mexc, m['ask'], k['bid'])
@@ -603,7 +651,15 @@ def main():
                 state = STATE_WAITING
             elif not trade_in_progress:
                 trade_in_progress = True
-                if spread_pct_km >= spread_pct_mk:
+                # Execute best tradeable spread
+                if tradeable_spreads:
+                    best = max(tradeable_spreads, key=lambda x: x['pct'])
+                    log(f"🚀 Executing trade: {best['dir']} @ {best['pct']:.3f}% | Vol={best['vol']:.0f} MPC")
+                    if best['dir'] == 'K→M':
+                        success, trade_id = execute_trade_K_to_M(best['vol'], best['buy'], best['sell'])
+                    else:
+                        success, trade_id = execute_trade_M_to_K(best['vol'], best['buy'], best['sell'])
+                elif spread_pct_km >= spread_pct_mk:
                     success, trade_id = execute_trade_K_to_M(vol_for_kucoin, k['ask'], m['bid'])
                 else:
                     success, trade_id = execute_trade_M_to_K(vol_for_mexc, m['ask'], k['bid'])
