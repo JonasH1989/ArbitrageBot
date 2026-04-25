@@ -112,6 +112,37 @@ def kucoin_passphrase_enc(secret, passphrase):
     mac = hmac.new(secret.encode(), passphrase.encode(), hashlib.sha256)
     return base64.b64encode(mac.digest()).decode()
 
+def get_orderbook_volume():
+    """Get real orderbook volume from both exchanges"""
+    try:
+        # MEXC depth API - get top 10 levels
+        resp_m = requests.get('https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=10', timeout=5)
+        m_depth = resp_m.json()
+        
+        # KuCoin Level2 API - get top 20
+        resp_k = requests.get('https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol=MPC-USDT', timeout=5)
+        k_depth = resp_k.json().get('data', {})
+        
+        # MEXC: Calculate cumulative volume at ask (buying MPC)
+        mexc_available = 0
+        if 'asks' in m_depth:
+            for price, qty in m_depth['asks'][:5]:  # top 5 levels
+                mexc_available += float(qty)
+        
+        # KuCoin: Calculate cumulative volume at bid (selling MPC)
+        kucoin_available = 0
+        if 'bids' in k_depth:
+            for price, qty in k_depth.get('bids', [])[:5]:  # top 5 levels
+                kucoin_available += float(qty)
+        
+        return {
+            'mexc_available': mexc_available,
+            'kucoin_available': kucoin_available
+        }
+    except Exception as e:
+        log(f"Error getting orderbook volume: {e}")
+        return None
+
 def get_prices():
     try:
         resp_k = requests.get('https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=MPC-USDT', timeout=5)
@@ -479,9 +510,34 @@ def main():
         spread_km = m['bid'] - k['ask']
         spread_pct_km = (spread_km / k['ask']) * 100 if k['ask'] > 0 else 0
         
-        # Determine volume (minimum for both exchanges)
-        vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 86
-        vol_for_kucoin = max(KUCOIN_MIN_MPC, vol_for_mexc)
+        # Determine volume - get real orderbook data first
+        ob_volume = get_orderbook_volume()
+        
+        if ob_volume:
+            # Use real orderbook volume, but ensure we have enough for minimum order
+            mexc_min_qty = round((MEXC_MIN_USDT + 0.1) / m['ask']) if m['ask'] > 0 else 85
+            kucoin_min_qty = KUCOIN_MIN_MPC
+            
+            # The minimum quantity we can trade is the max of the two minimums
+            min_trade_qty = max(mexc_min_qty, kucoin_min_qty)
+            
+            # Check if both sides have enough volume
+            has_enough_mexc = ob_volume['mexc_available'] >= min_trade_qty
+            has_enough_kucoin = ob_volume['kucoin_available'] >= min_trade_qty
+            
+            vol_for_mexc = min_trade_qty
+            vol_for_kucoin = min_trade_qty
+            
+            # Log the volume check
+            if int(time.time()) % 15 == 0:
+                log_condition("MEXC has enough volume", has_enough_mexc,
+                    details=f"available={ob_volume['mexc_available']:.0f} MPC")
+                log_condition("KuCoin has enough volume", has_enough_kucoin,
+                    details=f"available={ob_volume['kucoin_available']:.0f} MPC")
+        else:
+            # Fallback to calculated if orderbook fails
+            vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 86
+            vol_for_kucoin = max(KUCOIN_MIN_MPC, vol_for_mexc)
         
         # Log every 30 seconds
         if int(time.time()) % 30 == 0:
