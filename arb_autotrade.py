@@ -162,16 +162,27 @@ def get_orderbook_levels():
         return None
 
 def get_prices():
+    """Get Level 1 prices from real orderbook (not ticker!)"""
     try:
+        # KuCoin Level1 orderbook
         resp_k = requests.get('https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=MPC-USDT', timeout=5)
         k_data = resp_k.json()['data']
         
-        resp_m = requests.get('https://api.mexc.com/api/v3/ticker/24hr?symbol=MPCUSDT', timeout=5)
-        m_data = resp_m.json()
+        # MEXC Level1 from depth (not ticker!)
+        resp_m = requests.get('https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=1', timeout=5)
+        m_depth = resp_m.json()
+        
+        # Extract Level 1 prices
+        k_bid = float(k_data['bestBid'])
+        k_ask = float(k_data['bestAsk'])
+        
+        # MEXC: asks[0] = best ask (we buy here), bids[0] = best bid (we sell here)
+        m_ask = float(m_depth['asks'][0][0]) if m_depth.get('asks') else 0
+        m_bid = float(m_depth['bids'][0][0]) if m_depth.get('bids') else 0
         
         return {
-            'kucoin': {'bid': float(k_data['bestBid']), 'ask': float(k_data['bestAsk'])},
-            'mexc': {'bid': float(m_data['bidPrice']), 'ask': float(m_data['askPrice'])}
+            'kucoin': {'bid': k_bid, 'ask': k_ask},
+            'mexc': {'bid': m_bid, 'ask': m_ask}
         }
     except Exception as e:
         log(f"Error getting prices: {e}")
