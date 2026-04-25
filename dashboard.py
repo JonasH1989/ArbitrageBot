@@ -16,6 +16,30 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent / "config"))
 from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, get_alert_settings, set_alert_settings, get_api_keys, set_api_keys, get_all_pairs, add_pair, remove_pair
 
+import base64
+
+# Sound files
+SOUND_FILES = {
+    'bis3': '/app/static/bis3prozent.mp3',
+    'ab10': '/app/static/ab10prozent.mp3',
+    'kaching': '/app/static/kaching.mp3'
+}
+
+def play_sound(sound_key, volume=0.5):
+    """Play a sound file with given volume (0-1)"""
+    sound_file = SOUND_FILES.get(sound_key)
+    if not sound_file:
+        return
+    try:
+        with open(sound_file, 'rb') as f:
+            audio_bytes = f.read()
+        b64 = base64.b64encode(audio_bytes).decode()
+        # Volume is passed via query param in HTML5 audio
+        audio_html = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}" />'
+        components.html(audio_html, height=0, width=0)
+    except Exception as e:
+        pass  # Silent fail for sounds
+
 # Exchange price precision
 MEXC_PRICE_PRECISION = 5
 KUCOIN_PRICE_PRECISION = 6
@@ -479,13 +503,7 @@ with st.sidebar:
     sound_key = sound_options[selected_sound]
     
     if st.button("▶️ Sound testen"):
-        import base64
-        sound_files = {
-            'bis3': '/app/static/bis3prozent.mp3',
-            'ab10': '/app/static/ab10prozent.mp3',
-            'kaching': '/app/static/kaching.mp3'
-        }
-        sound_file = sound_files.get(sound_key)
+        sound_file = SOUND_FILES.get(sound_key)
         if sound_file:
             try:
                 with open(sound_file, 'rb') as f:
@@ -1093,11 +1111,11 @@ else:
             # Determine spread and play appropriate sound
             spread_pct = max(spread_pct_km, spread_pct_mk)
             if spread_pct >= 10:
-                play_sound('ab10')
+                play_sound('ab10', volume)
             elif spread_pct >= 3:
-                play_sound('bis3')
+                play_sound('bis3', volume)
             else:
-                play_sound('notification')
+                play_sound('notification', volume)
             
             st.warning("🚨 Profitabel!")
             st.warning("🚨 Profitabel!")
