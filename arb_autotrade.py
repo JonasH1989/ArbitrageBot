@@ -639,7 +639,7 @@ def main():
             total_mexc_vol = sum(x['qty'] for x in ob_data['mexc_asks'][:5])
             total_kucoin_vol = sum(x['qty'] for x in ob_data['kucoin_bids'][:5])
             log(f"Orderbook: MEXC top5={total_mexc_vol:.0f} MPC, KuCoin top5={total_kucoin_vol:.0f} MPC, min_needed={min_trade_qty}")
-            log(f"Tradeable spreads: {len(tradeable_spreads)} options found")
+            log(f"Best trade: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC" if best_trade else "No tradeable spread")
         
         if not ob_data:
             # Fallback
