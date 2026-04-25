@@ -61,6 +61,10 @@ MEXC_SECRET = _cfg.get('mexc', {}).get('api_secret', '')
 MEXC_MIN_USDT = 1.0
 KUCOIN_MIN_MPC = 85  # Minimum ~85 MPC per order (≈1 USDT at ~$0.012)
 
+# Exchange precision (decimal places)
+MEXC_PRICE_PRECISION = 5  # MEXC uses 5 decimal places for MPC
+KUCOIN_PRICE_PRECISION = 6  # KuCoin uses 6 decimal places for MPC
+
 TRADING_PAIR = "MPC-USDT"
 
 def is_active():
@@ -172,6 +176,12 @@ def get_prices():
     except Exception as e:
         log(f"Error getting prices: {e}")
         return None
+
+def fmt_price(price, exchange):
+    """Format price with exchange-specific precision"""
+    if exchange == 'mexc':
+        return f"{price:.{MEXC_PRICE_PRECISION}f}"
+    return f"{price:.{KUCOIN_PRICE_PRECISION}f}"
 
 def execute_market_buy_kucoin(qty):
     """Buy MPC on KuCoin at market price"""
@@ -612,7 +622,7 @@ def main():
         
         # Log every 30 seconds
         if int(time.time()) % 30 == 0:
-            log(f"Prices: K=${k['bid']:.4f}/${k['ask']:.4f} | M=${m['bid']:.4f}/${m['ask']:.4f}")
+            log(f"Prices: K={fmt_price(k['bid'],'kucoin')}/{fmt_price(k['ask'],'kucoin')} | M={fmt_price(m['bid'],'mexc')}/{fmt_price(m['ask'],'mexc')}")
             log(f"  M->K spread: {spread_pct_mk:.2f}% | K->M spread: {spread_pct_km:.2f}%")
         
         # Check limit order fills every 10 seconds
