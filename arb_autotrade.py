@@ -516,6 +516,8 @@ def main():
     STATE_RUNNING = 'RUNNING'
     state = STATE_WAITING
     trade_in_progress = False
+    last_spread_ok = None  # Track spread condition changes
+    last_pair_enabled = None  # Track pair enabled changes
     last_trade_time = 0
     last_limit_check = 0
     
@@ -685,12 +687,15 @@ def main():
             time.sleep(1)
             continue
         
-        # Log condition check
-        log_condition("Spread >= START_THRESHOLD",
-            profitable_spread >= START_THRESHOLD,
-            expected=f"{START_THRESHOLD}%",
-            details=f"actual={profitable_spread:.3f}%"
-        )
+        # Log condition check only when state CHANGES (reduce spam)
+        current_spread_ok = profitable_spread >= START_THRESHOLD
+        if current_spread_ok != last_spread_ok:
+            log_condition("Spread >= START_THRESHOLD",
+                current_spread_ok,
+                expected=f"{START_THRESHOLD}%",
+                details=f"actual={profitable_spread:.3f}%"
+            )
+            last_spread_ok = current_spread_ok
         
         # State machine logic
         if state == STATE_WAITING:
