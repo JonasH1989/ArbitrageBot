@@ -16,6 +16,23 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent / "config"))
 from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, get_alert_settings, set_alert_settings, get_api_keys, set_api_keys, get_all_pairs, add_pair, remove_pair
 
+# Dashboard logging to same file as bot
+LOG_FILE = Path('/home/openclaw/.openclaw/logs/arb_autotrade.log')
+
+def log_dashboard(action, details=""):
+    """Log dashboard actions to the same log file as the bot"""
+    ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+    msg = f"📋 DASHBOARD: {action}"
+    if details:
+        msg += f" | {details}"
+    line = f"[{ts}] [INFO] {msg}"
+    print(line)
+    try:
+        with open(LOG_FILE, 'a') as f:
+            f.write(line + '\n')
+    except:
+        pass
+
 
 # Logo paths
 
@@ -559,6 +576,7 @@ with st.sidebar:
         new_pair = st.selectbox("Paar", remaining, key="new_pair_select")
         if st.button("➕ Hinzufuegen"):
             add_pair(new_pair)
+            log_dashboard(f"Paar hinzugefuegt", new_pair)
             st.rerun()
     else:
         st.info("Alle vorhanden!")
@@ -644,6 +662,7 @@ else:
         new_enabled = st.checkbox("Bot AKTIV", value=pair_enabled, key="bot_enable_checkbox")
         if new_enabled != pair_enabled:
             set_pair_settings(pair, enabled=new_enabled)
+            log_dashboard(f"Pair {pair} {'AKTIVIERT' if new_enabled else 'DEAKTIVIERT'}")
             st.rerun()
     
     # Get data
