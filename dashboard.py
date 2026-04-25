@@ -17,86 +17,8 @@ sys.path.insert(0, str(Path(__file__).parent / "config"))
 from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, get_alert_settings, set_alert_settings, get_api_keys, set_api_keys, get_all_pairs, add_pair, remove_pair
 
 # Dashboard logging to same file as bot
-LOG_FILE = Path('/home/openclaw/.openclaw/logs/arb_autotrade.log')
-
-def log_dashboard(action, details=""):
-    """Log dashboard actions to the same log file as the bot"""
-    ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
-    msg = f"📋 DASHBOARD: {action}"
-    if details:
-        msg += f" | {details}"
-    line = f"[{ts}] [INFO] {msg}"
-    print(line)
-    try:
-        with open(LOG_FILE, 'a') as f:
-            f.write(line + '\n')
-    except:
-        pass
-
 
 # Logo paths
-
-# Check for log viewer page
-params = st.query_params
-if params.get("page") == "log":
-    st.set_page_config(page_title="Bot Log Viewer", page_icon="📊", layout="wide")
-    st.title("📊 Bot Log Viewer")
-    
-    LOG_FILE = Path('/home/openclaw/.openclaw/logs/arb_autotrade.log')
-    
-    # Simple pagination
-    lines_per_page = st.selectbox("Einträge pro Seite", [50, 100, 200], index=1, key="log_lines")
-    page = st.number_input("Seite", min_value=1, value=1, key="log_page")
-    
-    try:
-        if LOG_FILE.exists():
-            all_logs = LOG_FILE.read_text().strip().split('\n')
-            total = len(all_logs)
-            total_pages = max(1, (total + lines_per_page - 1) // lines_per_page)
-            
-            start = max(0, total - page * lines_per_page)
-            end = total - (page - 1) * lines_per_page if page > 1 else total
-            logs = all_logs[start:end]
-            
-            st.caption(f"Einträge {start+1} - {min(end, total)} von {total} | Seite {page} von {total_pages}")
-            
-            log_html = "<div style='font-family: monospace; font-size: 12px; background: #0d1117; padding: 15px; border-radius: 8px; max-height: 70vh; overflow-y: auto;'>"
-            for line in logs:
-                if '[DECISION]' in line:
-                    color = '#00bfff'
-                elif '[CONDITION]' in line:
-                    color = '#00ff00' if '✅' in line else ('#ff4444' if '❌' in line else '#ffff00')
-                elif '[ERROR]' in line:
-                    color = '#ff0000'
-                elif '[WARN]' in line:
-                    color = '#ffaa00'
-                elif '[INFO]' in line:
-                    color = '#ffffff'
-                else:
-                    color = '#aaaaaa'
-                line_escaped = line.replace('<', '&lt;').replace('>', '&gt;')
-                log_html += f"<div style='color: {color}; margin: 3px 0; border-bottom: 1px solid #222;'>{line_escaped}</div>"
-            log_html += "</div>"
-            components.html(log_html, height=700, scrolling=True)
-            
-            # Navigation
-            col1, col2, col3 = st.columns([1, 1, 3])
-            if col1.button("⏮️ Erste") and page > 1:
-                st.query_params["log_page"] = "1"
-                st.rerun()
-            if col2.button("⬅️ Zurück") and page > 1:
-                st.query_params["log_page"] = str(page - 1)
-                st.rerun()
-            if page < total_pages and col3.button("Weiter ➡️"):
-                st.query_params["log_page"] = str(page + 1)
-                st.rerun()
-        else:
-            st.info("Keine Logs vorhanden")
-    except Exception as e:
-        st.error(f"Log error: {e}")
-    
-    st.markdown("[← zurück zum Dashboard](/)")
-    st.stop()
 
 
 KUCoin_LOGO = "/app/static/kucoin.jpg"
@@ -576,7 +498,6 @@ with st.sidebar:
         new_pair = st.selectbox("Paar", remaining, key="new_pair_select")
         if st.button("➕ Hinzufuegen"):
             add_pair(new_pair)
-            log_dashboard(f"Paar hinzugefuegt", new_pair)
             st.rerun()
     else:
         st.info("Alle vorhanden!")
@@ -662,7 +583,6 @@ else:
         new_enabled = st.checkbox("Bot AKTIV", value=pair_enabled, key="bot_enable_checkbox")
         if new_enabled != pair_enabled:
             set_pair_settings(pair, enabled=new_enabled)
-            log_dashboard(f"Pair {pair} {'AKTIVIERT' if new_enabled else 'DEAKTIVIERT'}")
             st.rerun()
     
     # Get data
@@ -1183,35 +1103,5 @@ if st.session_state.selected_pair:
 
 # =============================================================================
 # LIVE LOG VIEWER (SIDEBAR)
-# =============================================================================
-with st.sidebar:
-    st.divider()
-    st.markdown("### 📊 Live Bot Log")
-    
-    log_file = Path('/home/openclaw/.openclaw/logs/arb_autotrade.log')
-    if log_file.exists():
-        try:
-            logs = log_file.read_text().strip().split('\n')[-30:]
-            log_html = "<div style='font-family: monospace; font-size: 10px; background: #1a1a1a; padding: 8px; border-radius: 4px; max-height: 200px; overflow-y: auto;'>"
-            for line in logs:
-                if '[DECISION]' in line:
-                    color = '#00bfff'
-                elif '[CONDITION]' in line:
-                    color = '#00ff00' if '✅' in line else ('#ff4444' if '❌' in line else '#ffff00')
-                elif '[ERROR]' in line:
-                    color = '#ff0000'
-                elif '[WARN]' in line:
-                    color = '#ffaa00'
-                else:
-                    color = '#cccccc'
-                line_escaped = line.replace('<', '&lt;').replace('>', '&gt;')
-                log_html += f"<div style='color: {color}; margin: 1px 0;'>{line_escaped}</div>"
-            log_html += "</div>"
-            components.html(log_html, height=220, scrolling=True)
-        except Exception as e:
-            st.caption(f"Log error: {e}")
-    else:
-        st.caption("warten auf logs...")
 
-    st.markdown("[📊 Log öffnen →](http://192.168.180.46:8501/?page=log)")
 
