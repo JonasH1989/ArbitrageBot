@@ -21,6 +21,7 @@ import base64
 # Sound files
 SOUND_FILES = {
     'bis3': '/app/static/bis3prozent.mp3',
+    'bis10': '/app/static/bis10prozent.mp3',
     'ab10': '/app/static/ab10prozent.mp3',
     'kaching': '/app/static/kaching.mp3'
 }
@@ -494,6 +495,7 @@ with st.sidebar:
     # Sound selector
     sound_options = {
         "💰 Bis 3%": "bis3",
+        "🎯 3-10%": "bis10",
         "🚨 Ab 10%": "ab10",
         "💵 Kaching (Trade)": "kaching"
     }
@@ -1113,9 +1115,9 @@ else:
             if spread_pct >= 10:
                 play_sound('ab10', volume)
             elif spread_pct >= 3:
-                play_sound('bis3', volume)
+                play_sound('bis10', volume)
             else:
-                play_sound('notification', volume)
+                play_sound('bis3', volume)
             
             st.warning("🚨 Profitabel!")
             st.warning("🚨 Profitabel!")
