@@ -77,12 +77,30 @@ def set_active(flag):
         except:
             pass
 
-def log(msg):
-    ts = datetime.now().strftime('%H:%M:%S')
-    line = f"[{ts}] {msg}"
+def log(msg, level="INFO"):
+    """Enhanced logging with optional level"""
+    ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+    line = f"[{ts}] [{level}] {msg}"
     print(line)
     with open(LOG_FILE, 'a') as f:
         f.write(line + '\n')
+
+def log_decision(title, **kwargs):
+    """Log a decision point with all conditions"""
+    log(f"═══ {title} ═══", "DECISION")
+    for key, value in kwargs.items():
+        log(f"  {key}: {value}", "DECISION")
+    log("─" * 50, "DECISION")
+
+def log_condition(name, result, expected=None, details=""):
+    """Log a boolean condition check"""
+    symbol = "✅" if result else "❌"
+    msg = f"{symbol} {name}: {result}"
+    if expected:
+        msg += f" (expected: {expected})"
+    if details:
+        msg += f" | {details}"
+    log(msg, "CONDITION")
 
 def kucoin_sig(secret, ts, method, path, body=''):
     message = f'{ts}{method}{path}{body}'
@@ -472,6 +490,24 @@ def main():
             check_limit_order_fills()
             last_limit_check = time.time()
         
+        # Determine which spread direction is profitable
+        profitable_spread = max(spread_pct_km, spread_pct_mk)
+        direction = "K→M" if spread_pct_km >= spread_pct_mk else "M→K"
+        
+        # Log decision every 15 seconds
+        if int(time.time()) % 15 == 0:
+            log_decision("STATUS_CHECK",
+                state=state,
+                pair_enabled=str(pair_enabled),
+                spread_mk=f"{spread_pct_mk:.3f}%",
+                spread_km=f"{spread_pct_km:.3f}%",
+                best_spread=f"{profitable_spread:.3f}%",
+                direction=direction,
+                threshold=f"{START_THRESHOLD}%",
+                vol_mexc=f"{vol_for_mexc:.0f}",
+                vol_kucoin=f"{vol_for_kucoin:.0f}"
+            )
+        
         # Trade BOTH directions when profitable!
         if not pair_enabled:
             state = STATE_WAITING
@@ -480,13 +516,17 @@ def main():
             time.sleep(1)
             continue
         
-        # Determine which spread direction is profitable
-        profitable_spread = max(spread_pct_km, spread_pct_mk)
+        # Log condition check
+        log_condition("Spread >= START_THRESHOLD",
+            profitable_spread >= START_THRESHOLD,
+            expected=f"{START_THRESHOLD}%",
+            details=f"actual={profitable_spread:.3f}%"
+        )
         
         # State machine logic
         if state == STATE_WAITING:
             if profitable_spread >= START_THRESHOLD and not trade_in_progress:
-                log(f"🚨 ENTERING: spread={profitable_spread:.2f}% >= START_THRESHOLD={START_THRESHOLD}%")
+                log(f"🚀 TRIGGER: spread={profitable_spread:.2f}% >= threshold={START_THRESHOLD}%", "DECISION")
                 state = STATE_RUNNING
                 trade_in_progress = True
                 
