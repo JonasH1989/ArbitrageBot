@@ -559,6 +559,8 @@ def main():
         
         # Find best tradeable spread using sweep algorithm
         best_trade = None
+        vol_for_mexc = min_trade_qty  # Default volume
+        vol_for_kucoin = min_trade_qty
         
         if ob_data:
             # Direction M→K: Buy MEXC (sweep asks), Sell KuCoin (fix bids)
@@ -642,9 +644,10 @@ def main():
             log(f"Best trade: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC" if best_trade else "No tradeable spread")
         
         if not ob_data:
-            # Fallback
+            # Fallback when orderbook fetch fails
             vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 86
             vol_for_kucoin = max(KUCOIN_MIN_MPC, vol_for_mexc)
+
         
         # Log every 30 seconds
         if int(time.time()) % 30 == 0:
@@ -698,6 +701,8 @@ def main():
                 
                 # Execute best trade found by sweep
                 if best_trade:
+                    vol_for_mexc = best_trade['vol']
+                    vol_for_kucoin = best_trade['vol']
                     log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC")
                     if best_trade['dir'] == 'K→M':
                         success, trade_id = execute_trade_K_to_M(best_trade['vol'], best_trade['buy'], best_trade['sell'])
@@ -719,6 +724,8 @@ def main():
                 trade_in_progress = True
                 # Execute best trade found by sweep
                 if best_trade:
+                    vol_for_mexc = best_trade['vol']
+                    vol_for_kucoin = best_trade['vol']
                     log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC")
                     if best_trade['dir'] == 'K→M':
                         success, trade_id = execute_trade_K_to_M(best_trade['vol'], best_trade['buy'], best_trade['sell'])
