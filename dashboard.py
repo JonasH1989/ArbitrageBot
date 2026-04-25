@@ -16,8 +16,19 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent / "config"))
 from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, get_alert_settings, set_alert_settings, get_api_keys, set_api_keys, get_all_pairs, add_pair, remove_pair
 
+# Exchange price precision
+MEXC_PRICE_PRECISION = 5
+KUCOIN_PRICE_PRECISION = 6
+
 # Dashboard logging to same file as bot
 
+
+
+def fmt_price(price, exchange):
+    """Format price with exchange-specific precision"""
+    if exchange == 'mexc':
+        return f"{price:.{MEXC_PRICE_PRECISION}f}"
+    return f"{price:.{KUCOIN_PRICE_PRECISION}f}"
 # Logo paths
 
 
@@ -713,7 +724,7 @@ else:
                         pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
                         bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                         price_color = "#f44336"  # RED - what we pay on BUY side
-                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #f44336; font-weight: bold;'>${k_ask_p:.5f}</span> <span style='color: #f44336;'>|</span> <span style='color: #f44336;'>{k_ask_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #f44336; font-weight: bold;'>${k_ask_p:.6f}</span> <span style='color: #f44336;'>|</span> <span style='color: #f44336;'>{k_ask_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
                     
                     km_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_km >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_km > 0 else "rgba(244,67,54,0.2)")
                     km_spread_color = "#00c853" if spread_pct_km >= threshold_start else ("#ffc107" if spread_pct_km > 0 else "#f44336")
@@ -772,7 +783,7 @@ else:
                         pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                         bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                         color = "#00c853" if pct >= threshold_start else ("#ffc107" if pct >= 0 else "#f44336")
-                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #00c853; font-weight: bold;'>${k_bid_p:.5f}</span> <span style='color: #00c853;'>|</span> <span style='color: #00c853;'>{k_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #00c853; font-weight: bold;'>${k_bid_p:.6f}</span> <span style='color: #00c853;'>|</span> <span style='color: #00c853;'>{k_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
                 
             else:
                 st.info("Orderbook Daten nicht vollständig verfügbar")
