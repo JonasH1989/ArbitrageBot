@@ -194,6 +194,10 @@ def fmt_price(price, exchange):
         return f"{price:.{MEXC_PRICE_PRECISION}f}"
     return f"{price:.{KUCOIN_PRICE_PRECISION}f}"
 
+def get_trading_strategy(pair):
+    """Get trading strategy for pair (usdt or mpc)"""
+    return get_setting(f'trading.pairs.{pair}.strategy', 'usdt')
+
 def execute_market_buy_kucoin(qty):
     """Buy MPC on KuCoin at market price"""
     ts = str(int(time.time() * 1000))
@@ -598,13 +602,23 @@ def main():
                     
                     # START_THRESHOLD check
                     if spread_pct >= START_THRESHOLD and cum_vol_kucoin >= min_trade_qty and m_bid['qty'] >= min_trade_qty:
-                        if best_trade is None or spread_pct > best_trade['pct']:
+                        # Calculate expected profit for decision
+                        strategy = get_trading_strategy(TRADING_PAIR)
+                        expected_profit_usdt = (m_bid['price'] - k_ask['price']) * min(cum_vol_kucoin, m_bid['qty'])
+                        expected_profit_mpc = expected_profit_usdt / k_ask['price'] if k_ask['price'] > 0 else 0
+                        
+                        profit_for_decision = expected_profit_mpc if strategy == 'mpc' else expected_profit_usdt
+                        
+                        if best_trade is None or profit_for_decision > (best_trade.get('profit_mpc' if strategy == 'mpc' else 'profit_usdt', 0)):
                             best_trade = {
                                 'dir': 'K→M',
                                 'buy': k_ask['price'],
                                 'sell': m_bid['price'],
                                 'pct': spread_pct,
-                                'vol': min(cum_vol_kucoin, m_bid['qty'])
+                                'vol': min(cum_vol_kucoin, m_bid['qty']),
+                                'profit_usdt': expected_profit_usdt,
+                                'profit_mpc': expected_profit_mpc,
+                                'strategy': strategy
                             }
                         break
 
@@ -613,9 +627,10 @@ def main():
             if ob_data:
                 total_mexc = sum(x['qty'] for x in ob_data['mexc_asks'][:5])
                 total_kucoin = sum(x['qty'] for x in ob_data['kucoin_bids'][:5])
-                log(f"Sweep: MEXC top5={total_mexc:.0f} MPC, KuCoin top5={total_kucoin:.0f} MPC, min={min_trade_qty}")
+                strategy = get_trading_strategy(TRADING_PAIR)
+                log(f"Sweep: {strategy.upper()} strategy | MEXC top5={total_mexc:.0f} MPC, KuCoin top5={total_kucoin:.0f} MPC, min={min_trade_qty}")
                 if best_trade:
-                    log(f"  Best trade: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC")
+                    log(f"  Best: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC | profit_usdt=${best_trade['profit_usdt']:.4f} | profit_mpc={best_trade['profit_mpc']:.4f}")
                 else:
                     log(f"  No tradeable spread found (spread below thresholds or insufficient volume)")
         
