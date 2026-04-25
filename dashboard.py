@@ -7,7 +7,6 @@ import streamlit as st
 import streamlit.components.v1 as components
 import requests
 import yaml
-from pathlib import Path
 from datetime import datetime
 import os
 import pandas as pd
@@ -1096,3 +1095,37 @@ if st.session_state.selected_pair:
     import time
     time.sleep(2)
     st.rerun()
+
+
+# =============================================================================
+# LIVE LOG VIEWER (SIDEBAR)
+# =============================================================================
+with st.sidebar:
+    st.divider()
+    st.markdown("### 📊 Live Bot Log")
+    
+    log_file = Path('/home/openclaw/.openclaw/logs/arb_debug.log')
+    if log_file.exists():
+        try:
+            logs = log_file.read_text().strip().split('\n')[-30:]
+            log_html = "<div style='font-family: monospace; font-size: 10px; background: #1a1a1a; padding: 8px; border-radius: 4px; max-height: 200px; overflow-y: auto;'>"
+            for line in logs:
+                if '[DECISION]' in line:
+                    color = '#00bfff'
+                elif '[CONDITION]' in line:
+                    color = '#00ff00' if '✅' in line else ('#ff4444' if '❌' in line else '#ffff00')
+                elif '[ERROR]' in line:
+                    color = '#ff0000'
+                elif '[WARN]' in line:
+                    color = '#ffaa00'
+                else:
+                    color = '#cccccc'
+                line_escaped = line.replace('<', '&lt;').replace('>', '&gt;')
+                log_html += f"<div style='color: {color}; margin: 1px 0;'>{line_escaped}</div>"
+            log_html += "</div>"
+            components.html(log_html, height=220, scrolling=True)
+        except Exception as e:
+            st.caption(f"Log error: {e}")
+    else:
+        st.caption("Debug log nicht gefunden")
+
