@@ -35,11 +35,11 @@ def play_sound(sound_key, volume=0.5):
         with open(sound_file, 'rb') as f:
             audio_bytes = f.read()
         b64 = base64.b64encode(audio_bytes).decode()
-        # Volume is passed via query param in HTML5 audio
-        audio_html = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}" />'
+        vol_int = int(volume * 100)
+        audio_html = '<audio id="alert_sound" autoplay="autoplay"><source src="data:audio/mp3;base64,' + b64 + '" type="audio/mpeg"></audio><script>document.getElementById("alert_sound").volume=' + str(vol_int) + '/100;</script>'
         components.html(audio_html, height=0, width=0)
     except Exception as e:
-        pass  # Silent fail for sounds
+        pass
 
 # Exchange price precision
 MEXC_PRICE_PRECISION = 5
