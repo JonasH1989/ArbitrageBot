@@ -532,40 +532,71 @@ def main():
         kucoin_min_qty = KUCOIN_MIN_MPC
         min_trade_qty = max(mexc_min_qty, kucoin_min_qty)
         
-        # Find all tradeable spreads at various price levels
-        tradeable_spreads = []
+        # Find best tradeable spread using sweep algorithm
+        best_trade = None
+        
         if ob_data:
-            # Check M->K direction (Buy MEXC, Sell KuCoin)
-            for m_ask in ob_data['mexc_asks']:
-                for k_bid in ob_data['kucoin_bids']:
+            # Direction M→K: Buy MEXC (sweep asks), Sell KuCoin (fix bids)
+            # For each KuCoin bid level (best first), sweep through MEXC asks
+            for k_bid in ob_data['kucoin_bids'][:5]:  # Top 5 bid levels
+                cum_vol_mexc = 0  # Cumulative volume on MEXC (buy) side
+                
+                for m_ask in ob_data['mexc_asks'][:5]:  # Sweep through asks
                     spread = k_bid['price'] - m_ask['price']
                     spread_pct = (spread / m_ask['price']) * 100 if m_ask['price'] > 0 else 0
+                    cum_vol_mexc += m_ask['qty']  # Add cumulative volume
                     
-                    if spread_pct >= START_THRESHOLD and m_ask['qty'] >= min_trade_qty and k_bid['qty'] >= min_trade_qty:
-                        tradeable_spreads.append({
-                            'dir': 'M→K',
-                            'buy': m_ask['price'],
-                            'sell': k_bid['price'],
-                            'pct': spread_pct,
-                            'vol': min(m_ask['qty'], k_bid['qty'])
-                        })
-                        break  # Found valid level, move on
+                    # STOP_THRESHOLD check - spread too low, no deeper level will help
+                    if spread_pct < STOP_THRESHOLD:
+                        break
+                    
+                    # START_THRESHOLD check - spread is interesting
+                    if spread_pct >= START_THRESHOLD and cum_vol_mexc >= min_trade_qty and k_bid['qty'] >= min_trade_qty:
+                        if best_trade is None or spread_pct > best_trade['pct']:
+                            best_trade = {
+                                'dir': 'M→K',
+                                'buy': m_ask['price'],
+                                'sell': k_bid['price'],
+                                'pct': spread_pct,
+                                'vol': min(cum_vol_mexc, k_bid['qty'])
+                            }
+                        break  # Found tradeable at this bid level, move to next bid
             
-            # Check K->M direction (Buy KuCoin, Sell MEXC)
-            for k_ask in ob_data.get('kucoin_asks', [])[:5]:
-                for m_bid in ob_data.get('mexc_bids', [])[:5]:
+            # Direction K→M: Buy KuCoin (sweep asks), Sell MEXC (fix bids)
+            for m_bid in ob_data['mexc_bids'][:5]:  # Top 5 bid levels on MEXC
+                cum_vol_kucoin = 0  # Cumulative volume on KuCoin (buy) side
+                
+                for k_ask in ob_data.get('kucoin_asks', [])[:5]:  # Sweep through asks
                     spread = m_bid['price'] - k_ask['price']
                     spread_pct = (spread / k_ask['price']) * 100 if k_ask['price'] > 0 else 0
+                    cum_vol_kucoin += k_ask['qty']  # Add cumulative volume
                     
-                    if spread_pct >= START_THRESHOLD and k_ask['qty'] >= min_trade_qty and m_bid['qty'] >= min_trade_qty:
-                        tradeable_spreads.append({
-                            'dir': 'K→M',
-                            'buy': k_ask['price'],
-                            'sell': m_bid['price'],
-                            'pct': spread_pct,
-                            'vol': min(k_ask['qty'], m_bid['qty'])
-                        })
+                    # STOP_THRESHOLD check
+                    if spread_pct < STOP_THRESHOLD:
                         break
+                    
+                    # START_THRESHOLD check
+                    if spread_pct >= START_THRESHOLD and cum_vol_kucoin >= min_trade_qty and m_bid['qty'] >= min_trade_qty:
+                        if best_trade is None or spread_pct > best_trade['pct']:
+                            best_trade = {
+                                'dir': 'K→M',
+                                'buy': k_ask['price'],
+                                'sell': m_bid['price'],
+                                'pct': spread_pct,
+                                'vol': min(cum_vol_kucoin, m_bid['qty'])
+                            }
+                        break
+
+        # Log sweep results every 30 seconds
+        if int(time.time()) % 30 == 0:
+            if ob_data:
+                total_mexc = sum(x['qty'] for x in ob_data['mexc_asks'][:5])
+                total_kucoin = sum(x['qty'] for x in ob_data['kucoin_bids'][:5])
+                log(f"Sweep: MEXC top5={total_mexc:.0f} MPC, KuCoin top5={total_kucoin:.0f} MPC, min={min_trade_qty}")
+                if best_trade:
+                    log(f"  Best trade: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC")
+                else:
+                    log(f"  No tradeable spread found (spread below thresholds or insufficient volume)")
         
         # Log volume check every 15s
         if int(time.time()) % 15 == 0 and ob_data:
@@ -629,14 +660,13 @@ def main():
                 state = STATE_RUNNING
                 trade_in_progress = True
                 
-                # Execute best tradeable spread
-                if tradeable_spreads:
-                    best = max(tradeable_spreads, key=lambda x: x['pct'])
-                    log(f"🚀 Executing trade: {best['dir']} @ {best['pct']:.3f}% | Vol={best['vol']:.0f} MPC")
-                    if best['dir'] == 'K→M':
-                        success, trade_id = execute_trade_K_to_M(best['vol'], best['buy'], best['sell'])
+                # Execute best trade found by sweep
+                if best_trade:
+                    log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC")
+                    if best_trade['dir'] == 'K→M':
+                        success, trade_id = execute_trade_K_to_M(best_trade['vol'], best_trade['buy'], best_trade['sell'])
                     else:
-                        success, trade_id = execute_trade_M_to_K(best['vol'], best['buy'], best['sell'])
+                        success, trade_id = execute_trade_M_to_K(best_trade['vol'], best_trade['buy'], best_trade['sell'])
                 elif spread_pct_km >= spread_pct_mk:
                     success, trade_id = execute_trade_K_to_M(vol_for_kucoin, k['ask'], m['bid'])
                 else:
@@ -651,14 +681,13 @@ def main():
                 state = STATE_WAITING
             elif not trade_in_progress:
                 trade_in_progress = True
-                # Execute best tradeable spread
-                if tradeable_spreads:
-                    best = max(tradeable_spreads, key=lambda x: x['pct'])
-                    log(f"🚀 Executing trade: {best['dir']} @ {best['pct']:.3f}% | Vol={best['vol']:.0f} MPC")
-                    if best['dir'] == 'K→M':
-                        success, trade_id = execute_trade_K_to_M(best['vol'], best['buy'], best['sell'])
+                # Execute best trade found by sweep
+                if best_trade:
+                    log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC")
+                    if best_trade['dir'] == 'K→M':
+                        success, trade_id = execute_trade_K_to_M(best_trade['vol'], best_trade['buy'], best_trade['sell'])
                     else:
-                        success, trade_id = execute_trade_M_to_K(best['vol'], best['buy'], best['sell'])
+                        success, trade_id = execute_trade_M_to_K(best_trade['vol'], best_trade['buy'], best_trade['sell'])
                 elif spread_pct_km >= spread_pct_mk:
                     success, trade_id = execute_trade_K_to_M(vol_for_kucoin, k['ask'], m['bid'])
                 else:
