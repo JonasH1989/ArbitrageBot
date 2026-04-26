@@ -10,8 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy dashboard
 COPY dashboard.py .
 
-# Copy config module (with __init__.py)
-COPY config/ ./config/
+# Copy settings_sync to /app/ (NOT in volume mount /app/config/)
+COPY config/settings_sync.py /app/settings_sync.py
 
 # Copy trade logger
 COPY trade_logger.py .
@@ -19,8 +19,7 @@ COPY trade_logger.py .
 # Copy static assets (logos)
 COPY static/ ./static/
 
-# DO NOT copy config.yaml - API keys come from mounted volume
-# Create empty config directory that will be populated at runtime
+# Create config directory for volume mount
 RUN mkdir -p /app/config
 
 # Expose Streamlit port
