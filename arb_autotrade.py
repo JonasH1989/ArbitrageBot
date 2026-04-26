@@ -667,8 +667,10 @@ def main():
         
         # Log decision every 15 seconds
         if int(time.time()) % 15 == 0:
-            # Read current strategy from config
+            # Read current strategy and thresholds from config
             current_strategy = get_trading_strategy(TRADING_PAIR)
+            threshold_start = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_start', START_THRESHOLD)
+            threshold_stop = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_stop', 0.5)
             log_decision("STATUS_CHECK",
                 state=state,
                 pair_enabled=str(pair_enabled),
@@ -677,7 +679,8 @@ def main():
                 spread_km=f"{spread_pct_km:.3f}%",
                 best_spread=f"{profitable_spread:.3f}%",
                 direction=direction,
-                threshold=f"{START_THRESHOLD}%",
+                threshold=f"{threshold_start:.2f}%",
+                threshold_stop=f"{threshold_stop:.2f}%",
                 vol_mexc=f"{vol_for_mexc:.0f}",
                 vol_kucoin=f"{vol_for_kucoin:.0f}"
             )
