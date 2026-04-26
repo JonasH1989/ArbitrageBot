@@ -611,9 +611,9 @@ def main():
                         expected_profit_usdt = (m_bid['price'] - k_ask['price']) * min(cum_vol_kucoin, m_bid['qty'])
                         expected_profit_mpc = expected_profit_usdt / k_ask['price'] if k_ask['price'] > 0 else 0
                         
-                        profit_for_decision = expected_profit_mpc if strategy == 'mpc' else expected_profit_usdt
+                        profit_for_decision = expected_profit_mpc if strategy == 'coins' else expected_profit_usdt
                         
-                        if best_trade is None or profit_for_decision > (best_trade.get('profit_mpc' if strategy == 'mpc' else 'profit_usdt', 0)):
+                        if best_trade is None or profit_for_decision > (best_trade.get('profit_mpc' if strategy == 'coins' else 'profit_usdt', 0)):
                             best_trade = {
                                 'dir': 'K→M',
                                 'buy': k_ask['price'],
