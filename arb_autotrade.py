@@ -518,6 +518,7 @@ def main():
     trade_in_progress = False
     last_spread_ok = None  # Track spread condition changes
     last_pair_enabled = None  # Track pair enabled changes
+    last_config_hash = None  # Track config changes for immediate logging
     last_trade_time = 0
     last_limit_check = 0
     
@@ -538,6 +539,18 @@ def main():
         current_strategy = get_setting(f'trading.pairs.{TRADING_PAIR}.strategy', 'usdt')
         threshold_start = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_start', 1.0)
         threshold_stop = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_stop', 0.5)
+        
+        # Check if any setting changed - log immediately if so
+        import hashlib
+        config_hash = f"{pair_enabled}|{current_strategy}|{threshold_start}|{threshold_stop}"
+        if config_hash != last_config_hash:
+            log_decision("CONFIG_CHANGED",
+                pair_enabled=str(pair_enabled),
+                strategy=current_strategy,
+                threshold=f"{threshold_start:.2f}%",
+                threshold_stop=f"{threshold_stop:.2f}%"
+            )
+            last_config_hash = config_hash
         
         prices = get_prices()
         if not prices:
@@ -669,9 +682,8 @@ def main():
         profitable_spread = max(spread_pct_km, spread_pct_mk)
         direction = "K→M" if spread_pct_km >= spread_pct_mk else "M→K"
         
-        # Log decision every 15 seconds
-        if int(time.time()) % 15 == 0:
-            # Settings already read at loop start
+        # Log periodic status every 30 seconds for monitoring
+        if int(time.time()) % 30 == 0:
             log_decision("STATUS_CHECK",
                 state=state,
                 pair_enabled=str(pair_enabled),
