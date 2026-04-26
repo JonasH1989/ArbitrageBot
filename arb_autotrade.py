@@ -258,11 +258,14 @@ def execute_limit_sell_mexc(qty, price):
     resp = requests.post(url, headers=headers, timeout=10)
     return resp.json()
 
-def execute_trade_M_to_K(qty, buy_price, sell_price):
-    """M -> K: Buy MEXC (market), Sell KuCoin (limit)"""
-    log(f"=== EXECUTING M->K TRADE ===")
+def execute_trade_M_to_K(qty, buy_price, sell_price, strategy='usdt'):
+    """M -> K: Buy MEXC (market), Sell KuCoin (limit)
+    
+    strategy='usdt': Sell same quantity as bought (profit in USDT)
+    strategy='coins': Sell LESS quantity to earn profit in MPC
+    """
+    log(f"=== EXECUTING M->K TRADE (strategy={strategy}) ===")
     log(f"Buy MEXC: {qty} MPC @ ${buy_price:.6f}")
-    log(f"Sell KuCoin: {qty} MPC @ ${sell_price:.6f}")
     
     # Capture internal timestamp
     internal_ts = datetime.now().isoformat()
@@ -278,17 +281,29 @@ def execute_trade_M_to_K(qty, buy_price, sell_price):
         
         # Harmonize MEXC response
         ex1_data = harmonize_mexc_order(result1, "buy", "market", TRADING_PAIR)
-        log(f"   Harmonized: qty_ordered={ex1_data['qty_ordered']}, qty_filled={ex1_data['qty_filled']}, price_avg={ex1_data['price_avg']:.6f}")
+        log(f"   Harmonized: qty_filled={ex1_data['qty_filled']}, value_usdt={ex1_data['value_usdt']:.4f}, fees={ex1_data['fees']:.4f}")
     else:
         log(f"❌ MEXC Error: {result1}")
         return False, None
+    
+    # Determine sell quantity based on strategy
+    if strategy == 'coins':
+        # Coins strategy: sell less MPC to keep the spread as MPC profit
+        # USDT spent (minus fees) / sell price = MPC to sell
+        usdt_to_sell = ex1_data['value_usdt'] - ex1_data['fees']
+        sell_qty = usdt_to_sell / sell_price if sell_price > 0 else qty
+        log(f"Strategy=COINS: USDT spent={usdt_to_sell:.4f}, calculating MPC to sell @ ${sell_price:.6f}")
+    else:
+        # USDT strategy: sell same quantity as bought
+        sell_qty = ex1_data['qty_filled']
+    
+    log(f"Step 2: KuCoin Limit SELL: {sell_qty:.4f} MPC @ ${sell_price:.6f}")
     
     # Small delay
     time.sleep(0.5)
     
     # Step 2: Limit Sell on KuCoin
-    log("Step 2: KuCoin Limit SELL...")
-    result2 = execute_limit_sell_kucoin(qty, sell_price)
+    result2 = execute_limit_sell_kucoin(sell_qty, sell_price)
     
     ex2_data = None
     if result2.get('code') == '200000':
@@ -316,12 +331,12 @@ def execute_trade_M_to_K(qty, buy_price, sell_price):
     )
     log(f"📝 Trade logged: {trade_id}")
     
-    # Calculate expected profit
-    cost = qty * buy_price
-    revenue = qty * sell_price
+    # Calculate expected profit using actual trade data
+    cost = ex1_data['value_usdt']
+    revenue = ex2_data['value_usdt']
     gross_profit = revenue - cost
-    fee_taker = cost * 0.001
-    fee_maker = revenue * 0.001
+    fee_taker = ex1_data['fees']
+    fee_maker = ex2_data.get('fees', 0)
     net_profit = gross_profit - fee_taker - fee_maker
     mpc_gain = net_profit / sell_price if sell_price > 0 else 0
     
@@ -332,11 +347,15 @@ def execute_trade_M_to_K(qty, buy_price, sell_price):
     
     return True, trade_id
 
-def execute_trade_K_to_M(qty, buy_price, sell_price):
-    """K -> M: Buy KuCoin (market), Sell MEXC (limit)"""
-    log(f"=== EXECUTING K->M TRADE ===")
+
+def execute_trade_K_to_M(qty, buy_price, sell_price, strategy='usdt'):
+    """K -> M: Buy KuCoin (market), Sell MEXC (limit)
+    
+    strategy='usdt': Sell same quantity as bought (profit in USDT)
+    strategy='coins': Sell LESS quantity to earn profit in MPC
+    """
+    log(f"=== EXECUTING K->M TRADE (strategy={strategy}) ===")
     log(f"Buy KuCoin: {qty} MPC @ ${buy_price:.6f}")
-    log(f"Sell MEXC: {qty} MPC @ ${sell_price:.6f}")
     
     # Capture internal timestamp
     internal_ts = datetime.now().isoformat()
@@ -352,17 +371,29 @@ def execute_trade_K_to_M(qty, buy_price, sell_price):
         
         # Harmonize KuCoin response
         ex1_data = harmonize_kucoin_order(result1['data'], "buy", "market", TRADING_PAIR)
-        log(f"   Harmonized: qty_ordered={ex1_data['qty_ordered']}, qty_filled={ex1_data['qty_filled']}, price_avg={ex1_data['price_avg']:.6f}")
+        log(f"   Harmonized: qty_filled={ex1_data['qty_filled']}, value_usdt={ex1_data['value_usdt']:.4f}, fees={ex1_data['fees']:.4f}")
     else:
         log(f"❌ KuCoin Error: {result1}")
         return False, None
+    
+    # Determine sell quantity based on strategy
+    if strategy == 'coins':
+        # Coins strategy: sell less MPC to keep the spread as MPC profit
+        usdt_to_sell = ex1_data['value_usdt'] - ex1_data['fees']
+        sell_qty = usdt_to_sell / sell_price if sell_price > 0 else qty
+        log(f"Strategy=COINS: USDT spent={usdt_to_sell:.4f}, calculating MPC to sell @ ${sell_price:.6f}")
+    else:
+        # USDT strategy: sell same quantity as bought
+        sell_qty = ex1_data['qty_filled']
+    
+    log(f"Step 2: MEXC Limit SELL: {sell_qty:.4f} MPC @ ${sell_price:.6f}")
     
     # Small delay
     time.sleep(0.5)
     
     # Step 2: Limit Sell on MEXC
     log("Step 2: MEXC Limit SELL...")
-    result2 = execute_limit_sell_mexc(qty, sell_price)
+    result2 = execute_limit_sell_mexc(sell_qty, sell_price)
     
     ex2_data = None
     if result2.get('code') is None or 'orderId' in result2:
@@ -371,12 +402,11 @@ def execute_trade_K_to_M(qty, buy_price, sell_price):
         
         # Harmonize MEXC response
         ex2_data = harmonize_mexc_order(result2, "sell", "limit", TRADING_PAIR)
-        log(f"   Harmonized: qty_ordered={ex2_data['qty_ordered']}, qty_filled={ex2_data['qty_filled']}, price_avg={ex2_data['price_avg']:.6f}")
+        log(f"   Harmonized: qty_filled={ex2_data['qty_filled']}, value_usdt={ex2_data['value_usdt']:.4f}")
     else:
         log(f"❌ MEXC Error: {result2}")
-        # Log trade even with partial failure
         ex2_data = {"exchange": "MEXC", "order_id": "FAILED", "type": "limit", "side": "sell",
-                    "qty_ordered": qty, "qty_filled": 0, "price_avg": 0, "value_usdt": 0,
+                    "qty_ordered": sell_qty, "qty_filled": 0, "price_avg": 0, "value_usdt": 0,
                     "fees": 0, "create_ts": 0, "status": "FAILED", "raw_response": result2}
     
     # Log trade with harmonized data
@@ -391,11 +421,11 @@ def execute_trade_K_to_M(qty, buy_price, sell_price):
     log(f"📝 Trade logged: {trade_id}")
     
     # Calculate expected profit
-    cost = qty * buy_price
-    revenue = qty * sell_price
+    cost = ex1_data['value_usdt']
+    revenue = ex2_data['value_usdt']
     gross_profit = revenue - cost
-    fee_taker = cost * 0.001
-    fee_maker = revenue * 0.001
+    fee_taker = ex1_data['fees']
+    fee_maker = ex2_data.get('fees', 0)
     net_profit = gross_profit - fee_taker - fee_maker
     mpc_gain = net_profit / sell_price if sell_price > 0 else 0
     
@@ -405,6 +435,8 @@ def execute_trade_K_to_M(qty, buy_price, sell_price):
     log(f"Expected Net Profit: ${net_profit:.4f} | MPC Gain: {mpc_gain:.4f}")
     
     return True, trade_id
+
+
 
 
 def check_limit_order_fills():
