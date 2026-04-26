@@ -532,8 +532,10 @@ def main():
     set_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
     
     while True:
-        # Re-read pair_enabled from config each cycle (in case Dashboard changed it)
+        # Re-read all settings from config each cycle
         pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
+        threshold_start = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_start', 1.0)
+        threshold_stop = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_stop', 0.5)
         
         prices = get_prices()
         if not prices:
@@ -580,7 +582,7 @@ def main():
                         break
                     
                     # START_THRESHOLD check - spread is interesting
-                    if spread_pct >= START_THRESHOLD and cum_vol_mexc >= min_trade_qty and k_bid['qty'] >= min_trade_qty:
+                    if spread_pct >= threshold_start and cum_vol_mexc >= min_trade_qty and k_bid['qty'] >= min_trade_qty:
                         if best_trade is None or spread_pct > best_trade['pct']:
                             best_trade = {
                                 'dir': 'M→K',
@@ -605,7 +607,7 @@ def main():
                         break
                     
                     # START_THRESHOLD check
-                    if spread_pct >= START_THRESHOLD and cum_vol_kucoin >= min_trade_qty and m_bid['qty'] >= min_trade_qty:
+                    if spread_pct >= threshold_start and cum_vol_kucoin >= min_trade_qty and m_bid['qty'] >= min_trade_qty:
                         # Calculate expected profit for decision
                         strategy = get_trading_strategy(TRADING_PAIR)
                         expected_profit_usdt = (m_bid['price'] - k_ask['price']) * min(cum_vol_kucoin, m_bid['qty'])
@@ -667,10 +669,7 @@ def main():
         
         # Log decision every 15 seconds
         if int(time.time()) % 15 == 0:
-            # Read current strategy and thresholds from config
-            current_strategy = get_trading_strategy(TRADING_PAIR)
-            threshold_start = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_start', START_THRESHOLD)
-            threshold_stop = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_stop', 0.5)
+            # Settings already read at loop start
             log_decision("STATUS_CHECK",
                 state=state,
                 pair_enabled=str(pair_enabled),
@@ -694,19 +693,19 @@ def main():
             continue
         
         # Log condition check only when state CHANGES (reduce spam)
-        current_spread_ok = profitable_spread >= START_THRESHOLD
+        current_spread_ok = profitable_spread >= threshold_start
         if current_spread_ok != last_spread_ok:
             log_condition("Spread >= START_THRESHOLD",
                 current_spread_ok,
-                expected=f"{START_THRESHOLD}%",
+                expected=f"{threshold_start}%",
                 details=f"actual={profitable_spread:.3f}%"
             )
             last_spread_ok = current_spread_ok
         
         # State machine logic
         if state == STATE_WAITING:
-            if profitable_spread >= START_THRESHOLD and not trade_in_progress:
-                log(f"🚀 TRIGGER: spread={profitable_spread:.2f}% >= threshold={START_THRESHOLD}%", "DECISION")
+            if profitable_spread >= threshold_start and not trade_in_progress:
+                log(f"🚀 TRIGGER: spread={profitable_spread:.2f}% >= threshold={threshold_start}%", "DECISION")
                 state = STATE_RUNNING
                 trade_in_progress = True
                 
