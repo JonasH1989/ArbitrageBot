@@ -667,9 +667,12 @@ def main():
         
         # Log decision every 15 seconds
         if int(time.time()) % 15 == 0:
+            # Read current strategy from config
+            current_strategy = get_trading_strategy(TRADING_PAIR)
             log_decision("STATUS_CHECK",
                 state=state,
                 pair_enabled=str(pair_enabled),
+                strategy=current_strategy,
                 spread_mk=f"{spread_pct_mk:.3f}%",
                 spread_km=f"{spread_pct_km:.3f}%",
                 best_spread=f"{profitable_spread:.3f}%",
