@@ -524,6 +524,7 @@ def main():
     # Read enabled status from config
     config = load_config()
     pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
+    current_strategy = get_setting(f'trading.pairs.{TRADING_PAIR}.strategy', 'usdt')
     log(f"Pair {TRADING_PAIR} enabled in config: {pair_enabled}")
     
     # ALWAYS start inactive for safety - user must enable via dashboard
@@ -534,6 +535,7 @@ def main():
     while True:
         # Re-read all settings from config each cycle
         pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
+        current_strategy = get_setting(f'trading.pairs.{TRADING_PAIR}.strategy', 'usdt')
         threshold_start = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_start', 1.0)
         threshold_stop = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_stop', 0.5)
         
