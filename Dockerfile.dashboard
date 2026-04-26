@@ -10,8 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy dashboard
 COPY dashboard.py .
 
-# Copy settings_sync (standalone module)
-COPY config/settings_sync.py /app/config/settings_sync.py
+# Copy config module (with __init__.py)
+COPY config/ ./config/
 
 # Copy trade logger
 COPY trade_logger.py .
@@ -19,7 +19,7 @@ COPY trade_logger.py .
 # Copy static assets (logos)
 COPY static/ ./static/
 
-# DO NOT copy config/ - API keys come from mounted volume
+# DO NOT copy config.yaml - API keys come from mounted volume
 # Create empty config directory that will be populated at runtime
 RUN mkdir -p /app/config
 
