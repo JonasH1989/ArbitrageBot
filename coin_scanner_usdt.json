@@ -1,0 +1,7025 @@
+{
+  "timestamp": "2026-04-24T18:11:00.600382",
+  "pairs": [
+    {
+      "coin": "ASI",
+      "mexc_usdt_vol": 0.0,
+      "kucoin_usdt_vol": 0.0,
+      "avg_usdt_vol": 0.0,
+      "m_price": 0.001322,
+      "k_price": 0.001281,
+      "spread_pct": 3.1013615733736777
+    },
+    {
+      "coin": "AI3",
+      "mexc_usdt_vol": 150.699615,
+      "kucoin_usdt_vol": 0.0,
+      "avg_usdt_vol": 75.3498075,
+      "m_price": 0.0055,
+      "k_price": 0.00556,
+      "spread_pct": 1.0791366906474849
+    },
+    {
+      "coin": "TEN",
+      "mexc_usdt_vol": 21.4296915,
+      "kucoin_usdt_vol": 158.616294,
+      "avg_usdt_vol": 90.02299275,
+      "m_price": 0.0009291,
+      "k_price": 0.000831,
+      "spread_pct": 10.55860510171133
+    },
+    {
+      "coin": "SCA",
+      "mexc_usdt_vol": 86.51195000000001,
+      "kucoin_usdt_vol": 250.1968,
+      "avg_usdt_vol": 168.354375,
+      "m_price": 0.0175,
+      "k_price": 0.0178,
+      "spread_pct": 1.6853932584269562
+    },
+    {
+      "coin": "BAX",
+      "mexc_usdt_vol": 239.72388371393998,
+      "kucoin_usdt_vol": 767.073382039082,
+      "avg_usdt_vol": 503.398632876511,
+      "m_price": 1.2849e-05,
+      "k_price": 1.271e-05,
+      "spread_pct": 1.081796248735309
+    },
+    {
+      "coin": "A47",
+      "mexc_usdt_vol": 207.04603240999995,
+      "kucoin_usdt_vol": 973.472682,
+      "avg_usdt_vol": 590.259357205,
+      "m_price": 0.002779,
+      "k_price": 0.00273,
+      "spread_pct": 1.7632241813602016
+    },
+    {
+      "coin": "IDOS",
+      "mexc_usdt_vol": 633.8213639999999,
+      "kucoin_usdt_vol": 782.468112,
+      "avg_usdt_vol": 708.144738,
+      "m_price": 0.0132,
+      "k_price": 0.01324,
+      "spread_pct": 0.3021148036253784
+    },
+    {
+      "coin": "CSIX",
+      "mexc_usdt_vol": 147.58386805700002,
+      "kucoin_usdt_vol": 1442.2179899999999,
+      "avg_usdt_vol": 794.9009290285,
+      "m_price": 0.0003401,
+      "k_price": 0.000345,
+      "spread_pct": 1.4202898550724512
+    },
+    {
+      "coin": "ROOT",
+      "mexc_usdt_vol": 518.1460590296,
+      "kucoin_usdt_vol": 1243.660128,
+      "avg_usdt_vol": 880.9030935148,
+      "m_price": 5.398e-05,
+      "k_price": 0.000116,
+      "spread_pct": 53.46551724137931
+    },
+    {
+      "coin": "MPC",
+      "mexc_usdt_vol": 979.8642366000001,
+      "kucoin_usdt_vol": 2699.031168,
+      "avg_usdt_vol": 1839.4477023,
+      "m_price": 0.01101,
+      "k_price": 0.010944,
+      "spread_pct": 0.5994550408719354
+    },
+    {
+      "coin": "SFUND",
+      "mexc_usdt_vol": 358.04346250000003,
+      "kucoin_usdt_vol": 3534.141918,
+      "avg_usdt_vol": 1946.09269025,
+      "m_price": 0.01745,
+      "k_price": 0.0173,
+      "spread_pct": 0.8595988538681996
+    },
+    {
+      "coin": "BOS",
+      "mexc_usdt_vol": 1753.03523668,
+      "kucoin_usdt_vol": 3086.2262960000003,
+      "avg_usdt_vol": 2419.6307663400003,
+      "m_price": 0.000406,
+      "k_price": 0.000404,
+      "spread_pct": 0.49261083743842227
+    },
+    {
+      "coin": "SIDUS",
+      "mexc_usdt_vol": 866.0522211264,
+      "kucoin_usdt_vol": 4495.5470226,
+      "avg_usdt_vol": 2680.7996218631997,
+      "m_price": 6.072e-05,
+      "k_price": 6.17e-05,
+      "spread_pct": 1.5883306320907522
+    },
+    {
+      "coin": "NEXI",
+      "mexc_usdt_vol": 1517.9146186000003,
+      "kucoin_usdt_vol": 4792.990608,
+      "avg_usdt_vol": 3155.4526133,
+      "m_price": 0.00974,
+      "k_price": 0.00966,
+      "spread_pct": 0.8213552361396325
+    },
+    {
+      "coin": "CTA",
+      "mexc_usdt_vol": 582.539364,
+      "kucoin_usdt_vol": 6476.227772000001,
+      "avg_usdt_vol": 3529.3835680000007,
+      "m_price": 0.01188,
+      "k_price": 0.01174,
+      "spread_pct": 1.1784511784511742
+    },
+    {
+      "coin": "USDP",
+      "mexc_usdt_vol": 7057.74936,
+      "kucoin_usdt_vol": 108.5356134,
+      "avg_usdt_vol": 3583.1424867,
+      "m_price": 0.9995,
+      "k_price": 0.997,
+      "spread_pct": 0.25012506253127137
+    },
+    {
+      "coin": "POKT",
+      "mexc_usdt_vol": 2994.21956701,
+      "kucoin_usdt_vol": 4224.36434657,
+      "avg_usdt_vol": 3609.29195679,
+      "m_price": 0.012047,
+      "k_price": 0.01195,
+      "spread_pct": 0.8051797127915652
+    },
+    {
+      "coin": "FUEL",
+      "mexc_usdt_vol": 716.8180748,
+      "kucoin_usdt_vol": 6698.187084,
+      "avg_usdt_vol": 3707.5025794000003,
+      "m_price": 0.00094,
+      "k_price": 0.000942,
+      "spread_pct": 0.21231422505308373
+    },
+    {
+      "coin": "NXRA",
+      "mexc_usdt_vol": 418.82373479999995,
+      "kucoin_usdt_vol": 7038.772384,
+      "avg_usdt_vol": 3728.7980594,
+      "m_price": 0.002022,
+      "k_price": 0.00196,
+      "spread_pct": 3.0662710187932736
+    },
+    {
+      "coin": "KRL",
+      "mexc_usdt_vol": 613.8240480000001,
+      "kucoin_usdt_vol": 8554.416553214,
+      "avg_usdt_vol": 4584.120300607,
+      "m_price": 0.1514,
+      "k_price": 0.15127,
+      "spread_pct": 0.08586525759578532
+    },
+    {
+      "coin": "SUT",
+      "mexc_usdt_vol": 4681.69765,
+      "kucoin_usdt_vol": 4571.98016,
+      "avg_usdt_vol": 4626.8389050000005,
+      "m_price": 0.655,
+      "k_price": 0.6865,
+      "spread_pct": 4.588492352512741
+    },
+    {
+      "coin": "XL1",
+      "mexc_usdt_vol": 5519.942139264,
+      "kucoin_usdt_vol": 3768.0773404,
+      "avg_usdt_vol": 4644.0097398319995,
+      "m_price": 0.0002624,
+      "k_price": 0.0002614,
+      "spread_pct": 0.3810975609755984
+    },
+    {
+      "coin": "ALKIMI",
+      "mexc_usdt_vol": 5015.2638612,
+      "kucoin_usdt_vol": 4771.606444,
+      "avg_usdt_vol": 4893.4351526,
+      "m_price": 0.00372,
+      "k_price": 0.00374,
+      "spread_pct": 0.5347593582887599
+    },
+    {
+      "coin": "POLYX",
+      "mexc_usdt_vol": 1895.694294,
+      "kucoin_usdt_vol": 7936.033734599999,
+      "avg_usdt_vol": 4915.864014299999,
+      "m_price": 0.0507,
+      "k_price": 0.051,
+      "spread_pct": 0.5882352941176368
+    },
+    {
+      "coin": "ELP",
+      "mexc_usdt_vol": 6943.675240799999,
+      "kucoin_usdt_vol": 3552.8707200000003,
+      "avg_usdt_vol": 5248.2729804,
+      "m_price": 0.000888,
+      "k_price": 0.000889,
+      "spread_pct": 0.11248593925759552
+    },
+    {
+      "coin": "KIMA",
+      "mexc_usdt_vol": 9245.6014014,
+      "kucoin_usdt_vol": 2205.09714,
+      "avg_usdt_vol": 5725.3492707,
+      "m_price": 0.00338,
+      "k_price": 0.0037,
+      "spread_pct": 8.648648648648647
+    },
+    {
+      "coin": "GIGA",
+      "mexc_usdt_vol": 3504.3762496,
+      "kucoin_usdt_vol": 8511.368954,
+      "avg_usdt_vol": 6007.8726018,
+      "m_price": 0.00188,
+      "k_price": 0.00187,
+      "spread_pct": 0.5319148936170226
+    },
+    {
+      "coin": "TRN",
+      "mexc_usdt_vol": 7375.977645700001,
+      "kucoin_usdt_vol": 6949.28754,
+      "avg_usdt_vol": 7162.632592850001,
+      "m_price": 0.00199,
+      "k_price": 0.00195,
+      "spread_pct": 2.0100502512562866
+    },
+    {
+      "coin": "PRCL",
+      "mexc_usdt_vol": 5459.8654502,
+      "kucoin_usdt_vol": 9074.052147999999,
+      "avg_usdt_vol": 7266.958799099999,
+      "m_price": 0.01393,
+      "k_price": 0.01393,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "PUNDIAI",
+      "mexc_usdt_vol": 14532.410402999998,
+      "kucoin_usdt_vol": 1419.301744,
+      "avg_usdt_vol": 7975.856073499999,
+      "m_price": 0.5901,
+      "k_price": 0.5816,
+      "spread_pct": 1.4404338247754538
+    },
+    {
+      "coin": "OTK",
+      "mexc_usdt_vol": 6320.013194068,
+      "kucoin_usdt_vol": 11685.2272056,
+      "avg_usdt_vol": 9002.620199834,
+      "m_price": 0.0004571,
+      "k_price": 0.0004602,
+      "spread_pct": 0.6736201651455934
+    },
+    {
+      "coin": "SUNDOG",
+      "mexc_usdt_vol": 3645.8136036,
+      "kucoin_usdt_vol": 14557.266085896,
+      "avg_usdt_vol": 9101.539844748,
+      "m_price": 0.00452,
+      "k_price": 0.00452,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "OBI",
+      "mexc_usdt_vol": 2448.6996974999997,
+      "kucoin_usdt_vol": 15771.359341599999,
+      "avg_usdt_vol": 9110.029519549998,
+      "m_price": 0.00035,
+      "k_price": 0.0003628,
+      "spread_pct": 3.528114663726568
+    },
+    {
+      "coin": "NIM",
+      "mexc_usdt_vol": 12091.41965163,
+      "kucoin_usdt_vol": 6364.09022900436,
+      "avg_usdt_vol": 9227.75494031718,
+      "m_price": 0.000451,
+      "k_price": 0.0004542,
+      "spread_pct": 0.7045354469396674
+    },
+    {
+      "coin": "BOSON",
+      "mexc_usdt_vol": 3168.8565768,
+      "kucoin_usdt_vol": 15349.694372,
+      "avg_usdt_vol": 9259.2754744,
+      "m_price": 0.02952,
+      "k_price": 0.02969,
+      "spread_pct": 0.5725833614011452
+    },
+    {
+      "coin": "MAN",
+      "mexc_usdt_vol": 16705.593040800002,
+      "kucoin_usdt_vol": 4729.932460780799,
+      "avg_usdt_vol": 10717.7627507904,
+      "m_price": 0.00164,
+      "k_price": 0.001581,
+      "spread_pct": 3.597560975609758
+    },
+    {
+      "coin": "US",
+      "mexc_usdt_vol": 14651.645872,
+      "kucoin_usdt_vol": 8733.85101,
+      "avg_usdt_vol": 11692.748441,
+      "m_price": 0.00464,
+      "k_price": 0.004635,
+      "spread_pct": 0.1077586206896508
+    },
+    {
+      "coin": "ADX",
+      "mexc_usdt_vol": 1415.1547440000002,
+      "kucoin_usdt_vol": 22895.6454666,
+      "avg_usdt_vol": 12155.4001053,
+      "m_price": 0.0772,
+      "k_price": 0.07719,
+      "spread_pct": 0.01295336787566062
+    },
+    {
+      "coin": "VOLT",
+      "mexc_usdt_vol": 24341.102951679,
+      "kucoin_usdt_vol": 1940.6315166687205,
+      "avg_usdt_vol": 13140.86723417386,
+      "m_price": 5.14e-08,
+      "k_price": 5.13e-08,
+      "spread_pct": 0.19455252918286825
+    },
+    {
+      "coin": "WL",
+      "mexc_usdt_vol": 4121.335194,
+      "kucoin_usdt_vol": 22751.427908,
+      "avg_usdt_vol": 13436.381551,
+      "m_price": 0.00786,
+      "k_price": 0.00803,
+      "spread_pct": 2.1170610211706102
+    },
+    {
+      "coin": "TADA",
+      "mexc_usdt_vol": 9313.42123491,
+      "kucoin_usdt_vol": 19758.3024,
+      "avg_usdt_vol": 14535.861817455,
+      "m_price": 0.000481,
+      "k_price": 0.00048,
+      "spread_pct": 0.20790020790020172
+    },
+    {
+      "coin": "UQC",
+      "mexc_usdt_vol": 12724.90175,
+      "kucoin_usdt_vol": 17111.7843904,
+      "avg_usdt_vol": 14918.3430702,
+      "m_price": 2.825,
+      "k_price": 2.8352,
+      "spread_pct": 0.3597629796839646
+    },
+    {
+      "coin": "MIN",
+      "mexc_usdt_vol": 13856.659057500001,
+      "kucoin_usdt_vol": 16398.47552,
+      "avg_usdt_vol": 15127.56728875,
+      "m_price": 0.00525,
+      "k_price": 0.005257,
+      "spread_pct": 0.1331557922769652
+    },
+    {
+      "coin": "ELA",
+      "mexc_usdt_vol": 23281.89032,
+      "kucoin_usdt_vol": 6996.785302,
+      "avg_usdt_vol": 15139.337811,
+      "m_price": 0.442,
+      "k_price": 0.442,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "ARTFI",
+      "mexc_usdt_vol": 19820.73433704,
+      "kucoin_usdt_vol": 10697.1586624,
+      "avg_usdt_vol": 15258.946499720001,
+      "m_price": 0.000728,
+      "k_price": 0.0007294,
+      "spread_pct": 0.19193857965450037
+    },
+    {
+      "coin": "ZND",
+      "mexc_usdt_vol": 15972.28991618,
+      "kucoin_usdt_vol": 14621.993988,
+      "avg_usdt_vol": 15297.14195209,
+      "m_price": 0.000641,
+      "k_price": 0.000634,
+      "spread_pct": 1.0920436817472627
+    },
+    {
+      "coin": "DIN",
+      "mexc_usdt_vol": 8403.73613325,
+      "kucoin_usdt_vol": 22306.131640000003,
+      "avg_usdt_vol": 15354.933886625002,
+      "m_price": 0.005609,
+      "k_price": 0.005564,
+      "spread_pct": 0.8022820467106417
+    },
+    {
+      "coin": "PIGGY",
+      "mexc_usdt_vol": 22701.049848,
+      "kucoin_usdt_vol": 8684.650872,
+      "avg_usdt_vol": 15692.85036,
+      "m_price": 0.06096,
+      "k_price": 0.06156,
+      "spread_pct": 0.9746588693957057
+    },
+    {
+      "coin": "PZP",
+      "mexc_usdt_vol": 14940.3079537,
+      "kucoin_usdt_vol": 16643.697192,
+      "avg_usdt_vol": 15792.00257285,
+      "m_price": 0.00211,
+      "k_price": 0.002103,
+      "spread_pct": 0.3317535545023726
+    },
+    {
+      "coin": "GF",
+      "mexc_usdt_vol": 13115.339625229,
+      "kucoin_usdt_vol": 19694.499210399998,
+      "avg_usdt_vol": 16404.919417814497,
+      "m_price": 0.0010133,
+      "k_price": 0.0010178,
+      "spread_pct": 0.4421300844959665
+    },
+    {
+      "coin": "MAPO",
+      "mexc_usdt_vol": 14591.83027344,
+      "kucoin_usdt_vol": 19536.596508,
+      "avg_usdt_vol": 17064.21339072,
+      "m_price": 0.003246,
+      "k_price": 0.003217,
+      "spread_pct": 0.8934072704867646
+    },
+    {
+      "coin": "ITHACA",
+      "mexc_usdt_vol": 18794.7565315,
+      "kucoin_usdt_vol": 17376.82954,
+      "avg_usdt_vol": 18085.79303575,
+      "m_price": 0.002498,
+      "k_price": 0.002506,
+      "spread_pct": 0.3192338387869192
+    },
+    {
+      "coin": "SAFE",
+      "mexc_usdt_vol": 5441.813759999999,
+      "kucoin_usdt_vol": 30828.49887,
+      "avg_usdt_vol": 18135.156315,
+      "m_price": 0.149,
+      "k_price": 0.1487,
+      "spread_pct": 0.2013422818791911
+    },
+    {
+      "coin": "KOMA",
+      "mexc_usdt_vol": 8119.7430048,
+      "kucoin_usdt_vol": 28317.096405,
+      "avg_usdt_vol": 18218.4197049,
+      "m_price": 0.00864,
+      "k_price": 0.00855,
+      "spread_pct": 1.0416666666666643
+    },
+    {
+      "coin": "ROUTE",
+      "mexc_usdt_vol": 13214.91465918,
+      "kucoin_usdt_vol": 26461.256364,
+      "avg_usdt_vol": 19838.08551159,
+      "m_price": 0.000923,
+      "k_price": 0.000918,
+      "spread_pct": 0.5417118093174446
+    },
+    {
+      "coin": "P2P",
+      "mexc_usdt_vol": 26669.291795432,
+      "kucoin_usdt_vol": 13026.152734,
+      "avg_usdt_vol": 19847.722264716,
+      "m_price": 0.0001352,
+      "k_price": 0.0001369,
+      "spread_pct": 1.2417823228633946
+    },
+    {
+      "coin": "VAI",
+      "mexc_usdt_vol": 19943.4063038,
+      "kucoin_usdt_vol": 20878.92896,
+      "avg_usdt_vol": 20411.1676319,
+      "m_price": 0.00602,
+      "k_price": 0.00596,
+      "spread_pct": 0.9966777408637899
+    },
+    {
+      "coin": "XDB",
+      "mexc_usdt_vol": 6335.9013438,
+      "kucoin_usdt_vol": 35884.0285116,
+      "avg_usdt_vol": 21109.9649277,
+      "m_price": 0.0001575,
+      "k_price": 0.0001569,
+      "spread_pct": 0.3809523809523902
+    },
+    {
+      "coin": "LYX",
+      "mexc_usdt_vol": 5219.347296,
+      "kucoin_usdt_vol": 38523.3159885,
+      "avg_usdt_vol": 21871.33164225,
+      "m_price": 0.2344,
+      "k_price": 0.2345,
+      "spread_pct": 0.04264392324093347
+    },
+    {
+      "coin": "CHO",
+      "mexc_usdt_vol": 19400.904612896,
+      "kucoin_usdt_vol": 26661.166824,
+      "avg_usdt_vol": 23031.035718448,
+      "m_price": 0.0019304,
+      "k_price": 0.001916,
+      "spread_pct": 0.7459593866556223
+    },
+    {
+      "coin": "DCK",
+      "mexc_usdt_vol": 31005.930485309997,
+      "kucoin_usdt_vol": 15940.8984296,
+      "avg_usdt_vol": 23473.414457454997,
+      "m_price": 0.000149,
+      "k_price": 0.0001502,
+      "spread_pct": 0.7989347536617857
+    },
+    {
+      "coin": "MOVA",
+      "mexc_usdt_vol": 29747.62959,
+      "kucoin_usdt_vol": 17331.209504,
+      "avg_usdt_vol": 23539.419546999998,
+      "m_price": 0.699,
+      "k_price": 0.6928,
+      "spread_pct": 0.8869814020028588
+    },
+    {
+      "coin": "PVT",
+      "mexc_usdt_vol": 46263.059309348,
+      "kucoin_usdt_vol": 1672.59105,
+      "avg_usdt_vol": 23967.825179674,
+      "m_price": 0.0004762,
+      "k_price": 0.000465,
+      "spread_pct": 2.3519529609407703
+    },
+    {
+      "coin": "X",
+      "mexc_usdt_vol": 34934.54260734,
+      "kucoin_usdt_vol": 13503.857181039999,
+      "avg_usdt_vol": 24219.199894190002,
+      "m_price": 0.014121,
+      "k_price": 1.244e-05,
+      "spread_pct": 99.91190425607252
+    },
+    {
+      "coin": "READY",
+      "mexc_usdt_vol": 8036.1573382199995,
+      "kucoin_usdt_vol": 40848.715368,
+      "avg_usdt_vol": 24442.43635311,
+      "m_price": 0.014421,
+      "k_price": 0.01566,
+      "spread_pct": 7.911877394636019
+    },
+    {
+      "coin": "ZKWASM",
+      "mexc_usdt_vol": 52282.45509452,
+      "kucoin_usdt_vol": 0.0,
+      "avg_usdt_vol": 26141.22754726,
+      "m_price": 0.003556,
+      "k_price": 0.00352,
+      "spread_pct": 1.0123734533183355
+    },
+    {
+      "coin": "OBT",
+      "mexc_usdt_vol": 52364.30814208,
+      "kucoin_usdt_vol": 29.988256,
+      "avg_usdt_vol": 26197.14819904,
+      "m_price": 0.001024,
+      "k_price": 0.001016,
+      "spread_pct": 0.7812499999999978
+    },
+    {
+      "coin": "QKC",
+      "mexc_usdt_vol": 52698.63304224,
+      "kucoin_usdt_vol": 58.622096297999995,
+      "avg_usdt_vol": 26378.627569269,
+      "m_price": 0.003128,
+      "k_price": 0.00309,
+      "spread_pct": 1.2148337595908016
+    },
+    {
+      "coin": "PURR",
+      "mexc_usdt_vol": 53490.2893938,
+      "kucoin_usdt_vol": 0.0,
+      "avg_usdt_vol": 26745.1446969,
+      "m_price": 0.07074,
+      "k_price": 0.0711,
+      "spread_pct": 0.5063291139240496
+    },
+    {
+      "coin": "PUFFER",
+      "mexc_usdt_vol": 53558.109359999995,
+      "kucoin_usdt_vol": 110.7717748,
+      "avg_usdt_vol": 26834.440567399997,
+      "m_price": 0.0245,
+      "k_price": 0.02447,
+      "spread_pct": 0.1224489795918459
+    },
+    {
+      "coin": "NAVX",
+      "mexc_usdt_vol": 52775.60237773,
+      "kucoin_usdt_vol": 962.479138176,
+      "avg_usdt_vol": 26869.040757953,
+      "m_price": 0.008653,
+      "k_price": 0.00864,
+      "spread_pct": 0.1502369120536129
+    },
+    {
+      "coin": "SUKU",
+      "mexc_usdt_vol": 52865.389801,
+      "kucoin_usdt_vol": 1073.9135878079999,
+      "avg_usdt_vol": 26969.651694403998,
+      "m_price": 0.00707,
+      "k_price": 0.00709,
+      "spread_pct": 0.2820874471086044
+    },
+    {
+      "coin": "BLUE",
+      "mexc_usdt_vol": 52504.8766752,
+      "kucoin_usdt_vol": 1514.8685999999998,
+      "avg_usdt_vol": 27009.8726376,
+      "m_price": 0.01769,
+      "k_price": 0.01758,
+      "spread_pct": 0.6218202374222863
+    },
+    {
+      "coin": "EPT",
+      "mexc_usdt_vol": 53679.291448756,
+      "kucoin_usdt_vol": 351.982348,
+      "avg_usdt_vol": 27015.636898377998,
+      "m_price": 0.0007373,
+      "k_price": 0.000731,
+      "spread_pct": 0.8544690085446888
+    },
+    {
+      "coin": "KILO",
+      "mexc_usdt_vol": 55171.97824657001,
+      "kucoin_usdt_vol": 0.0,
+      "avg_usdt_vol": 27585.989123285006,
+      "m_price": 0.006217,
+      "k_price": 0.00615,
+      "spread_pct": 1.0776902042785945
+    },
+    {
+      "coin": "POLS",
+      "mexc_usdt_vol": 53368.4112066,
+      "kucoin_usdt_vol": 1804.21493568,
+      "avg_usdt_vol": 27586.31307114,
+      "m_price": 0.05362,
+      "k_price": 0.0538,
+      "spread_pct": 0.334572490706319
+    },
+    {
+      "coin": "TEAFI",
+      "mexc_usdt_vol": 50591.454534,
+      "kucoin_usdt_vol": 4676.4131959999995,
+      "avg_usdt_vol": 27633.933865,
+      "m_price": 0.0018,
+      "k_price": 0.00182,
+      "spread_pct": 1.0989010989011017
+    },
+    {
+      "coin": "EDGEN",
+      "mexc_usdt_vol": 52705.64681996,
+      "kucoin_usdt_vol": 2618.960204,
+      "avg_usdt_vol": 27662.30351198,
+      "m_price": 0.002146,
+      "k_price": 0.002138,
+      "spread_pct": 0.3727865796831203
+    },
+    {
+      "coin": "POND",
+      "mexc_usdt_vol": 55407.92606844,
+      "kucoin_usdt_vol": 604.0472730404,
+      "avg_usdt_vol": 28005.9866707402,
+      "m_price": 0.002452,
+      "k_price": 0.002461,
+      "spread_pct": 0.3657049979683012
+    },
+    {
+      "coin": "GODS",
+      "mexc_usdt_vol": 54606.525434999996,
+      "kucoin_usdt_vol": 1870.7956399999998,
+      "avg_usdt_vol": 28238.660537499996,
+      "m_price": 0.03213,
+      "k_price": 0.03215,
+      "spread_pct": 0.06220839813374553
+    },
+    {
+      "coin": "NEON",
+      "mexc_usdt_vol": 55793.732680400004,
+      "kucoin_usdt_vol": 699.55826688,
+      "avg_usdt_vol": 28246.64547364,
+      "m_price": 0.02981,
+      "k_price": 0.0297,
+      "spread_pct": 0.369003690036897
+    },
+    {
+      "coin": "MBL",
+      "mexc_usdt_vol": 54962.991071312,
+      "kucoin_usdt_vol": 1581.8202591289999,
+      "avg_usdt_vol": 28272.4056652205,
+      "m_price": 0.0009488,
+      "k_price": 0.000935,
+      "spread_pct": 1.4544688026981463
+    },
+    {
+      "coin": "RIZ",
+      "mexc_usdt_vol": 48270.026624608,
+      "kucoin_usdt_vol": 8331.5774164,
+      "avg_usdt_vol": 28300.802020504,
+      "m_price": 0.0001418,
+      "k_price": 0.0001411,
+      "spread_pct": 0.4936530324400684
+    },
+    {
+      "coin": "PYBOBO",
+      "mexc_usdt_vol": 56053.21974395999,
+      "kucoin_usdt_vol": 784.9911264,
+      "avg_usdt_vol": 28419.105435179994,
+      "m_price": 0.0007411,
+      "k_price": 0.0007356,
+      "spread_pct": 0.7421400620698922
+    },
+    {
+      "coin": "ACS",
+      "mexc_usdt_vol": 56753.912781,
+      "kucoin_usdt_vol": 104.38774383600001,
+      "avg_usdt_vol": 28429.150262418,
+      "m_price": 0.00018,
+      "k_price": 0.00018,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "TRVL",
+      "mexc_usdt_vol": 56782.89123903,
+      "kucoin_usdt_vol": 116.06725200000001,
+      "avg_usdt_vol": 28449.479245515002,
+      "m_price": 0.000999,
+      "k_price": 0.000987,
+      "spread_pct": 1.2012012012012085
+    },
+    {
+      "coin": "FB",
+      "mexc_usdt_vol": 54782.689984000004,
+      "kucoin_usdt_vol": 2141.1023219999997,
+      "avg_usdt_vol": 28461.896153,
+      "m_price": 0.4672,
+      "k_price": 0.4671,
+      "spread_pct": 0.02140410958903874
+    },
+    {
+      "coin": "SUP",
+      "mexc_usdt_vol": 55285.87035042,
+      "kucoin_usdt_vol": 1647.245016,
+      "avg_usdt_vol": 28466.55768321,
+      "m_price": 0.004286,
+      "k_price": 0.00421,
+      "spread_pct": 1.7732151189920597
+    },
+    {
+      "coin": "KARRAT",
+      "mexc_usdt_vol": 55897.620282,
+      "kucoin_usdt_vol": 1232.98243,
+      "avg_usdt_vol": 28565.301356000004,
+      "m_price": 0.0042,
+      "k_price": 0.00415,
+      "spread_pct": 1.1904761904761834
+    },
+    {
+      "coin": "SKATE",
+      "mexc_usdt_vol": 55327.6693929,
+      "kucoin_usdt_vol": 1820.43045,
+      "avg_usdt_vol": 28574.04992145,
+      "m_price": 0.00179,
+      "k_price": 0.001863,
+      "spread_pct": 3.918411164787984
+    },
+    {
+      "coin": "KIN",
+      "mexc_usdt_vol": 53502.727318859994,
+      "kucoin_usdt_vol": 3743.46066,
+      "avg_usdt_vol": 28623.093989429995,
+      "m_price": 0.004762,
+      "k_price": 0.00457,
+      "spread_pct": 4.031919361612757
+    },
+    {
+      "coin": "MANTA",
+      "mexc_usdt_vol": 55218.47133190001,
+      "kucoin_usdt_vol": 2057.16895168,
+      "avg_usdt_vol": 28637.820141790005,
+      "m_price": 0.06571,
+      "k_price": 0.0656,
+      "spread_pct": 0.16740222188403436
+    },
+    {
+      "coin": "CLOUD",
+      "mexc_usdt_vol": 57336.1752854,
+      "kucoin_usdt_vol": 286.834746,
+      "avg_usdt_vol": 28811.5050157,
+      "m_price": 0.02101,
+      "k_price": 0.0213,
+      "spread_pct": 1.3615023474178338
+    },
+    {
+      "coin": "USDD",
+      "mexc_usdt_vol": 26610.113612,
+      "kucoin_usdt_vol": 31036.861670399998,
+      "avg_usdt_vol": 28823.4876412,
+      "m_price": 0.9986,
+      "k_price": 0.999,
+      "spread_pct": 0.04004004004003563
+    },
+    {
+      "coin": "RDNT",
+      "mexc_usdt_vol": 55010.97494082,
+      "kucoin_usdt_vol": 2731.450936,
+      "avg_usdt_vol": 28871.21293841,
+      "m_price": 0.001934,
+      "k_price": 0.00194,
+      "spread_pct": 0.3092783505154714
+    },
+    {
+      "coin": "T",
+      "mexc_usdt_vol": 55134.22135506,
+      "kucoin_usdt_vol": 2690.317055636,
+      "avg_usdt_vol": 28912.269205348,
+      "m_price": 0.006241,
+      "k_price": 0.00623,
+      "spread_pct": 0.17625380547988664
+    },
+    {
+      "coin": "RIO",
+      "mexc_usdt_vol": 32124.198964200004,
+      "kucoin_usdt_vol": 25702.51092,
+      "avg_usdt_vol": 28913.354942100003,
+      "m_price": 0.05682,
+      "k_price": 0.0573,
+      "spread_pct": 0.8376963350785243
+    },
+    {
+      "coin": "LAVA",
+      "mexc_usdt_vol": 57792.0243328,
+      "kucoin_usdt_vol": 89.035568,
+      "avg_usdt_vol": 28940.5299504,
+      "m_price": 0.02488,
+      "k_price": 0.02488,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "MAT",
+      "mexc_usdt_vol": 53957.6532922,
+      "kucoin_usdt_vol": 3929.6584559999997,
+      "avg_usdt_vol": 28943.655874099997,
+      "m_price": 0.03694,
+      "k_price": 0.0372,
+      "spread_pct": 0.698924731182786
+    },
+    {
+      "coin": "GIZA",
+      "mexc_usdt_vol": 55888.611858,
+      "kucoin_usdt_vol": 2197.120798,
+      "avg_usdt_vol": 29042.866327999996,
+      "m_price": 0.01035,
+      "k_price": 0.01031,
+      "spread_pct": 0.38647342995169187
+    },
+    {
+      "coin": "QUICK",
+      "mexc_usdt_vol": 58164.70768297999,
+      "kucoin_usdt_vol": 89.31465628,
+      "avg_usdt_vol": 29127.011169629997,
+      "m_price": 0.011807,
+      "k_price": 0.01174,
+      "spread_pct": 0.5674599813669803
+    },
+    {
+      "coin": "DMC",
+      "mexc_usdt_vol": 50964.70712829001,
+      "kucoin_usdt_vol": 7425.7490800000005,
+      "avg_usdt_vol": 29195.228104145004,
+      "m_price": 0.0007006,
+      "k_price": 0.000701,
+      "spread_pct": 0.057061340941513515
+    },
+    {
+      "coin": "SPA",
+      "mexc_usdt_vol": 54600.6060188,
+      "kucoin_usdt_vol": 3801.1444487640006,
+      "avg_usdt_vol": 29200.875233782,
+      "m_price": 0.00283,
+      "k_price": 0.002844,
+      "spread_pct": 0.4922644163150535
+    },
+    {
+      "coin": "DOGEGOV",
+      "mexc_usdt_vol": 56588.72725896,
+      "kucoin_usdt_vol": 1907.8196799999998,
+      "avg_usdt_vol": 29248.273469480002,
+      "m_price": 0.002238,
+      "k_price": 0.00226,
+      "spread_pct": 0.9734513274336233
+    },
+    {
+      "coin": "SFP",
+      "mexc_usdt_vol": 52980.243720000006,
+      "kucoin_usdt_vol": 5601.91559528,
+      "avg_usdt_vol": 29291.079657640003,
+      "m_price": 0.318,
+      "k_price": 0.3187,
+      "spread_pct": 0.21964229683086867
+    },
+    {
+      "coin": "SONIC",
+      "mexc_usdt_vol": 58642.4034658,
+      "kucoin_usdt_vol": 5.346852,
+      "avg_usdt_vol": 29323.875158900002,
+      "m_price": 0.03626,
+      "k_price": 0.03603,
+      "spread_pct": 0.6343077771649229
+    },
+    {
+      "coin": "AVAIL",
+      "mexc_usdt_vol": 53845.240903109996,
+      "kucoin_usdt_vol": 4986.572904000001,
+      "avg_usdt_vol": 29415.906903555,
+      "m_price": 0.003979,
+      "k_price": 0.003994,
+      "spread_pct": 0.3755633450175327
+    },
+    {
+      "coin": "NOBODY",
+      "mexc_usdt_vol": 58568.1090086,
+      "kucoin_usdt_vol": 282.02329999999995,
+      "avg_usdt_vol": 29425.0661543,
+      "m_price": 0.00326,
+      "k_price": 0.00325,
+      "spread_pct": 0.30674846625766955
+    },
+    {
+      "coin": "AUCTION",
+      "mexc_usdt_vol": 53880.265289999996,
+      "kucoin_usdt_vol": 5003.1561599999995,
+      "avg_usdt_vol": 29441.710724999997,
+      "m_price": 4.811,
+      "k_price": 4.8,
+      "spread_pct": 0.22864269382664978
+    },
+    {
+      "coin": "QTUM",
+      "mexc_usdt_vol": 57397.17456000001,
+      "kucoin_usdt_vol": 1518.6262,
+      "avg_usdt_vol": 29457.900380000003,
+      "m_price": 0.9119,
+      "k_price": 0.91,
+      "spread_pct": 0.208356179405638
+    },
+    {
+      "coin": "SYS",
+      "mexc_usdt_vol": 57784.15292195001,
+      "kucoin_usdt_vol": 1250.347592,
+      "avg_usdt_vol": 29517.250256975003,
+      "m_price": 0.010283,
+      "k_price": 0.01007,
+      "spread_pct": 2.0713799474861387
+    },
+    {
+      "coin": "RLC",
+      "mexc_usdt_vol": 55333.74784,
+      "kucoin_usdt_vol": 3877.68244654,
+      "avg_usdt_vol": 29605.71514327,
+      "m_price": 0.448,
+      "k_price": 0.4451,
+      "spread_pct": 0.6473214285714316
+    },
+    {
+      "coin": "AURORA",
+      "mexc_usdt_vol": 54852.3213448,
+      "kucoin_usdt_vol": 4522.4315696,
+      "avg_usdt_vol": 29687.3764572,
+      "m_price": 0.02792,
+      "k_price": 0.028,
+      "spread_pct": 0.2857142857142865
+    },
+    {
+      "coin": "RACA",
+      "mexc_usdt_vol": 58427.8160648,
+      "kucoin_usdt_vol": 1047.2091298,
+      "avg_usdt_vol": 29737.5125973,
+      "m_price": 1.82e-05,
+      "k_price": 1.81e-05,
+      "spread_pct": 0.5494505494505442
+    },
+    {
+      "coin": "LA",
+      "mexc_usdt_vol": 57533.746014000004,
+      "kucoin_usdt_vol": 2075.290312,
+      "avg_usdt_vol": 29804.518163,
+      "m_price": 0.16353,
+      "k_price": 0.16106,
+      "spread_pct": 1.5104262214884119
+    },
+    {
+      "coin": "HTR",
+      "mexc_usdt_vol": 49767.012986999995,
+      "kucoin_usdt_vol": 9922.775754569999,
+      "avg_usdt_vol": 29844.894370784998,
+      "m_price": 0.00463,
+      "k_price": 0.00465,
+      "spread_pct": 0.43010752688172155
+    },
+    {
+      "coin": "PEPE2",
+      "mexc_usdt_vol": 54688.16593029477,
+      "kucoin_usdt_vol": 5384.432395362896,
+      "avg_usdt_vol": 30036.299162828833,
+      "m_price": 2.179e-09,
+      "k_price": 2.2e-09,
+      "spread_pct": 0.9545454545454466
+    },
+    {
+      "coin": "SWELL",
+      "mexc_usdt_vol": 54982.52930846,
+      "kucoin_usdt_vol": 5227.946064,
+      "avg_usdt_vol": 30105.23768623,
+      "m_price": 0.001181,
+      "k_price": 0.001188,
+      "spread_pct": 0.5892255892255944
+    },
+    {
+      "coin": "ACX",
+      "mexc_usdt_vol": 57683.137161599996,
+      "kucoin_usdt_vol": 2593.351154,
+      "avg_usdt_vol": 30138.2441578,
+      "m_price": 0.04384,
+      "k_price": 0.0437,
+      "spread_pct": 0.31934306569341764
+    },
+    {
+      "coin": "SYN",
+      "mexc_usdt_vol": 58945.5742975,
+      "kucoin_usdt_vol": 1544.5542219,
+      "avg_usdt_vol": 30245.0642597,
+      "m_price": 0.05555,
+      "k_price": 0.0555,
+      "spread_pct": 0.09000900090009259
+    },
+    {
+      "coin": "MYRO",
+      "mexc_usdt_vol": 56554.04624883999,
+      "kucoin_usdt_vol": 4268.1333190079995,
+      "avg_usdt_vol": 30411.089783923995,
+      "m_price": 0.002891,
+      "k_price": 0.002899,
+      "spread_pct": 0.2759572266298791
+    },
+    {
+      "coin": "AERGO",
+      "mexc_usdt_vol": 57901.7795696,
+      "kucoin_usdt_vol": 2971.0860792999997,
+      "avg_usdt_vol": 30436.432824450003,
+      "m_price": 0.05546,
+      "k_price": 0.05545,
+      "spread_pct": 0.018031013342955392
+    },
+    {
+      "coin": "BIGTIME",
+      "mexc_usdt_vol": 57471.8758074,
+      "kucoin_usdt_vol": 3554.575287978,
+      "avg_usdt_vol": 30513.225547689,
+      "m_price": 0.01383,
+      "k_price": 0.01367,
+      "spread_pct": 1.1569052783803355
+    },
+    {
+      "coin": "ASP",
+      "mexc_usdt_vol": 60424.32558240001,
+      "kucoin_usdt_vol": 855.111432,
+      "avg_usdt_vol": 30639.718507200003,
+      "m_price": 0.02568,
+      "k_price": 0.02588,
+      "spread_pct": 0.7727975270479087
+    },
+    {
+      "coin": "VENOM",
+      "mexc_usdt_vol": 55287.398859400004,
+      "kucoin_usdt_vol": 6025.034495999999,
+      "avg_usdt_vol": 30656.216677700002,
+      "m_price": 0.01933,
+      "k_price": 0.0192,
+      "spread_pct": 0.6725297465080271
+    },
+    {
+      "coin": "NFP",
+      "mexc_usdt_vol": 57593.809003200004,
+      "kucoin_usdt_vol": 3891.488964,
+      "avg_usdt_vol": 30742.648983600004,
+      "m_price": 0.01608,
+      "k_price": 0.01606,
+      "spread_pct": 0.12437810945273124
+    },
+    {
+      "coin": "TFUEL",
+      "mexc_usdt_vol": 57853.5686712,
+      "kucoin_usdt_vol": 3839.9810113199997,
+      "avg_usdt_vol": 30846.77484126,
+      "m_price": 0.01179,
+      "k_price": 0.01172,
+      "spread_pct": 0.5937234944868585
+    },
+    {
+      "coin": "ARPA",
+      "mexc_usdt_vol": 58840.089918,
+      "kucoin_usdt_vol": 2913.643943958,
+      "avg_usdt_vol": 30876.866930979,
+      "m_price": 0.00996,
+      "k_price": 0.009966,
+      "spread_pct": 0.06020469596627596
+    },
+    {
+      "coin": "CXT",
+      "mexc_usdt_vol": 58562.21570562,
+      "kucoin_usdt_vol": 3400.23999,
+      "avg_usdt_vol": 30981.22784781,
+      "m_price": 0.005121,
+      "k_price": 0.00511,
+      "spread_pct": 0.21480179652411105
+    },
+    {
+      "coin": "L3",
+      "mexc_usdt_vol": 58606.99172097,
+      "kucoin_usdt_vol": 3442.26934,
+      "avg_usdt_vol": 31024.630530485,
+      "m_price": 0.010317,
+      "k_price": 0.01039,
+      "spread_pct": 0.7025986525505308
+    },
+    {
+      "coin": "CELR",
+      "mexc_usdt_vol": 57491.000342700005,
+      "kucoin_usdt_vol": 4558.2737574,
+      "avg_usdt_vol": 31024.63705005,
+      "m_price": 0.002774,
+      "k_price": 0.00275,
+      "spread_pct": 0.865176640230719
+    },
+    {
+      "coin": "HEI",
+      "mexc_usdt_vol": 59840.493224399994,
+      "kucoin_usdt_vol": 2224.178496,
+      "avg_usdt_vol": 31032.335860199997,
+      "m_price": 0.08526,
+      "k_price": 0.0848,
+      "spread_pct": 0.5395261552897045
+    },
+    {
+      "coin": "ANIME",
+      "mexc_usdt_vol": 58814.38548867,
+      "kucoin_usdt_vol": 3263.59332,
+      "avg_usdt_vol": 31038.989404335,
+      "m_price": 0.004867,
+      "k_price": 0.004869,
+      "spread_pct": 0.04107619634422398
+    },
+    {
+      "coin": "RPL",
+      "mexc_usdt_vol": 57539.615659999996,
+      "kucoin_usdt_vol": 4627.7919600000005,
+      "avg_usdt_vol": 31083.70381,
+      "m_price": 1.886,
+      "k_price": 1.866,
+      "spread_pct": 1.0604453870625556
+    },
+    {
+      "coin": "ID",
+      "mexc_usdt_vol": 58300.181668,
+      "kucoin_usdt_vol": 3892.9771680000003,
+      "avg_usdt_vol": 31096.579417999998,
+      "m_price": 0.03161,
+      "k_price": 0.0316,
+      "spread_pct": 0.03163555836759292
+    },
+    {
+      "coin": "MTRG",
+      "mexc_usdt_vol": 56179.42850519999,
+      "kucoin_usdt_vol": 6022.989984000001,
+      "avg_usdt_vol": 31101.209244599995,
+      "m_price": 0.01953,
+      "k_price": 0.01947,
+      "spread_pct": 0.30721966205835927
+    },
+    {
+      "coin": "NODE",
+      "mexc_usdt_vol": 59701.087416,
+      "kucoin_usdt_vol": 2617.850552,
+      "avg_usdt_vol": 31159.468984,
+      "m_price": 0.01164,
+      "k_price": 0.01178,
+      "spread_pct": 1.1884550084889747
+    },
+    {
+      "coin": "SUN",
+      "mexc_usdt_vol": 59931.14327724,
+      "kucoin_usdt_vol": 2474.7954,
+      "avg_usdt_vol": 31202.96933862,
+      "m_price": 0.018654,
+      "k_price": 0.0187,
+      "spread_pct": 0.245989304812839
+    },
+    {
+      "coin": "A2Z",
+      "mexc_usdt_vol": 57752.4633390234,
+      "kucoin_usdt_vol": 4964.0898455999995,
+      "avg_usdt_vol": 31358.2765923117,
+      "m_price": 7.143e-05,
+      "k_price": 7.17e-05,
+      "spread_pct": 0.3765690376568978
+    },
+    {
+      "coin": "GNS",
+      "mexc_usdt_vol": 57560.52747300001,
+      "kucoin_usdt_vol": 5166.58835,
+      "avg_usdt_vol": 31363.557911500004,
+      "m_price": 0.7053,
+      "k_price": 0.71,
+      "spread_pct": 0.6619718309859052
+    },
+    {
+      "coin": "LAYER",
+      "mexc_usdt_vol": 57930.2615706,
+      "kucoin_usdt_vol": 4843.91843,
+      "avg_usdt_vol": 31387.0900003,
+      "m_price": 0.08714,
+      "k_price": 0.0871,
+      "spread_pct": 0.04590314436538716
+    },
+    {
+      "coin": "CRTR",
+      "mexc_usdt_vol": 53454.881995640004,
+      "kucoin_usdt_vol": 9356.626900000001,
+      "avg_usdt_vol": 31405.754447820003,
+      "m_price": 0.005318,
+      "k_price": 0.00523,
+      "spread_pct": 1.6547574276043537
+    },
+    {
+      "coin": "HIFI",
+      "mexc_usdt_vol": 54968.93332280999,
+      "kucoin_usdt_vol": 7917.148480000001,
+      "avg_usdt_vol": 31443.040901405,
+      "m_price": 0.005239,
+      "k_price": 0.0053,
+      "spread_pct": 1.1509433962264206
+    },
+    {
+      "coin": "BOBA",
+      "mexc_usdt_vol": 61472.5822294,
+      "kucoin_usdt_vol": 1586.2694518939998,
+      "avg_usdt_vol": 31529.425840647,
+      "m_price": 0.02362,
+      "k_price": 0.02371,
+      "spread_pct": 0.3795866722901721
+    },
+    {
+      "coin": "NTRN",
+      "mexc_usdt_vol": 55430.13342867,
+      "kucoin_usdt_vol": 7676.435399999999,
+      "avg_usdt_vol": 31553.284414335,
+      "m_price": 0.003003,
+      "k_price": 0.003,
+      "spread_pct": 0.09990009990009871
+    },
+    {
+      "coin": "AGI",
+      "mexc_usdt_vol": 56985.991775999995,
+      "kucoin_usdt_vol": 6196.735813554,
+      "avg_usdt_vol": 31591.363794776997,
+      "m_price": 0.0109,
+      "k_price": 0.01089,
+      "spread_pct": 0.0917431192660513
+    },
+    {
+      "coin": "XTER",
+      "mexc_usdt_vol": 62429.738170799996,
+      "kucoin_usdt_vol": 787.99536,
+      "avg_usdt_vol": 31608.8667654,
+      "m_price": 0.01703,
+      "k_price": 0.0171,
+      "spread_pct": 0.4093567251462024
+    },
+    {
+      "coin": "ISP",
+      "mexc_usdt_vol": 56086.5633019755,
+      "kucoin_usdt_vol": 7216.38668902678,
+      "avg_usdt_vol": 31651.47499550114,
+      "m_price": 4.883e-05,
+      "k_price": 4.79e-05,
+      "spread_pct": 1.9045668646323972
+    },
+    {
+      "coin": "BCUT",
+      "mexc_usdt_vol": 40548.16329864,
+      "kucoin_usdt_vol": 22795.174098,
+      "avg_usdt_vol": 31671.668698319998,
+      "m_price": 0.001219,
+      "k_price": 0.001227,
+      "spread_pct": 0.651996740016298
+    },
+    {
+      "coin": "ECHO",
+      "mexc_usdt_vol": 61015.608728960004,
+      "kucoin_usdt_vol": 2404.9222200000004,
+      "avg_usdt_vol": 31710.265474480002,
+      "m_price": 0.007328,
+      "k_price": 0.0073,
+      "spread_pct": 0.382096069868999
+    },
+    {
+      "coin": "WEN",
+      "mexc_usdt_vol": 58878.79036251489,
+      "kucoin_usdt_vol": 4586.503115400001,
+      "avg_usdt_vol": 31732.646738957446,
+      "m_price": 4.311e-06,
+      "k_price": 4.38e-06,
+      "spread_pct": 1.5753424657534365
+    },
+    {
+      "coin": "STORJ",
+      "mexc_usdt_vol": 61806.8453662,
+      "kucoin_usdt_vol": 2276.5015238799997,
+      "avg_usdt_vol": 32041.67344504,
+      "m_price": 0.10102,
+      "k_price": 0.1006,
+      "spread_pct": 0.41575925559295557
+    },
+    {
+      "coin": "NC",
+      "mexc_usdt_vol": 29656.898809029997,
+      "kucoin_usdt_vol": 34431.8634,
+      "avg_usdt_vol": 32044.381104515,
+      "m_price": 0.000899,
+      "k_price": 0.00099,
+      "spread_pct": 9.191919191919197
+    },
+    {
+      "coin": "CHEEMS",
+      "mexc_usdt_vol": 58031.9185039164,
+      "kucoin_usdt_vol": 6063.2289676392,
+      "avg_usdt_vol": 32047.5737357778,
+      "m_price": 6.178e-07,
+      "k_price": 6.134e-07,
+      "spread_pct": 0.712204596956946
+    },
+    {
+      "coin": "OGN",
+      "mexc_usdt_vol": 60599.05807649999,
+      "kucoin_usdt_vol": 3611.6526762420003,
+      "avg_usdt_vol": 32105.355376370997,
+      "m_price": 0.02395,
+      "k_price": 0.02379,
+      "spread_pct": 0.6680584551148243
+    },
+    {
+      "coin": "RVN",
+      "mexc_usdt_vol": 57956.164060229996,
+      "kucoin_usdt_vol": 6467.217309314,
+      "avg_usdt_vol": 32211.690684772,
+      "m_price": 0.006003,
+      "k_price": 0.00601,
+      "spread_pct": 0.11647254575707258
+    },
+    {
+      "coin": "PUNDIX",
+      "mexc_usdt_vol": 52962.45277,
+      "kucoin_usdt_vol": 11486.5138884,
+      "avg_usdt_vol": 32224.483329200004,
+      "m_price": 0.1514,
+      "k_price": 0.151,
+      "spread_pct": 0.2642007926023854
+    },
+    {
+      "coin": "BTT",
+      "mexc_usdt_vol": 56811.96537312352,
+      "kucoin_usdt_vol": 7652.282175310616,
+      "avg_usdt_vol": 32232.12377421707,
+      "m_price": 3.239e-07,
+      "k_price": 3.225e-07,
+      "spread_pct": 0.43223217042296985
+    },
+    {
+      "coin": "ME",
+      "mexc_usdt_vol": 62537.6489728,
+      "kucoin_usdt_vol": 1973.7329639999998,
+      "avg_usdt_vol": 32255.690968400002,
+      "m_price": 0.11008,
+      "k_price": 0.10983,
+      "spread_pct": 0.22710755813953507
+    },
+    {
+      "coin": "DUCK",
+      "mexc_usdt_vol": 17990.815784495102,
+      "kucoin_usdt_vol": 46927.04825856,
+      "avg_usdt_vol": 32458.93202152755,
+      "m_price": 7.181e-05,
+      "k_price": 7.167e-05,
+      "spread_pct": 0.19495891937057347
+    },
+    {
+      "coin": "BAL",
+      "mexc_usdt_vol": 54069.706923,
+      "kucoin_usdt_vol": 11309.63316,
+      "avg_usdt_vol": 32689.670041499998,
+      "m_price": 0.1483,
+      "k_price": 0.147,
+      "spread_pct": 0.8766014834794308
+    },
+    {
+      "coin": "IOTX",
+      "mexc_usdt_vol": 56852.096355999995,
+      "kucoin_usdt_vol": 8533.760304468,
+      "avg_usdt_vol": 32692.928330233997,
+      "m_price": 0.00484,
+      "k_price": 0.00483,
+      "spread_pct": 0.20661157024792548
+    },
+    {
+      "coin": "ZEUS",
+      "mexc_usdt_vol": 56054.14083162,
+      "kucoin_usdt_vol": 9532.801228,
+      "avg_usdt_vol": 32793.47102981,
+      "m_price": 0.006714,
+      "k_price": 0.00674,
+      "spread_pct": 0.3857566765578632
+    },
+    {
+      "coin": "IMU",
+      "mexc_usdt_vol": 60850.39714960001,
+      "kucoin_usdt_vol": 4806.62996,
+      "avg_usdt_vol": 32828.5135548,
+      "m_price": 0.002536,
+      "k_price": 0.00254,
+      "spread_pct": 0.15748031496063375
+    },
+    {
+      "coin": "HYPER",
+      "mexc_usdt_vol": 55639.2785925,
+      "kucoin_usdt_vol": 10192.996134,
+      "avg_usdt_vol": 32916.13736325,
+      "m_price": 0.09825,
+      "k_price": 0.0981,
+      "spread_pct": 0.15267175572518815
+    },
+    {
+      "coin": "ORCA",
+      "mexc_usdt_vol": 54682.065491,
+      "kucoin_usdt_vol": 11448.469961359999,
+      "avg_usdt_vol": 33065.26772618,
+      "m_price": 0.9413,
+      "k_price": 0.9356,
+      "spread_pct": 0.6055455221502218
+    },
+    {
+      "coin": "UDS",
+      "mexc_usdt_vol": 24960.681095,
+      "kucoin_usdt_vol": 41337.402448,
+      "avg_usdt_vol": 33149.0417715,
+      "m_price": 1.7465,
+      "k_price": 1.7441,
+      "spread_pct": 0.13741769252791056
+    },
+    {
+      "coin": "AIO",
+      "mexc_usdt_vol": 60993.2295401,
+      "kucoin_usdt_vol": 5429.662601999999,
+      "avg_usdt_vol": 33211.44607105,
+      "m_price": 0.08459,
+      "k_price": 0.08331,
+      "spread_pct": 1.5131812270954055
+    },
+    {
+      "coin": "MAJOR",
+      "mexc_usdt_vol": 58144.8993597,
+      "kucoin_usdt_vol": 8310.337257000001,
+      "avg_usdt_vol": 33227.61830835,
+      "m_price": 0.06129,
+      "k_price": 0.06135,
+      "spread_pct": 0.09779951100245231
+    },
+    {
+      "coin": "DOLO",
+      "mexc_usdt_vol": 64026.767784,
+      "kucoin_usdt_vol": 2465.620884,
+      "avg_usdt_vol": 33246.194334,
+      "m_price": 0.03416,
+      "k_price": 0.03411,
+      "spread_pct": 0.14637002341920793
+    },
+    {
+      "coin": "SIN",
+      "mexc_usdt_vol": 38702.478445184,
+      "kucoin_usdt_vol": 28090.8354228,
+      "avg_usdt_vol": 33396.656933992,
+      "m_price": 0.0001912,
+      "k_price": 0.0001907,
+      "spread_pct": 0.26150627615063393
+    },
+    {
+      "coin": "LMTS",
+      "mexc_usdt_vol": 65582.96201999999,
+      "kucoin_usdt_vol": 1317.1375380000002,
+      "avg_usdt_vol": 33450.04977899999,
+      "m_price": 0.073,
+      "k_price": 0.0719,
+      "spread_pct": 1.5068493150684794
+    },
+    {
+      "coin": "ERA",
+      "mexc_usdt_vol": 56409.180219,
+      "kucoin_usdt_vol": 10566.755012000001,
+      "avg_usdt_vol": 33487.967615500005,
+      "m_price": 0.1449,
+      "k_price": 0.1441,
+      "spread_pct": 0.5521048999309836
+    },
+    {
+      "coin": "DRIFT",
+      "mexc_usdt_vol": 61874.0520444,
+      "kucoin_usdt_vol": 5363.875948,
+      "avg_usdt_vol": 33618.9639962,
+      "m_price": 0.03548,
+      "k_price": 0.0353,
+      "spread_pct": 0.5073280721533248
+    },
+    {
+      "coin": "XYO",
+      "mexc_usdt_vol": 52795.2761335,
+      "kucoin_usdt_vol": 14482.1083956348,
+      "avg_usdt_vol": 33638.6922645674,
+      "m_price": 0.00355,
+      "k_price": 0.003522,
+      "spread_pct": 0.7887323943662041
+    },
+    {
+      "coin": "MOCA",
+      "mexc_usdt_vol": 59738.6020506,
+      "kucoin_usdt_vol": 7546.817086000001,
+      "avg_usdt_vol": 33642.7095683,
+      "m_price": 0.01362,
+      "k_price": 0.01357,
+      "spread_pct": 0.3671071953010257
+    },
+    {
+      "coin": "DEFI",
+      "mexc_usdt_vol": 39463.577436672,
+      "kucoin_usdt_vol": 27838.508016000003,
+      "avg_usdt_vol": 33651.042726336,
+      "m_price": 0.0002592,
+      "k_price": 0.000264,
+      "spread_pct": 1.8181818181818212
+    },
+    {
+      "coin": "HAI",
+      "mexc_usdt_vol": 37928.31041216,
+      "kucoin_usdt_vol": 29491.706617999997,
+      "avg_usdt_vol": 33710.00851508,
+      "m_price": 0.002624,
+      "k_price": 0.002629,
+      "spread_pct": 0.19018638265499418
+    },
+    {
+      "coin": "SNX",
+      "mexc_usdt_vol": 59478.84706400001,
+      "kucoin_usdt_vol": 8208.398536781568,
+      "avg_usdt_vol": 33843.62280039079,
+      "m_price": 0.3052,
+      "k_price": 0.3039,
+      "spread_pct": 0.425950196592406
+    },
+    {
+      "coin": "MEME",
+      "mexc_usdt_vol": 56808.351088380005,
+      "kucoin_usdt_vol": 11033.560608336,
+      "avg_usdt_vol": 33920.955848358004,
+      "m_price": 0.0005829,
+      "k_price": 0.00058,
+      "spread_pct": 0.49751243781094806
+    },
+    {
+      "coin": "MMT",
+      "mexc_usdt_vol": 65040.22656000001,
+      "kucoin_usdt_vol": 2843.6135639999998,
+      "avg_usdt_vol": 33941.920062000005,
+      "m_price": 0.136,
+      "k_price": 0.1362,
+      "spread_pct": 0.146842878120395
+    },
+    {
+      "coin": "BLAST",
+      "mexc_usdt_vol": 57880.944290554,
+      "kucoin_usdt_vol": 10013.009994,
+      "avg_usdt_vol": 33946.977142277,
+      "m_price": 0.0005137,
+      "k_price": 0.000513,
+      "spread_pct": 0.13626630328985068
+    },
+    {
+      "coin": "ANYONE",
+      "mexc_usdt_vol": 24813.540437,
+      "kucoin_usdt_vol": 43095.429728,
+      "avg_usdt_vol": 33954.4850825,
+      "m_price": 0.0859,
+      "k_price": 0.0851,
+      "spread_pct": 0.9313154831199174
+    },
+    {
+      "coin": "STREAM",
+      "mexc_usdt_vol": 61647.006352979995,
+      "kucoin_usdt_vol": 6407.226768,
+      "avg_usdt_vol": 34027.11656049,
+      "m_price": 0.004254,
+      "k_price": 0.00428,
+      "spread_pct": 0.6074766355140182
+    },
+    {
+      "coin": "AWE",
+      "mexc_usdt_vol": 52898.3805776,
+      "kucoin_usdt_vol": 15493.98334,
+      "avg_usdt_vol": 34196.1819588,
+      "m_price": 0.05179,
+      "k_price": 0.0517,
+      "spread_pct": 0.17377872176095732
+    },
+    {
+      "coin": "FIDA",
+      "mexc_usdt_vol": 61979.04648,
+      "kucoin_usdt_vol": 6556.621450000001,
+      "avg_usdt_vol": 34267.833965,
+      "m_price": 0.0169,
+      "k_price": 0.01685,
+      "spread_pct": 0.29585798816566844
+    },
+    {
+      "coin": "SENSO",
+      "mexc_usdt_vol": 45419.024318359996,
+      "kucoin_usdt_vol": 23117.579848,
+      "avg_usdt_vol": 34268.302083179995,
+      "m_price": 0.003212,
+      "k_price": 0.003212,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "USDS",
+      "mexc_usdt_vol": 62561.510557999994,
+      "kucoin_usdt_vol": 6068.811504,
+      "avg_usdt_vol": 34315.161030999996,
+      "m_price": 0.9994,
+      "k_price": 0.9996,
+      "spread_pct": 0.020008003201289416
+    },
+    {
+      "coin": "MOVE",
+      "mexc_usdt_vol": 54741.110235,
+      "kucoin_usdt_vol": 13906.22945,
+      "avg_usdt_vol": 34323.6698425,
+      "m_price": 0.01862,
+      "k_price": 0.01861,
+      "spread_pct": 0.05370569280343497
+    },
+    {
+      "coin": "BLUM",
+      "mexc_usdt_vol": 61422.32028858,
+      "kucoin_usdt_vol": 7265.155247999999,
+      "avg_usdt_vol": 34343.73776829,
+      "m_price": 0.003414,
+      "k_price": 0.00342,
+      "spread_pct": 0.17543859649122598
+    },
+    {
+      "coin": "RNBW",
+      "mexc_usdt_vol": 57152.6260504,
+      "kucoin_usdt_vol": 11696.613232,
+      "avg_usdt_vol": 34424.6196412,
+      "m_price": 0.01426,
+      "k_price": 0.01432,
+      "spread_pct": 0.4189944134078163
+    },
+    {
+      "coin": "GOAT",
+      "mexc_usdt_vol": 61358.812491599994,
+      "kucoin_usdt_vol": 7790.665757999999,
+      "avg_usdt_vol": 34574.7391248,
+      "m_price": 0.01706,
+      "k_price": 0.01713,
+      "spread_pct": 0.4086398131932319
+    },
+    {
+      "coin": "SAHARA",
+      "mexc_usdt_vol": 60371.377008799995,
+      "kucoin_usdt_vol": 8843.937872,
+      "avg_usdt_vol": 34607.6574404,
+      "m_price": 0.02167,
+      "k_price": 0.02156,
+      "spread_pct": 0.507614213197965
+    },
+    {
+      "coin": "FLK",
+      "mexc_usdt_vol": 52743.283468199996,
+      "kucoin_usdt_vol": 16483.523558,
+      "avg_usdt_vol": 34613.4035131,
+      "m_price": 0.02223,
+      "k_price": 0.0223,
+      "spread_pct": 0.31390134529148256
+    },
+    {
+      "coin": "AGLD",
+      "mexc_usdt_vol": 57685.985595000006,
+      "kucoin_usdt_vol": 11765.928923000001,
+      "avg_usdt_vol": 34725.957259,
+      "m_price": 0.2745,
+      "k_price": 0.2755,
+      "spread_pct": 0.3629764065335756
+    },
+    {
+      "coin": "FRAX",
+      "mexc_usdt_vol": 67131.719447,
+      "kucoin_usdt_vol": 2556.353272,
+      "avg_usdt_vol": 34844.036359499994,
+      "m_price": 0.4667,
+      "k_price": 0.4682,
+      "spread_pct": 0.32037590773173885
+    },
+    {
+      "coin": "GTAI",
+      "mexc_usdt_vol": 56072.1880825,
+      "kucoin_usdt_vol": 13682.199204,
+      "avg_usdt_vol": 34877.19364325,
+      "m_price": 0.02273,
+      "k_price": 0.02286,
+      "spread_pct": 0.5686789151356001
+    },
+    {
+      "coin": "AIN",
+      "mexc_usdt_vol": 64531.9237662,
+      "kucoin_usdt_vol": 5223.460561999999,
+      "avg_usdt_vol": 34877.6921641,
+      "m_price": 0.06014,
+      "k_price": 0.06053,
+      "spread_pct": 0.6443086073021665
+    },
+    {
+      "coin": "LADYS",
+      "mexc_usdt_vol": 59723.97082782601,
+      "kucoin_usdt_vol": 10041.19116901098,
+      "avg_usdt_vol": 34882.580998418496,
+      "m_price": 1.0849e-08,
+      "k_price": 1.083e-08,
+      "spread_pct": 0.1751313485113839
+    },
+    {
+      "coin": "SLP",
+      "mexc_usdt_vol": 58534.024801499996,
+      "kucoin_usdt_vol": 11331.8532183726,
+      "avg_usdt_vol": 34932.9390099363,
+      "m_price": 0.0006885,
+      "k_price": 0.000687,
+      "spread_pct": 0.21786492374727412
+    },
+    {
+      "coin": "UMA",
+      "mexc_usdt_vol": 60798.827529,
+      "kucoin_usdt_vol": 9299.8770616,
+      "avg_usdt_vol": 35049.3522953,
+      "m_price": 0.4873,
+      "k_price": 0.487,
+      "spread_pct": 0.061563718448598904
+    },
+    {
+      "coin": "HTX",
+      "mexc_usdt_vol": 54961.48537578,
+      "kucoin_usdt_vol": 15161.004433790999,
+      "avg_usdt_vol": 35061.2449047855,
+      "m_price": 1.83e-06,
+      "k_price": 1.817e-06,
+      "spread_pct": 0.7103825136612093
+    },
+    {
+      "coin": "ZORA",
+      "mexc_usdt_vol": 62462.785650280006,
+      "kucoin_usdt_vol": 7692.833401999999,
+      "avg_usdt_vol": 35077.80952614,
+      "m_price": 0.014348,
+      "k_price": 0.014299,
+      "spread_pct": 0.3415110119877365
+    },
+    {
+      "coin": "XAVA",
+      "mexc_usdt_vol": 58045.842284000006,
+      "kucoin_usdt_vol": 12264.684490959999,
+      "avg_usdt_vol": 35155.26338748,
+      "m_price": 0.2918,
+      "k_price": 0.2924,
+      "spread_pct": 0.20519835841312908
+    },
+    {
+      "coin": "KNC",
+      "mexc_usdt_vol": 53792.351306000004,
+      "kucoin_usdt_vol": 16690.603453919997,
+      "avg_usdt_vol": 35241.47737996,
+      "m_price": 0.1451,
+      "k_price": 0.1452,
+      "spread_pct": 0.06887052341597037
+    },
+    {
+      "coin": "BANANA",
+      "mexc_usdt_vol": 58430.642100000005,
+      "kucoin_usdt_vol": 12172.0646,
+      "avg_usdt_vol": 35301.353350000005,
+      "m_price": 3.903,
+      "k_price": 3.91,
+      "spread_pct": 0.17902813299233036
+    },
+    {
+      "coin": "IOST",
+      "mexc_usdt_vol": 66709.96155060001,
+      "kucoin_usdt_vol": 4093.5128859071997,
+      "avg_usdt_vol": 35401.737218253606,
+      "m_price": 0.00111,
+      "k_price": 0.001116,
+      "spread_pct": 0.5376344086021442
+    },
+    {
+      "coin": "MEW",
+      "mexc_usdt_vol": 57602.635310280006,
+      "kucoin_usdt_vol": 13286.274848000001,
+      "avg_usdt_vol": 35444.45507914,
+      "m_price": 0.0006177,
+      "k_price": 0.000616,
+      "spread_pct": 0.2752145054233426
+    },
+    {
+      "coin": "LISTA",
+      "mexc_usdt_vol": 66886.23946,
+      "kucoin_usdt_vol": 4154.22378,
+      "avg_usdt_vol": 35520.23162,
+      "m_price": 0.08516,
+      "k_price": 0.0846,
+      "spread_pct": 0.6575857209957785
+    },
+    {
+      "coin": "G",
+      "mexc_usdt_vol": 57340.115504320005,
+      "kucoin_usdt_vol": 13717.445845999999,
+      "avg_usdt_vol": 35528.78067516,
+      "m_price": 0.003784,
+      "k_price": 0.00377,
+      "spread_pct": 0.3699788583509547
+    },
+    {
+      "coin": "KAIA",
+      "mexc_usdt_vol": 57774.4946616,
+      "kucoin_usdt_vol": 13460.591508000001,
+      "avg_usdt_vol": 35617.5430848,
+      "m_price": 0.04846,
+      "k_price": 0.04827,
+      "spread_pct": 0.3920759389187013
+    },
+    {
+      "coin": "CAT",
+      "mexc_usdt_vol": 61378.55727810201,
+      "kucoin_usdt_vol": 9865.114632704,
+      "avg_usdt_vol": 35621.835955403,
+      "m_price": 1.919e-06,
+      "k_price": 1.919e-06,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "ANKR",
+      "mexc_usdt_vol": 59034.549773218,
+      "kucoin_usdt_vol": 12333.96216238,
+      "avg_usdt_vol": 35684.255967799,
+      "m_price": 0.005156,
+      "k_price": 0.00515,
+      "spread_pct": 0.11636927851047187
+    },
+    {
+      "coin": "NEWT",
+      "mexc_usdt_vol": 61713.6571608,
+      "kucoin_usdt_vol": 9678.34208,
+      "avg_usdt_vol": 35695.9996204,
+      "m_price": 0.07908,
+      "k_price": 0.0788,
+      "spread_pct": 0.3540718259989915
+    },
+    {
+      "coin": "WILD",
+      "mexc_usdt_vol": 58483.785094599996,
+      "kucoin_usdt_vol": 12917.51162,
+      "avg_usdt_vol": 35700.6483573,
+      "m_price": 0.03727,
+      "k_price": 0.03734,
+      "spread_pct": 0.18746652383503112
+    },
+    {
+      "coin": "WBAI",
+      "mexc_usdt_vol": 52584.85667754,
+      "kucoin_usdt_vol": 18938.824992,
+      "avg_usdt_vol": 35761.84083477,
+      "m_price": 0.001786,
+      "k_price": 0.001788,
+      "spread_pct": 0.11185682326622194
+    },
+    {
+      "coin": "XEC",
+      "mexc_usdt_vol": 55245.95859429854,
+      "kucoin_usdt_vol": 16363.624784918704,
+      "avg_usdt_vol": 35804.791689608624,
+      "m_price": 7.137e-06,
+      "k_price": 7.12e-06,
+      "spread_pct": 0.23819532016253336
+    },
+    {
+      "coin": "MONPRO",
+      "mexc_usdt_vol": 71509.31699576,
+      "kucoin_usdt_vol": 129.93336,
+      "avg_usdt_vol": 35819.62517788,
+      "m_price": 0.001796,
+      "k_price": 0.0018,
+      "spread_pct": 0.22222222222221558
+    },
+    {
+      "coin": "MEMEFI",
+      "mexc_usdt_vol": 58565.9797389,
+      "kucoin_usdt_vol": 13106.8095684,
+      "avg_usdt_vol": 35836.39465365,
+      "m_price": 0.000135,
+      "k_price": 0.0001338,
+      "spread_pct": 0.8888888888888904
+    },
+    {
+      "coin": "HOUSE",
+      "mexc_usdt_vol": 64167.32979882001,
+      "kucoin_usdt_vol": 8193.838996,
+      "avg_usdt_vol": 36180.584397410006,
+      "m_price": 0.001801,
+      "k_price": 0.001813,
+      "spread_pct": 0.6618863761720826
+    },
+    {
+      "coin": "OSMO",
+      "mexc_usdt_vol": 63313.2253886,
+      "kucoin_usdt_vol": 9059.524242720001,
+      "avg_usdt_vol": 36186.374815660005,
+      "m_price": 0.03298,
+      "k_price": 0.0328,
+      "spread_pct": 0.5457853244390527
+    },
+    {
+      "coin": "BMT",
+      "mexc_usdt_vol": 65454.8479426,
+      "kucoin_usdt_vol": 7043.277824000001,
+      "avg_usdt_vol": 36249.0628833,
+      "m_price": 0.01678,
+      "k_price": 0.01661,
+      "spread_pct": 1.0131108462455305
+    },
+    {
+      "coin": "MIRA",
+      "mexc_usdt_vol": 61693.208775,
+      "kucoin_usdt_vol": 10974.693888,
+      "avg_usdt_vol": 36333.9513315,
+      "m_price": 0.08646,
+      "k_price": 0.0864,
+      "spread_pct": 0.06939625260234863
+    },
+    {
+      "coin": "SLC",
+      "mexc_usdt_vol": 58408.8917375288,
+      "kucoin_usdt_vol": 14304.885956000002,
+      "avg_usdt_vol": 36356.8888467644,
+      "m_price": 3.596e-05,
+      "k_price": 3.58e-05,
+      "spread_pct": 0.44493882091212034
+    },
+    {
+      "coin": "LPT",
+      "mexc_usdt_vol": 55600.104960000004,
+      "kucoin_usdt_vol": 17371.3298199,
+      "avg_usdt_vol": 36485.717389950005,
+      "m_price": 2.152,
+      "k_price": 2.1315,
+      "spread_pct": 0.9526022304832799
+    },
+    {
+      "coin": "JTO",
+      "mexc_usdt_vol": 63902.946972,
+      "kucoin_usdt_vol": 9095.268059999999,
+      "avg_usdt_vol": 36499.107516,
+      "m_price": 0.3494,
+      "k_price": 0.349,
+      "spread_pct": 0.11448196908987163
+    },
+    {
+      "coin": "LRC",
+      "mexc_usdt_vol": 54966.352803600006,
+      "kucoin_usdt_vol": 18145.03252,
+      "avg_usdt_vol": 36555.6926618,
+      "m_price": 0.01734,
+      "k_price": 0.01735,
+      "spread_pct": 0.05763688760806682
+    },
+    {
+      "coin": "MYRIA",
+      "mexc_usdt_vol": 57626.3845161642,
+      "kucoin_usdt_vol": 15592.929716800001,
+      "avg_usdt_vol": 36609.6571164821,
+      "m_price": 3.597e-05,
+      "k_price": 3.58e-05,
+      "spread_pct": 0.4726160689463443
+    },
+    {
+      "coin": "ORDER",
+      "mexc_usdt_vol": 58327.964106,
+      "kucoin_usdt_vol": 14960.4624,
+      "avg_usdt_vol": 36644.213253,
+      "m_price": 0.0562,
+      "k_price": 0.05616,
+      "spread_pct": 0.0711743772241964
+    },
+    {
+      "coin": "ASTR",
+      "mexc_usdt_vol": 61670.28417329,
+      "kucoin_usdt_vol": 11795.326783344,
+      "avg_usdt_vol": 36732.805478317,
+      "m_price": 0.008333,
+      "k_price": 0.00828,
+      "spread_pct": 0.6360254410176522
+    },
+    {
+      "coin": "ALEX",
+      "mexc_usdt_vol": 71022.4943087,
+      "kucoin_usdt_vol": 2675.5092,
+      "avg_usdt_vol": 36849.00175435,
+      "m_price": 0.00079,
+      "k_price": 0.00078,
+      "spread_pct": 1.2658227848101298
+    },
+    {
+      "coin": "LIKE",
+      "mexc_usdt_vol": 54811.39687776001,
+      "kucoin_usdt_vol": 18913.568049999998,
+      "avg_usdt_vol": 36862.482463880006,
+      "m_price": 0.001314,
+      "k_price": 0.001285,
+      "spread_pct": 2.2070015220700276
+    },
+    {
+      "coin": "EYWA",
+      "mexc_usdt_vol": 19365.39804004,
+      "kucoin_usdt_vol": 54382.5510228,
+      "avg_usdt_vol": 36873.97453142,
+      "m_price": 0.0007367,
+      "k_price": 0.0007371,
+      "spread_pct": 0.054266720933388926
+    },
+    {
+      "coin": "THQ",
+      "mexc_usdt_vol": 56258.0082952,
+      "kucoin_usdt_vol": 17657.553012,
+      "avg_usdt_vol": 36957.7806536,
+      "m_price": 0.02278,
+      "k_price": 0.02283,
+      "spread_pct": 0.21901007446341642
+    },
+    {
+      "coin": "URANUS",
+      "mexc_usdt_vol": 67098.542955,
+      "kucoin_usdt_vol": 6844.602028,
+      "avg_usdt_vol": 36971.572491499996,
+      "m_price": 0.015117,
+      "k_price": 0.01501,
+      "spread_pct": 0.7078123966395413
+    },
+    {
+      "coin": "F",
+      "mexc_usdt_vol": 57047.48125092,
+      "kucoin_usdt_vol": 17376.299846,
+      "avg_usdt_vol": 37211.890548459996,
+      "m_price": 0.005697,
+      "k_price": 0.005693,
+      "spread_pct": 0.0702123924872681
+    },
+    {
+      "coin": "PRAI",
+      "mexc_usdt_vol": 65283.58089549,
+      "kucoin_usdt_vol": 9408.041732,
+      "avg_usdt_vol": 37345.811313745,
+      "m_price": 0.001467,
+      "k_price": 0.00146,
+      "spread_pct": 0.47716428084526663
+    },
+    {
+      "coin": "WIN",
+      "mexc_usdt_vol": 55558.142201138,
+      "kucoin_usdt_vol": 19370.538714950824,
+      "avg_usdt_vol": 37464.34045804441,
+      "m_price": 2.06e-05,
+      "k_price": 2.067e-05,
+      "spread_pct": 0.33865505563619264
+    },
+    {
+      "coin": "BAT",
+      "mexc_usdt_vol": 57995.13094430001,
+      "kucoin_usdt_vol": 17245.20909668,
+      "avg_usdt_vol": 37620.170020490004,
+      "m_price": 0.10459,
+      "k_price": 0.1046,
+      "spread_pct": 0.009560229445502985
+    },
+    {
+      "coin": "ERG",
+      "mexc_usdt_vol": 52912.57441,
+      "kucoin_usdt_vol": 22377.16624082,
+      "avg_usdt_vol": 37644.87032541,
+      "m_price": 0.3155,
+      "k_price": 0.3151,
+      "spread_pct": 0.12678288431062168
+    },
+    {
+      "coin": "LL",
+      "mexc_usdt_vol": 49674.14111587,
+      "kucoin_usdt_vol": 25772.090669999998,
+      "avg_usdt_vol": 37723.115892935,
+      "m_price": 0.003221,
+      "k_price": 0.003221,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "USUAL",
+      "mexc_usdt_vol": 54378.290781,
+      "kucoin_usdt_vol": 21123.338124,
+      "avg_usdt_vol": 37750.8144525,
+      "m_price": 0.0151,
+      "k_price": 0.01509,
+      "spread_pct": 0.06622516556292268
+    },
+    {
+      "coin": "WEMIX",
+      "mexc_usdt_vol": 58959.617920000004,
+      "kucoin_usdt_vol": 16545.545250080002,
+      "avg_usdt_vol": 37752.58158504,
+      "m_price": 0.2396,
+      "k_price": 0.2398,
+      "spread_pct": 0.08340283569641606
+    },
+    {
+      "coin": "HMND",
+      "mexc_usdt_vol": 41872.347347200004,
+      "kucoin_usdt_vol": 33666.472,
+      "avg_usdt_vol": 37769.40967360001,
+      "m_price": 0.002804,
+      "k_price": 0.0028,
+      "spread_pct": 0.1426533523537838
+    },
+    {
+      "coin": "AZERO",
+      "mexc_usdt_vol": 58406.41085832001,
+      "kucoin_usdt_vol": 17444.449826,
+      "avg_usdt_vol": 37925.430342160005,
+      "m_price": 0.006426,
+      "k_price": 0.00643,
+      "spread_pct": 0.06220839813374283
+    },
+    {
+      "coin": "VTHO",
+      "mexc_usdt_vol": 73747.267650126,
+      "kucoin_usdt_vol": 2110.709524,
+      "avg_usdt_vol": 37928.988587063,
+      "m_price": 0.0005859,
+      "k_price": 0.000583,
+      "spread_pct": 0.49496501109404617
+    },
+    {
+      "coin": "TAI",
+      "mexc_usdt_vol": 61535.05059120001,
+      "kucoin_usdt_vol": 14324.706161999999,
+      "avg_usdt_vol": 37929.878376600005,
+      "m_price": 0.01657,
+      "k_price": 0.01663,
+      "spread_pct": 0.3607937462417171
+    },
+    {
+      "coin": "NFT",
+      "mexc_usdt_vol": 63224.9495874183,
+      "kucoin_usdt_vol": 12784.853552875687,
+      "avg_usdt_vol": 38004.90157014699,
+      "m_price": 3.233e-07,
+      "k_price": 3.226e-07,
+      "spread_pct": 0.21651716671821827
+    },
+    {
+      "coin": "STG",
+      "mexc_usdt_vol": 54437.5737,
+      "kucoin_usdt_vol": 21957.40947176,
+      "avg_usdt_vol": 38197.49158588,
+      "m_price": 0.205,
+      "k_price": 0.2044,
+      "spread_pct": 0.29268292682926317
+    },
+    {
+      "coin": "VOOI",
+      "mexc_usdt_vol": 54978.76992759999,
+      "kucoin_usdt_vol": 21425.236816,
+      "avg_usdt_vol": 38202.0033718,
+      "m_price": 0.006488,
+      "k_price": 0.006484,
+      "spread_pct": 0.06165228113439679
+    },
+    {
+      "coin": "TLM",
+      "mexc_usdt_vol": 59829.48659570001,
+      "kucoin_usdt_vol": 16740.036544000002,
+      "avg_usdt_vol": 38284.76156985,
+      "m_price": 0.001909,
+      "k_price": 0.001904,
+      "spread_pct": 0.26191723415400797
+    },
+    {
+      "coin": "FWOG",
+      "mexc_usdt_vol": 63373.7226954,
+      "kucoin_usdt_vol": 13245.358506,
+      "avg_usdt_vol": 38309.5406007,
+      "m_price": 0.004524,
+      "k_price": 0.00453,
+      "spread_pct": 0.13245033112582624
+    },
+    {
+      "coin": "HOME",
+      "mexc_usdt_vol": 56846.56384349999,
+      "kucoin_usdt_vol": 19781.175964,
+      "avg_usdt_vol": 38313.86990375,
+      "m_price": 0.01629,
+      "k_price": 0.016298,
+      "spread_pct": 0.049085777396006024
+    },
+    {
+      "coin": "PONKE",
+      "mexc_usdt_vol": 70338.3188354,
+      "kucoin_usdt_vol": 6615.602812,
+      "avg_usdt_vol": 38476.9608237,
+      "m_price": 0.02849,
+      "k_price": 0.02863,
+      "spread_pct": 0.48899755501221714
+    },
+    {
+      "coin": "WAXP",
+      "mexc_usdt_vol": 74824.44777239999,
+      "kucoin_usdt_vol": 2308.346337452,
+      "avg_usdt_vol": 38566.397054926,
+      "m_price": 0.006852,
+      "k_price": 0.00674,
+      "spread_pct": 1.6345592527729023
+    },
+    {
+      "coin": "CKB",
+      "mexc_usdt_vol": 58478.85253386001,
+      "kucoin_usdt_vol": 18930.7278029364,
+      "avg_usdt_vol": 38704.790168398205,
+      "m_price": 0.001518,
+      "k_price": 0.001518,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "GMEE",
+      "mexc_usdt_vol": 62559.17642966,
+      "kucoin_usdt_vol": 15027.434582844598,
+      "avg_usdt_vol": 38793.3055062523,
+      "m_price": 0.0010271,
+      "k_price": 0.001029,
+      "spread_pct": 0.18464528668610225
+    },
+    {
+      "coin": "FORTH",
+      "mexc_usdt_vol": 66293.818014,
+      "kucoin_usdt_vol": 11373.966993600001,
+      "avg_usdt_vol": 38833.8925038,
+      "m_price": 0.2334,
+      "k_price": 0.232,
+      "spread_pct": 0.5998286203941665
+    },
+    {
+      "coin": "BSU",
+      "mexc_usdt_vol": 67951.0033488,
+      "kucoin_usdt_vol": 9929.310844,
+      "avg_usdt_vol": 38940.1570964,
+      "m_price": 0.04587,
+      "k_price": 0.0458,
+      "spread_pct": 0.15260518857641295
+    },
+    {
+      "coin": "UP",
+      "mexc_usdt_vol": 72006.74952190001,
+      "kucoin_usdt_vol": 5987.17256,
+      "avg_usdt_vol": 38996.96104095001,
+      "m_price": 0.19939,
+      "k_price": 0.0652,
+      "spread_pct": 67.30026581072272
+    },
+    {
+      "coin": "ETHW",
+      "mexc_usdt_vol": 59381.674204949995,
+      "kucoin_usdt_vol": 18644.764811520003,
+      "avg_usdt_vol": 39013.219508235,
+      "m_price": 0.3015,
+      "k_price": 0.3012,
+      "spread_pct": 0.0995024875621781
+    },
+    {
+      "coin": "COW",
+      "mexc_usdt_vol": 62959.68863,
+      "kucoin_usdt_vol": 15124.429865999999,
+      "avg_usdt_vol": 39042.059248,
+      "m_price": 0.1915,
+      "k_price": 0.1911,
+      "spread_pct": 0.20887728459530625
+    },
+    {
+      "coin": "XLAB",
+      "mexc_usdt_vol": 44734.315514953676,
+      "kucoin_usdt_vol": 33465.185214608005,
+      "avg_usdt_vol": 39099.75036478084,
+      "m_price": 2.31e-07,
+      "k_price": 2.32e-07,
+      "spread_pct": 0.4310344827586302
+    },
+    {
+      "coin": "INSP",
+      "mexc_usdt_vol": 50043.03210810001,
+      "kucoin_usdt_vol": 28206.970132,
+      "avg_usdt_vol": 39125.00112005,
+      "m_price": 0.00111,
+      "k_price": 0.001111,
+      "spread_pct": 0.09000900090008243
+    },
+    {
+      "coin": "CATI",
+      "mexc_usdt_vol": 61943.2724625,
+      "kucoin_usdt_vol": 16361.99566,
+      "avg_usdt_vol": 39152.63406125,
+      "m_price": 0.04799,
+      "k_price": 0.04798,
+      "spread_pct": 0.02083767451551599
+    },
+    {
+      "coin": "SWEAT",
+      "mexc_usdt_vol": 52555.620577432004,
+      "kucoin_usdt_vol": 25998.71499475,
+      "avg_usdt_vol": 39277.167786091,
+      "m_price": 0.0002012,
+      "k_price": 0.000202,
+      "spread_pct": 0.39603960396039223
+    },
+    {
+      "coin": "CERE",
+      "mexc_usdt_vol": 54144.203271912,
+      "kucoin_usdt_vol": 24546.062552000003,
+      "avg_usdt_vol": 39345.132911956,
+      "m_price": 0.0001976,
+      "k_price": 0.000199,
+      "spread_pct": 0.7035175879397019
+    },
+    {
+      "coin": "SN3",
+      "mexc_usdt_vol": 59650.940526822,
+      "kucoin_usdt_vol": 19051.2809648,
+      "avg_usdt_vol": 39351.110745811,
+      "m_price": 0.0008223,
+      "k_price": 0.0008051,
+      "spread_pct": 2.0916940289432064
+    },
+    {
+      "coin": "ZCX",
+      "mexc_usdt_vol": 58750.147596999996,
+      "kucoin_usdt_vol": 19956.313137705998,
+      "avg_usdt_vol": 39353.230367353,
+      "m_price": 0.00311,
+      "k_price": 0.00311,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "LINGO",
+      "mexc_usdt_vol": 63772.06554927,
+      "kucoin_usdt_vol": 15169.341624,
+      "avg_usdt_vol": 39470.703586635005,
+      "m_price": 0.007423,
+      "k_price": 0.00753,
+      "spread_pct": 1.4209827357237759
+    },
+    {
+      "coin": "COQ",
+      "mexc_usdt_vol": 56052.55772392695,
+      "kucoin_usdt_vol": 22930.5387772048,
+      "avg_usdt_vol": 39491.54825056587,
+      "m_price": 1.4802e-07,
+      "k_price": 1.484e-07,
+      "spread_pct": 0.25606469002695914
+    },
+    {
+      "coin": "LOT",
+      "mexc_usdt_vol": 57390.15631463999,
+      "kucoin_usdt_vol": 21652.096692,
+      "avg_usdt_vol": 39521.126503319996,
+      "m_price": 0.007401,
+      "k_price": 0.007422,
+      "spread_pct": 0.28294260307195074
+    },
+    {
+      "coin": "COMP",
+      "mexc_usdt_vol": 56802.01787999999,
+      "kucoin_usdt_vol": 22303.7167267426,
+      "avg_usdt_vol": 39552.8673033713,
+      "m_price": 23.22,
+      "k_price": 23.23,
+      "spread_pct": 0.043047783039180214
+    },
+    {
+      "coin": "ACH",
+      "mexc_usdt_vol": 72934.15758936,
+      "kucoin_usdt_vol": 6180.5920591404,
+      "avg_usdt_vol": 39557.3748242502,
+      "m_price": 0.006252,
+      "k_price": 0.006246,
+      "spread_pct": 0.09596928982725415
+    },
+    {
+      "coin": "GAIN",
+      "mexc_usdt_vol": 44246.247613456006,
+      "kucoin_usdt_vol": 34918.438058399995,
+      "avg_usdt_vol": 39582.342835928,
+      "m_price": 0.0011728,
+      "k_price": 0.0011982,
+      "spread_pct": 2.119846436321137
+    },
+    {
+      "coin": "REEF",
+      "mexc_usdt_vol": 57263.9166557344,
+      "kucoin_usdt_vol": 22748.178398400003,
+      "avg_usdt_vol": 40006.0475270672,
+      "m_price": 7.432e-05,
+      "k_price": 7.44e-05,
+      "spread_pct": 0.10752688172042907
+    },
+    {
+      "coin": "ILV",
+      "mexc_usdt_vol": 57568.568392299996,
+      "kucoin_usdt_vol": 23325.2730312,
+      "avg_usdt_vol": 40446.92071175,
+      "m_price": 4.681,
+      "k_price": 4.676,
+      "spread_pct": 0.1068147831659879
+    },
+    {
+      "coin": "DAO",
+      "mexc_usdt_vol": 64691.818398,
+      "kucoin_usdt_vol": 16474.77936,
+      "avg_usdt_vol": 40583.298879,
+      "m_price": 0.04479,
+      "k_price": 0.04524,
+      "spread_pct": 0.9946949602121993
+    },
+    {
+      "coin": "PUBLIC",
+      "mexc_usdt_vol": 53903.96137700001,
+      "kucoin_usdt_vol": 27630.50888,
+      "avg_usdt_vol": 40767.235128500004,
+      "m_price": 0.01565,
+      "k_price": 0.01555,
+      "spread_pct": 0.6389776357827548
+    },
+    {
+      "coin": "YB",
+      "mexc_usdt_vol": 69229.64649,
+      "kucoin_usdt_vol": 12335.405868000002,
+      "avg_usdt_vol": 40782.526179,
+      "m_price": 0.1266,
+      "k_price": 0.1269,
+      "spread_pct": 0.23640661938536048
+    },
+    {
+      "coin": "BSV",
+      "mexc_usdt_vol": 66404.31632,
+      "kucoin_usdt_vol": 15196.828319999999,
+      "avg_usdt_vol": 40800.57232,
+      "m_price": 16.0,
+      "k_price": 16.02,
+      "spread_pct": 0.1248439450686615
+    },
+    {
+      "coin": "NAVI",
+      "mexc_usdt_vol": 25925.19347792,
+      "kucoin_usdt_vol": 55827.703444,
+      "avg_usdt_vol": 40876.44846096,
+      "m_price": 0.003544,
+      "k_price": 0.003541,
+      "spread_pct": 0.08465011286681616
+    },
+    {
+      "coin": "KERNEL",
+      "mexc_usdt_vol": 66930.7219231,
+      "kucoin_usdt_vol": 14890.064552,
+      "avg_usdt_vol": 40910.39323755,
+      "m_price": 0.06973,
+      "k_price": 0.06982,
+      "spread_pct": 0.12890289315381392
+    },
+    {
+      "coin": "CYBER",
+      "mexc_usdt_vol": 61929.105767999994,
+      "kucoin_usdt_vol": 19931.1033742,
+      "avg_usdt_vol": 40930.1045711,
+      "m_price": 0.5416,
+      "k_price": 0.541,
+      "spread_pct": 0.11078286558344422
+    },
+    {
+      "coin": "ZKC",
+      "mexc_usdt_vol": 65158.177095,
+      "kucoin_usdt_vol": 16767.735284000002,
+      "avg_usdt_vol": 40962.9561895,
+      "m_price": 0.07365,
+      "k_price": 0.0734,
+      "spread_pct": 0.33944331296671604
+    },
+    {
+      "coin": "XEN",
+      "mexc_usdt_vol": 67746.08543295879,
+      "kucoin_usdt_vol": 14451.85554550776,
+      "avg_usdt_vol": 41098.970489233274,
+      "m_price": 1.178e-08,
+      "k_price": 1.164e-08,
+      "spread_pct": 1.1884550084889638
+    },
+    {
+      "coin": "SIGN",
+      "mexc_usdt_vol": 75884.603275,
+      "kucoin_usdt_vol": 7164.414,
+      "avg_usdt_vol": 41524.5086375,
+      "m_price": 0.01795,
+      "k_price": 0.018,
+      "spread_pct": 0.27777777777776647
+    },
+    {
+      "coin": "NS",
+      "mexc_usdt_vol": 55326.2684634,
+      "kucoin_usdt_vol": 28202.516225999996,
+      "avg_usdt_vol": 41764.3923447,
+      "m_price": 0.01802,
+      "k_price": 0.01809,
+      "spread_pct": 0.38695411829738613
+    },
+    {
+      "coin": "MANA",
+      "mexc_usdt_vol": 61171.046297199995,
+      "kucoin_usdt_vol": 22582.32748428,
+      "avg_usdt_vol": 41876.68689074,
+      "m_price": 0.09332,
+      "k_price": 0.0933,
+      "spread_pct": 0.021431633090448054
+    },
+    {
+      "coin": "WET",
+      "mexc_usdt_vol": 63545.8450575,
+      "kucoin_usdt_vol": 20520.576364,
+      "avg_usdt_vol": 42033.210710750005,
+      "m_price": 0.10023,
+      "k_price": 0.10027,
+      "spread_pct": 0.03989229081479841
+    },
+    {
+      "coin": "B3",
+      "mexc_usdt_vol": 73251.67633797,
+      "kucoin_usdt_vol": 10920.878784,
+      "avg_usdt_vol": 42086.277560985,
+      "m_price": 0.000291,
+      "k_price": 0.000288,
+      "spread_pct": 1.0309278350515527
+    },
+    {
+      "coin": "SQD",
+      "mexc_usdt_vol": 56135.008740799996,
+      "kucoin_usdt_vol": 28322.855279999996,
+      "avg_usdt_vol": 42228.93201039999,
+      "m_price": 0.03256,
+      "k_price": 0.0324,
+      "spread_pct": 0.4914004914004927
+    },
+    {
+      "coin": "BARD",
+      "mexc_usdt_vol": 72525.471273,
+      "kucoin_usdt_vol": 12018.550103999998,
+      "avg_usdt_vol": 42272.0106885,
+      "m_price": 0.3093,
+      "k_price": 0.3102,
+      "spread_pct": 0.2901353965183612
+    },
+    {
+      "coin": "CHIRP",
+      "mexc_usdt_vol": 49940.394,
+      "kucoin_usdt_vol": 34719.981,
+      "avg_usdt_vol": 42330.1875,
+      "m_price": 0.0075,
+      "k_price": 0.0075,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "HONEY",
+      "mexc_usdt_vol": 54214.2336028,
+      "kucoin_usdt_vol": 30493.275587999997,
+      "avg_usdt_vol": 42353.754595399994,
+      "m_price": 0.00214,
+      "k_price": 0.00214,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "DMTR",
+      "mexc_usdt_vol": 68689.1960876,
+      "kucoin_usdt_vol": 16303.39704,
+      "avg_usdt_vol": 42496.296563799995,
+      "m_price": 0.008338,
+      "k_price": 0.0084,
+      "spread_pct": 0.7380952380952328
+    },
+    {
+      "coin": "SXT",
+      "mexc_usdt_vol": 59351.2377909,
+      "kucoin_usdt_vol": 25772.538384,
+      "avg_usdt_vol": 42561.88808745,
+      "m_price": 0.01749,
+      "k_price": 0.01746,
+      "spread_pct": 0.17152658662091927
+    },
+    {
+      "coin": "0G",
+      "mexc_usdt_vol": 55569.583080000004,
+      "kucoin_usdt_vol": 29993.521827999997,
+      "avg_usdt_vol": 42781.552454000004,
+      "m_price": 0.5742,
+      "k_price": 0.5749,
+      "spread_pct": 0.12176030614018489
+    },
+    {
+      "coin": "MANTRA",
+      "mexc_usdt_vol": 68018.7416482,
+      "kucoin_usdt_vol": 17800.17888,
+      "avg_usdt_vol": 42909.460264099995,
+      "m_price": 0.01043,
+      "k_price": 0.01045,
+      "spread_pct": 0.19138755980860467
+    },
+    {
+      "coin": "OPEN",
+      "mexc_usdt_vol": 68568.1115184,
+      "kucoin_usdt_vol": 17276.09406,
+      "avg_usdt_vol": 42922.1027892,
+      "m_price": 0.23088,
+      "k_price": 0.23097,
+      "spread_pct": 0.03896609949344362
+    },
+    {
+      "coin": "TARA",
+      "mexc_usdt_vol": 52254.72303912,
+      "kucoin_usdt_vol": 33733.272216,
+      "avg_usdt_vol": 42993.99762756,
+      "m_price": 5.6e-05,
+      "k_price": 8.4e-05,
+      "spread_pct": 33.33333333333333
+    },
+    {
+      "coin": "XCH",
+      "mexc_usdt_vol": 73457.3265525,
+      "kucoin_usdt_vol": 12634.675107600002,
+      "avg_usdt_vol": 43046.000830050005,
+      "m_price": 2.475,
+      "k_price": 2.482,
+      "spread_pct": 0.2820306204673697
+    },
+    {
+      "coin": "DYM",
+      "mexc_usdt_vol": 73763.1036808,
+      "kucoin_usdt_vol": 12561.074736,
+      "avg_usdt_vol": 43162.0892084,
+      "m_price": 0.01861,
+      "k_price": 0.01864,
+      "spread_pct": 0.16094420600857712
+    },
+    {
+      "coin": "XR",
+      "mexc_usdt_vol": 20282.34619345,
+      "kucoin_usdt_vol": 66067.14857599999,
+      "avg_usdt_vol": 43174.74738472499,
+      "m_price": 0.005015,
+      "k_price": 0.005018,
+      "spread_pct": 0.059784774810672195
+    },
+    {
+      "coin": "CTC",
+      "mexc_usdt_vol": 63859.58176799999,
+      "kucoin_usdt_vol": 22501.836007299997,
+      "avg_usdt_vol": 43180.70888764999,
+      "m_price": 0.1473,
+      "k_price": 0.1469,
+      "spread_pct": 0.2715546503733766
+    },
+    {
+      "coin": "WAVES",
+      "mexc_usdt_vol": 60417.560711,
+      "kucoin_usdt_vol": 26403.4612076,
+      "avg_usdt_vol": 43410.5109593,
+      "m_price": 0.4177,
+      "k_price": 0.4204,
+      "spread_pct": 0.6422454804947622
+    },
+    {
+      "coin": "PAWS",
+      "mexc_usdt_vol": 61897.01558037,
+      "kucoin_usdt_vol": 26277.050454,
+      "avg_usdt_vol": 44087.033017185,
+      "m_price": 3e-06,
+      "k_price": 3e-06,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "WSDM",
+      "mexc_usdt_vol": 18677.28276336,
+      "kucoin_usdt_vol": 70441.59105280001,
+      "avg_usdt_vol": 44559.43690808,
+      "m_price": 0.000276,
+      "k_price": 0.0002728,
+      "spread_pct": 1.1594202898550614
+    },
+    {
+      "coin": "DSYNC",
+      "mexc_usdt_vol": 73739.71508750001,
+      "kucoin_usdt_vol": 15481.694000000001,
+      "avg_usdt_vol": 44610.704543750006,
+      "m_price": 0.01375,
+      "k_price": 0.01387,
+      "spread_pct": 0.8651766402307159
+    },
+    {
+      "coin": "FITFI",
+      "mexc_usdt_vol": 54779.601722069,
+      "kucoin_usdt_vol": 35067.5687053072,
+      "avg_usdt_vol": 44923.5852136881,
+      "m_price": 0.0005803,
+      "k_price": 0.000586,
+      "spread_pct": 0.9726962457338028
+    },
+    {
+      "coin": "C98",
+      "mexc_usdt_vol": 57286.627750800006,
+      "kucoin_usdt_vol": 32564.778754320003,
+      "avg_usdt_vol": 44925.70325256001,
+      "m_price": 0.02142,
+      "k_price": 0.02116,
+      "spread_pct": 1.2138188608776834
+    },
+    {
+      "coin": "HYDRA",
+      "mexc_usdt_vol": 61237.936736400006,
+      "kucoin_usdt_vol": 28668.27349164,
+      "avg_usdt_vol": 44953.10511402,
+      "m_price": 0.03221,
+      "k_price": 0.0323,
+      "spread_pct": 0.2786377708978322
+    },
+    {
+      "coin": "LVVA",
+      "mexc_usdt_vol": 46190.896071036,
+      "kucoin_usdt_vol": 44158.5664236,
+      "avg_usdt_vol": 45174.731247318,
+      "m_price": 0.0004398,
+      "k_price": 0.0004386,
+      "spread_pct": 0.27285129604366287
+    },
+    {
+      "coin": "QORPO",
+      "mexc_usdt_vol": 18688.47491288,
+      "kucoin_usdt_vol": 72002.116836,
+      "avg_usdt_vol": 45345.29587444,
+      "m_price": 0.001966,
+      "k_price": 0.001882,
+      "spread_pct": 4.272634791454724
+    },
+    {
+      "coin": "CESS",
+      "mexc_usdt_vol": 63355.5547227,
+      "kucoin_usdt_vol": 27464.146176,
+      "avg_usdt_vol": 45409.85044935,
+      "m_price": 0.00279,
+      "k_price": 0.002796,
+      "spread_pct": 0.21459227467810907
+    },
+    {
+      "coin": "VINU",
+      "mexc_usdt_vol": 69126.52722372091,
+      "kucoin_usdt_vol": 21728.623472532898,
+      "avg_usdt_vol": 45427.575348126906,
+      "m_price": 3.836e-09,
+      "k_price": 3.85e-09,
+      "spread_pct": 0.36363636363634627
+    },
+    {
+      "coin": "DOOD",
+      "mexc_usdt_vol": 83366.02033063999,
+      "kucoin_usdt_vol": 8121.84653,
+      "avg_usdt_vol": 45743.933430319994,
+      "m_price": 0.003274,
+      "k_price": 0.003283,
+      "spread_pct": 0.27413950654888497
+    },
+    {
+      "coin": "FLOCK",
+      "mexc_usdt_vol": 63472.753689000005,
+      "kucoin_usdt_vol": 28086.8028,
+      "avg_usdt_vol": 45779.778244500005,
+      "m_price": 0.06907,
+      "k_price": 0.06925,
+      "spread_pct": 0.2599277978339344
+    },
+    {
+      "coin": "ZIG",
+      "mexc_usdt_vol": 90776.40639325,
+      "kucoin_usdt_vol": 1181.65362,
+      "avg_usdt_vol": 45979.030006625,
+      "m_price": 0.028555,
+      "k_price": 0.0287,
+      "spread_pct": 0.5052264808362344
+    },
+    {
+      "coin": "IMX",
+      "mexc_usdt_vol": 66996.71781,
+      "kucoin_usdt_vol": 25348.427933866176,
+      "avg_usdt_vol": 46172.57287193309,
+      "m_price": 0.177,
+      "k_price": 0.1776,
+      "spread_pct": 0.3378378378378475
+    },
+    {
+      "coin": "XTZ",
+      "mexc_usdt_vol": 66510.62873600001,
+      "kucoin_usdt_vol": 25988.130118312496,
+      "avg_usdt_vol": 46249.37942715625,
+      "m_price": 0.3748,
+      "k_price": 0.375,
+      "spread_pct": 0.05333333333332746
+    },
+    {
+      "coin": "GAIA",
+      "mexc_usdt_vol": 90249.2638037,
+      "kucoin_usdt_vol": 2269.717328,
+      "avg_usdt_vol": 46259.49056585,
+      "m_price": 0.01069,
+      "k_price": 0.01054,
+      "spread_pct": 1.4031805425631345
+    },
+    {
+      "coin": "SOPH",
+      "mexc_usdt_vol": 60849.79682676,
+      "kucoin_usdt_vol": 31670.56097110228,
+      "avg_usdt_vol": 46260.17889893114,
+      "m_price": 0.009092,
+      "k_price": 0.00906,
+      "spread_pct": 0.35195776506818127
+    },
+    {
+      "coin": "SHM",
+      "mexc_usdt_vol": 38105.242596102,
+      "kucoin_usdt_vol": 54517.096754399994,
+      "avg_usdt_vol": 46311.169675250996,
+      "m_price": 6.34e-05,
+      "k_price": 6.34e-05,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "PROMPT",
+      "mexc_usdt_vol": 67593.31836349999,
+      "kucoin_usdt_vol": 25995.2154,
+      "avg_usdt_vol": 46794.266881749994,
+      "m_price": 0.03763,
+      "k_price": 0.03773,
+      "spread_pct": 0.26504108136761956
+    },
+    {
+      "coin": "AVA",
+      "mexc_usdt_vol": 62093.148064999994,
+      "kucoin_usdt_vol": 31751.503368,
+      "avg_usdt_vol": 46922.325716499996,
+      "m_price": 0.2561,
+      "k_price": 0.2561,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "CHILLGUY",
+      "mexc_usdt_vol": 65929.77547919999,
+      "kucoin_usdt_vol": 28093.8344316,
+      "avg_usdt_vol": 47011.804955399995,
+      "m_price": 0.013032,
+      "k_price": 0.01302,
+      "spread_pct": 0.09208103130754955
+    },
+    {
+      "coin": "FORT",
+      "mexc_usdt_vol": 84025.490937,
+      "kucoin_usdt_vol": 10519.29324,
+      "avg_usdt_vol": 47272.3920885,
+      "m_price": 0.01685,
+      "k_price": 0.01685,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "MTV",
+      "mexc_usdt_vol": 54051.095000496,
+      "kucoin_usdt_vol": 40498.85143596824,
+      "avg_usdt_vol": 47274.97321823212,
+      "m_price": 0.0002706,
+      "k_price": 0.0002711,
+      "spread_pct": 0.18443378826999557
+    },
+    {
+      "coin": "1INCH",
+      "mexc_usdt_vol": 55138.7787633,
+      "kucoin_usdt_vol": 39567.526494588004,
+      "avg_usdt_vol": 47353.152628944,
+      "m_price": 0.09637,
+      "k_price": 0.09642,
+      "spread_pct": 0.051856461315088545
+    },
+    {
+      "coin": "MAV",
+      "mexc_usdt_vol": 85037.0840494,
+      "kucoin_usdt_vol": 10090.363535999999,
+      "avg_usdt_vol": 47563.7237927,
+      "m_price": 0.01634,
+      "k_price": 0.01628,
+      "spread_pct": 0.36719706242350686
+    },
+    {
+      "coin": "MELANIA",
+      "mexc_usdt_vol": 58694.2515663,
+      "kucoin_usdt_vol": 36436.34910000001,
+      "avg_usdt_vol": 47565.30033315001,
+      "m_price": 0.11613,
+      "k_price": 0.11625,
+      "spread_pct": 0.10322580645162063
+    },
+    {
+      "coin": "SUSHI",
+      "mexc_usdt_vol": 55942.914945,
+      "kucoin_usdt_vol": 39385.68303115999,
+      "avg_usdt_vol": 47664.298988079994,
+      "m_price": 0.2235,
+      "k_price": 0.2234,
+      "spread_pct": 0.044742729306495185
+    },
+    {
+      "coin": "XION",
+      "mexc_usdt_vol": 24664.565834,
+      "kucoin_usdt_vol": 70753.76089599999,
+      "avg_usdt_vol": 47709.163365,
+      "m_price": 0.1574,
+      "k_price": 0.1568,
+      "spread_pct": 0.38119440914867675
+    },
+    {
+      "coin": "NYM",
+      "mexc_usdt_vol": 57586.2021475,
+      "kucoin_usdt_vol": 38084.574192,
+      "avg_usdt_vol": 47835.388169750004,
+      "m_price": 0.03107,
+      "k_price": 0.03108,
+      "spread_pct": 0.032175032175030864
+    },
+    {
+      "coin": "TUSD",
+      "mexc_usdt_vol": 21630.880035,
+      "kucoin_usdt_vol": 74586.72798,
+      "avg_usdt_vol": 48108.804007499995,
+      "m_price": 1.0005,
+      "k_price": 0.9995,
+      "spread_pct": 0.09995002498749525
+    },
+    {
+      "coin": "NEO",
+      "mexc_usdt_vol": 71877.410262,
+      "kucoin_usdt_vol": 24711.249483723597,
+      "avg_usdt_vol": 48294.3298728618,
+      "m_price": 2.898,
+      "k_price": 2.8926,
+      "spread_pct": 0.1863354037267182
+    },
+    {
+      "coin": "ELIZAOS",
+      "mexc_usdt_vol": 79052.375145392,
+      "kucoin_usdt_vol": 17582.24466,
+      "avg_usdt_vol": 48317.309902696,
+      "m_price": 0.0006896,
+      "k_price": 0.00069,
+      "spread_pct": 0.05797101449275503
+    },
+    {
+      "coin": "ZRX",
+      "mexc_usdt_vol": 63189.25899950001,
+      "kucoin_usdt_vol": 33574.381047300005,
+      "avg_usdt_vol": 48381.82002340001,
+      "m_price": 0.11629,
+      "k_price": 0.1159,
+      "spread_pct": 0.3353684753633171
+    },
+    {
+      "coin": "KAVA",
+      "mexc_usdt_vol": 71802.0167774,
+      "kucoin_usdt_vol": 25153.86194368,
+      "avg_usdt_vol": 48477.93936054,
+      "m_price": 0.06097,
+      "k_price": 0.0608,
+      "spread_pct": 0.27882565195998604
+    },
+    {
+      "coin": "SOMI",
+      "mexc_usdt_vol": 59633.28236,
+      "kucoin_usdt_vol": 37396.760458,
+      "avg_usdt_vol": 48515.02140899999,
+      "m_price": 0.172,
+      "k_price": 0.1723,
+      "spread_pct": 0.17411491584447036
+    },
+    {
+      "coin": "AMP",
+      "mexc_usdt_vol": 60333.204738276,
+      "kucoin_usdt_vol": 36960.3632643696,
+      "avg_usdt_vol": 48646.7840013228,
+      "m_price": 0.0008908,
+      "k_price": 0.000891,
+      "spread_pct": 0.022446689113356327
+    },
+    {
+      "coin": "RMV",
+      "mexc_usdt_vol": 43214.11191100001,
+      "kucoin_usdt_vol": 54387.634904,
+      "avg_usdt_vol": 48800.8734075,
+      "m_price": 0.00578,
+      "k_price": 0.005732,
+      "spread_pct": 0.8304498269896244
+    },
+    {
+      "coin": "NIL",
+      "mexc_usdt_vol": 66941.6140777,
+      "kucoin_usdt_vol": 30695.622740000003,
+      "avg_usdt_vol": 48818.61840885,
+      "m_price": 0.04163,
+      "k_price": 0.0415,
+      "spread_pct": 0.31227480182560213
+    },
+    {
+      "coin": "SHELL",
+      "mexc_usdt_vol": 61181.814039200006,
+      "kucoin_usdt_vol": 36975.656760000005,
+      "avg_usdt_vol": 49078.7353996,
+      "m_price": 0.03452,
+      "k_price": 0.0346,
+      "spread_pct": 0.23121387283236056
+    },
+    {
+      "coin": "API3",
+      "mexc_usdt_vol": 68707.963215,
+      "kucoin_usdt_vol": 29482.925270920005,
+      "avg_usdt_vol": 49095.44424296,
+      "m_price": 0.3147,
+      "k_price": 0.3149,
+      "spread_pct": 0.06351222610353556
+    },
+    {
+      "coin": "BICO",
+      "mexc_usdt_vol": 72909.17101,
+      "kucoin_usdt_vol": 25476.953086999998,
+      "avg_usdt_vol": 49193.0620485,
+      "m_price": 0.0274,
+      "k_price": 0.0271,
+      "spread_pct": 1.094890510948911
+    },
+    {
+      "coin": "XAI",
+      "mexc_usdt_vol": 75368.4349839,
+      "kucoin_usdt_vol": 23922.950100000002,
+      "avg_usdt_vol": 49645.692541950004,
+      "m_price": 0.01047,
+      "k_price": 0.0105,
+      "spread_pct": 0.2857142857142906
+    },
+    {
+      "coin": "CHR",
+      "mexc_usdt_vol": 63460.87662080001,
+      "kucoin_usdt_vol": 36399.923032,
+      "avg_usdt_vol": 49930.399826400004,
+      "m_price": 0.02176,
+      "k_price": 0.0218,
+      "spread_pct": 0.1834862385321026
+    },
+    {
+      "coin": "HOLO",
+      "mexc_usdt_vol": 74241.5399054,
+      "kucoin_usdt_vol": 25855.2569,
+      "avg_usdt_vol": 50048.3984027,
+      "m_price": 0.06307,
+      "k_price": 0.0635,
+      "spread_pct": 0.6771653543307085
+    },
+    {
+      "coin": "YGG",
+      "mexc_usdt_vol": 56931.673809,
+      "kucoin_usdt_vol": 43207.591616,
+      "avg_usdt_vol": 50069.632712499995,
+      "m_price": 0.0421,
+      "k_price": 0.04214,
+      "spread_pct": 0.09492168960607113
+    },
+    {
+      "coin": "TRAC",
+      "mexc_usdt_vol": 63773.32181400001,
+      "kucoin_usdt_vol": 38059.72201668,
+      "avg_usdt_vol": 50916.52191534001,
+      "m_price": 0.2826,
+      "k_price": 0.2821,
+      "spread_pct": 0.1769285208775656
+    },
+    {
+      "coin": "CVX",
+      "mexc_usdt_vol": 59576.216159999996,
+      "kucoin_usdt_vol": 42697.7327506,
+      "avg_usdt_vol": 51136.9744553,
+      "m_price": 1.784,
+      "k_price": 1.789,
+      "spread_pct": 0.27948574622693645
+    },
+    {
+      "coin": "HANA",
+      "mexc_usdt_vol": 58063.25086754999,
+      "kucoin_usdt_vol": 44363.979088,
+      "avg_usdt_vol": 51213.614977774996,
+      "m_price": 0.038777,
+      "k_price": 0.03887,
+      "spread_pct": 0.239259068690514
+    },
+    {
+      "coin": "CWEB",
+      "mexc_usdt_vol": 57256.664738168,
+      "kucoin_usdt_vol": 45331.22412,
+      "avg_usdt_vol": 51293.944429084004,
+      "m_price": 0.0009077,
+      "k_price": 0.00091,
+      "spread_pct": 0.25274725274725296
+    },
+    {
+      "coin": "RION",
+      "mexc_usdt_vol": 81066.15423700001,
+      "kucoin_usdt_vol": 21641.88684,
+      "avg_usdt_vol": 51354.0205385,
+      "m_price": 0.2341,
+      "k_price": 0.2436,
+      "spread_pct": 3.8998357963875243
+    },
+    {
+      "coin": "TROLL",
+      "mexc_usdt_vol": 68974.80341919875,
+      "kucoin_usdt_vol": 33918.698864,
+      "avg_usdt_vol": 51446.75114159938,
+      "m_price": 3.507e-09,
+      "k_price": 0.02342,
+      "spread_pct": 99.99998502561913
+    },
+    {
+      "coin": "AXS",
+      "mexc_usdt_vol": 74893.32268000001,
+      "kucoin_usdt_vol": 28223.225244000005,
+      "avg_usdt_vol": 51558.27396200001,
+      "m_price": 1.124,
+      "k_price": 1.124,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "GTC",
+      "mexc_usdt_vol": 75904.761388,
+      "kucoin_usdt_vol": 27796.9934412,
+      "avg_usdt_vol": 51850.8774146,
+      "m_price": 0.11416,
+      "k_price": 0.114,
+      "spread_pct": 0.14015416958653948
+    },
+    {
+      "coin": "NXPC",
+      "mexc_usdt_vol": 63123.85993,
+      "kucoin_usdt_vol": 40757.45508,
+      "avg_usdt_vol": 51940.657504999996,
+      "m_price": 0.2995,
+      "k_price": 0.29901,
+      "spread_pct": 0.1636060100166913
+    },
+    {
+      "coin": "EPIC",
+      "mexc_usdt_vol": 92688.15079999999,
+      "kucoin_usdt_vol": 11218.581659999998,
+      "avg_usdt_vol": 51953.36622999999,
+      "m_price": 0.2996,
+      "k_price": 0.299,
+      "spread_pct": 0.20026702269692576
+    },
+    {
+      "coin": "NUMI",
+      "mexc_usdt_vol": 54309.200325000005,
+      "kucoin_usdt_vol": 49754.943036,
+      "avg_usdt_vol": 52032.0716805,
+      "m_price": 0.0111,
+      "k_price": 0.01107,
+      "spread_pct": 0.2702702702702749
+    },
+    {
+      "coin": "HIPPO",
+      "mexc_usdt_vol": 63788.319598874004,
+      "kucoin_usdt_vol": 40289.120967999996,
+      "avg_usdt_vol": 52038.720283437,
+      "m_price": 0.0001651,
+      "k_price": 0.000166,
+      "spread_pct": 0.542168674698792
+    },
+    {
+      "coin": "IOTA",
+      "mexc_usdt_vol": 70654.6865457,
+      "kucoin_usdt_vol": 33591.602248,
+      "avg_usdt_vol": 52123.144396849995,
+      "m_price": 0.05781,
+      "k_price": 0.058,
+      "spread_pct": 0.32758620689655626
+    },
+    {
+      "coin": "COOKIE",
+      "mexc_usdt_vol": 81302.0724845,
+      "kucoin_usdt_vol": 23047.968672000003,
+      "avg_usdt_vol": 52175.02057825,
+      "m_price": 0.01673,
+      "k_price": 0.01667,
+      "spread_pct": 0.35863717872084616
+    },
+    {
+      "coin": "ION",
+      "mexc_usdt_vol": 27578.40438521,
+      "kucoin_usdt_vol": 77289.93394,
+      "avg_usdt_vol": 52434.169162605,
+      "m_price": 0.000193,
+      "k_price": 0.000191,
+      "spread_pct": 1.0362694300518105
+    },
+    {
+      "coin": "LMWR",
+      "mexc_usdt_vol": 59048.1567935,
+      "kucoin_usdt_vol": 46358.235263999995,
+      "avg_usdt_vol": 52703.19602875,
+      "m_price": 0.02045,
+      "k_price": 0.02046,
+      "spread_pct": 0.048875855327466244
+    },
+    {
+      "coin": "XRD",
+      "mexc_usdt_vol": 86116.47562624,
+      "kucoin_usdt_vol": 19562.94483,
+      "avg_usdt_vol": 52839.710228120006,
+      "m_price": 0.001336,
+      "k_price": 0.001331,
+      "spread_pct": 0.37425149700598903
+    },
+    {
+      "coin": "NKN",
+      "mexc_usdt_vol": 58345.71738281,
+      "kucoin_usdt_vol": 47385.95904,
+      "avg_usdt_vol": 52865.838211405004,
+      "m_price": 0.008723,
+      "k_price": 0.00864,
+      "spread_pct": 0.951507508884555
+    },
+    {
+      "coin": "ALEPH",
+      "mexc_usdt_vol": 51682.7777266,
+      "kucoin_usdt_vol": 54140.65462,
+      "avg_usdt_vol": 52911.716173299996,
+      "m_price": 0.01789,
+      "k_price": 0.01781,
+      "spread_pct": 0.447177193963109
+    },
+    {
+      "coin": "PYR",
+      "mexc_usdt_vol": 59941.15396,
+      "kucoin_usdt_vol": 46314.49941872,
+      "avg_usdt_vol": 53127.82668936,
+      "m_price": 0.2785,
+      "k_price": 0.2782,
+      "spread_pct": 0.1077199281867226
+    },
+    {
+      "coin": "SATS",
+      "mexc_usdt_vol": 68101.22130386443,
+      "kucoin_usdt_vol": 38342.24620724738,
+      "avg_usdt_vol": 53221.733755555906,
+      "m_price": 1.487e-08,
+      "k_price": 1.471e-08,
+      "spread_pct": 1.075991930060521
+    },
+    {
+      "coin": "MINA",
+      "mexc_usdt_vol": 60824.6951152,
+      "kucoin_usdt_vol": 45752.56206312,
+      "avg_usdt_vol": 53288.62858916,
+      "m_price": 0.06128,
+      "k_price": 0.0613,
+      "spread_pct": 0.03262642740619769
+    },
+    {
+      "coin": "MAGIC",
+      "mexc_usdt_vol": 75272.04671669999,
+      "kucoin_usdt_vol": 31306.01189088,
+      "avg_usdt_vol": 53289.02930379,
+      "m_price": 0.06859,
+      "k_price": 0.0688,
+      "spread_pct": 0.3052325581395376
+    },
+    {
+      "coin": "PARTI",
+      "mexc_usdt_vol": 73675.6535375,
+      "kucoin_usdt_vol": 33218.65288,
+      "avg_usdt_vol": 53447.153208749995,
+      "m_price": 0.04273,
+      "k_price": 0.0427,
+      "spread_pct": 0.07020828457756918
+    },
+    {
+      "coin": "CARV",
+      "mexc_usdt_vol": 74337.4994824,
+      "kucoin_usdt_vol": 32635.232376,
+      "avg_usdt_vol": 53486.3659292,
+      "m_price": 0.05882,
+      "k_price": 0.0587,
+      "spread_pct": 0.20401224073443575
+    },
+    {
+      "coin": "WOO",
+      "mexc_usdt_vol": 72020.6580664,
+      "kucoin_usdt_vol": 35216.770170582,
+      "avg_usdt_vol": 53618.714118491,
+      "m_price": 0.01906,
+      "k_price": 0.01911,
+      "spread_pct": 0.2616431187859653
+    },
+    {
+      "coin": "ROAM",
+      "mexc_usdt_vol": 93508.4276126,
+      "kucoin_usdt_vol": 14546.127985459998,
+      "avg_usdt_vol": 54027.27779903,
+      "m_price": 0.01667,
+      "k_price": 0.016609,
+      "spread_pct": 0.3659268146370847
+    },
+    {
+      "coin": "OVR",
+      "mexc_usdt_vol": 66475.19064799999,
+      "kucoin_usdt_vol": 42088.855338,
+      "avg_usdt_vol": 54282.02299299999,
+      "m_price": 0.0428,
+      "k_price": 0.04293,
+      "spread_pct": 0.30281854181226436
+    },
+    {
+      "coin": "PIN",
+      "mexc_usdt_vol": 79215.49462,
+      "kucoin_usdt_vol": 29404.402018,
+      "avg_usdt_vol": 54309.948319,
+      "m_price": 0.05336,
+      "k_price": 0.0523,
+      "spread_pct": 1.9865067466266837
+    },
+    {
+      "coin": "MORI",
+      "mexc_usdt_vol": 76878.98748873001,
+      "kucoin_usdt_vol": 32139.619656000003,
+      "avg_usdt_vol": 54509.30357236501,
+      "m_price": 0.004019,
+      "k_price": 0.00404,
+      "spread_pct": 0.5198019801980244
+    },
+    {
+      "coin": "CLANKER",
+      "mexc_usdt_vol": 91466.155,
+      "kucoin_usdt_vol": 17671.7436,
+      "avg_usdt_vol": 54568.9493,
+      "m_price": 24.86,
+      "k_price": 24.62,
+      "spread_pct": 0.9654062751407821
+    },
+    {
+      "coin": "CHEQ",
+      "mexc_usdt_vol": 16192.68743535,
+      "kucoin_usdt_vol": 93567.67683,
+      "avg_usdt_vol": 54880.182132675,
+      "m_price": 0.002845,
+      "k_price": 0.002839,
+      "spread_pct": 0.2108963093145845
+    },
+    {
+      "coin": "ESE",
+      "mexc_usdt_vol": 61419.55897314,
+      "kucoin_usdt_vol": 48363.700944000004,
+      "avg_usdt_vol": 54891.62995857,
+      "m_price": 0.005829,
+      "k_price": 0.005837,
+      "spread_pct": 0.13705670721261254
+    },
+    {
+      "coin": "FLOW",
+      "mexc_usdt_vol": 61066.3313936,
+      "kucoin_usdt_vol": 49419.8533165,
+      "avg_usdt_vol": 55243.09235505,
+      "m_price": 0.03961,
+      "k_price": 0.0395,
+      "spread_pct": 0.27770764958343597
+    },
+    {
+      "coin": "KMNO",
+      "mexc_usdt_vol": 63538.969196399994,
+      "kucoin_usdt_vol": 47513.676876000005,
+      "avg_usdt_vol": 55526.3230362,
+      "m_price": 0.01996,
+      "k_price": 0.019959,
+      "spread_pct": 0.005010020040067789
+    },
+    {
+      "coin": "PAAL",
+      "mexc_usdt_vol": 91273.6445928,
+      "kucoin_usdt_vol": 20639.066962,
+      "avg_usdt_vol": 55956.3557774,
+      "m_price": 0.01272,
+      "k_price": 0.01279,
+      "spread_pct": 0.5473025801407262
+    },
+    {
+      "coin": "B2",
+      "mexc_usdt_vol": 52796.1518032,
+      "kucoin_usdt_vol": 59287.421023999996,
+      "avg_usdt_vol": 56041.7864136,
+      "m_price": 0.63368,
+      "k_price": 0.6352,
+      "spread_pct": 0.23929471032745056
+    },
+    {
+      "coin": "ALU",
+      "mexc_usdt_vol": 61948.515702259996,
+      "kucoin_usdt_vol": 50150.026712,
+      "avg_usdt_vol": 56049.27120713,
+      "m_price": 0.005654,
+      "k_price": 0.00563,
+      "spread_pct": 0.4244782454899289
+    },
+    {
+      "coin": "PNUT",
+      "mexc_usdt_vol": 74558.5121831,
+      "kucoin_usdt_vol": 38903.192982,
+      "avg_usdt_vol": 56730.85258255,
+      "m_price": 0.05477,
+      "k_price": 0.0549,
+      "spread_pct": 0.23679417122039742
+    },
+    {
+      "coin": "LUMIA",
+      "mexc_usdt_vol": 83678.10525179999,
+      "kucoin_usdt_vol": 29879.533508000004,
+      "avg_usdt_vol": 56778.8193799,
+      "m_price": 0.13263,
+      "k_price": 0.1327,
+      "spread_pct": 0.0527505651846379
+    },
+    {
+      "coin": "NMR",
+      "mexc_usdt_vol": 73515.231159,
+      "kucoin_usdt_vol": 40505.024851199996,
+      "avg_usdt_vol": 57010.1280051,
+      "m_price": 9.077,
+      "k_price": 9.072,
+      "spread_pct": 0.0550842789467972
+    },
+    {
+      "coin": "CAMP",
+      "mexc_usdt_vol": 93289.90820096,
+      "kucoin_usdt_vol": 20891.534993999998,
+      "avg_usdt_vol": 57090.72159748,
+      "m_price": 0.001972,
+      "k_price": 0.001969,
+      "spread_pct": 0.15212981744421727
+    },
+    {
+      "coin": "STBL",
+      "mexc_usdt_vol": 74022.5155005,
+      "kucoin_usdt_vol": 40513.925852,
+      "avg_usdt_vol": 57268.22067625,
+      "m_price": 0.03395,
+      "k_price": 0.03398,
+      "spread_pct": 0.08828722778105429
+    },
+    {
+      "coin": "KSM",
+      "mexc_usdt_vol": 82071.35151760001,
+      "kucoin_usdt_vol": 33846.451199999996,
+      "avg_usdt_vol": 57958.9013588,
+      "m_price": 4.922,
+      "k_price": 4.92,
+      "spread_pct": 0.04063388866314059
+    },
+    {
+      "coin": "BTR",
+      "mexc_usdt_vol": 86714.20531539999,
+      "kucoin_usdt_vol": 29604.475584,
+      "avg_usdt_vol": 58159.340449699994,
+      "m_price": 0.03523,
+      "k_price": 0.03524,
+      "spread_pct": 0.028376844494900858
+    },
+    {
+      "coin": "SYRUP",
+      "mexc_usdt_vol": 67141.17142039999,
+      "kucoin_usdt_vol": 49837.812192,
+      "avg_usdt_vol": 58489.49180619999,
+      "m_price": 0.23548,
+      "k_price": 0.2352,
+      "spread_pct": 0.11890606420927573
+    },
+    {
+      "coin": "ELON",
+      "mexc_usdt_vol": 82336.79696077717,
+      "kucoin_usdt_vol": 35095.21500096112,
+      "avg_usdt_vol": 58716.005980869144,
+      "m_price": 4.227e-08,
+      "k_price": 4.226e-08,
+      "spread_pct": 0.023657440264958845
+    },
+    {
+      "coin": "RAY",
+      "mexc_usdt_vol": 60335.82544,
+      "kucoin_usdt_vol": 57119.375738079994,
+      "avg_usdt_vol": 58727.60058904,
+      "m_price": 0.6688,
+      "k_price": 0.6686,
+      "spread_pct": 0.0299043062200924
+    },
+    {
+      "coin": "JCT",
+      "mexc_usdt_vol": 37649.4887,
+      "kucoin_usdt_vol": 80407.170008,
+      "avg_usdt_vol": 59028.329354,
+      "m_price": 0.0025,
+      "k_price": 0.002501,
+      "spread_pct": 0.03998400639744633
+    },
+    {
+      "coin": "BABYDOGE",
+      "mexc_usdt_vol": 103195.0927413644,
+      "kucoin_usdt_vol": 15129.624440832635,
+      "avg_usdt_vol": 59162.35859109851,
+      "m_price": 4.285e-10,
+      "k_price": 4.29e-10,
+      "spread_pct": 0.11655011655011614
+    },
+    {
+      "coin": "HMSTR",
+      "mexc_usdt_vol": 60025.117205118004,
+      "kucoin_usdt_vol": 58347.0513912,
+      "avg_usdt_vol": 59186.084298159,
+      "m_price": 0.0001586,
+      "k_price": 0.0001586,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "SXP",
+      "mexc_usdt_vol": 55764.627476400005,
+      "kucoin_usdt_vol": 62949.21091,
+      "avg_usdt_vol": 59356.9191932,
+      "m_price": 0.00142,
+      "k_price": 0.001433,
+      "spread_pct": 0.90718771807397
+    },
+    {
+      "coin": "RWA",
+      "mexc_usdt_vol": 52956.32356447999,
+      "kucoin_usdt_vol": 66138.457386,
+      "avg_usdt_vol": 59547.39047524,
+      "m_price": 0.001736,
+      "k_price": 0.001671,
+      "spread_pct": 3.744239631336403
+    },
+    {
+      "coin": "TOSHI",
+      "mexc_usdt_vol": 91123.681989714,
+      "kucoin_usdt_vol": 29097.895326,
+      "avg_usdt_vol": 60110.788657856996,
+      "m_price": 0.0001851,
+      "k_price": 0.0001842,
+      "spread_pct": 0.48622366288492425
+    },
+    {
+      "coin": "IN",
+      "mexc_usdt_vol": 107220.977156,
+      "kucoin_usdt_vol": 13588.144950000002,
+      "avg_usdt_vol": 60404.561053,
+      "m_price": 0.0677,
+      "k_price": 0.06725,
+      "spread_pct": 0.6646971935007269
+    },
+    {
+      "coin": "ES",
+      "mexc_usdt_vol": 77786.29349880002,
+      "kucoin_usdt_vol": 43458.55335,
+      "avg_usdt_vol": 60622.42342440001,
+      "m_price": 0.14741,
+      "k_price": 0.1475,
+      "spread_pct": 0.06101694915252814
+    },
+    {
+      "coin": "XAN",
+      "mexc_usdt_vol": 76789.12311239999,
+      "kucoin_usdt_vol": 44750.76432,
+      "avg_usdt_vol": 60769.943716199996,
+      "m_price": 0.008367,
+      "k_price": 0.008394,
+      "spread_pct": 0.3216583273767093
+    },
+    {
+      "coin": "ONT",
+      "mexc_usdt_vol": 90431.94796019999,
+      "kucoin_usdt_vol": 31156.367066256,
+      "avg_usdt_vol": 60794.157513228,
+      "m_price": 0.07854,
+      "k_price": 0.07822,
+      "spread_pct": 0.4074357015533497
+    },
+    {
+      "coin": "TOWNS",
+      "mexc_usdt_vol": 68500.21876116999,
+      "kucoin_usdt_vol": 53110.289736,
+      "avg_usdt_vol": 60805.254248585,
+      "m_price": 0.003383,
+      "k_price": 0.003381,
+      "spread_pct": 0.0591191250369573
+    },
+    {
+      "coin": "SKL",
+      "mexc_usdt_vol": 61351.2680904,
+      "kucoin_usdt_vol": 60663.78123676368,
+      "avg_usdt_vol": 61007.52466358184,
+      "m_price": 0.007164,
+      "k_price": 0.00724,
+      "spread_pct": 1.049723756906073
+    },
+    {
+      "coin": "LOFI",
+      "mexc_usdt_vol": 24653.689697600003,
+      "kucoin_usdt_vol": 98454.99935,
+      "avg_usdt_vol": 61554.3445238,
+      "m_price": 0.00404,
+      "k_price": 0.00425,
+      "spread_pct": 4.941176470588237
+    },
+    {
+      "coin": "ADI",
+      "mexc_usdt_vol": 81822.990553,
+      "kucoin_usdt_vol": 41436.217944,
+      "avg_usdt_vol": 61629.6042485,
+      "m_price": 4.1401,
+      "k_price": 4.1373,
+      "spread_pct": 0.0676312166372933
+    },
+    {
+      "coin": "TAIKO",
+      "mexc_usdt_vol": 61560.07561200001,
+      "kucoin_usdt_vol": 63157.952896,
+      "avg_usdt_vol": 62359.01425400001,
+      "m_price": 0.1218,
+      "k_price": 0.1216,
+      "spread_pct": 0.16420361247947926
+    },
+    {
+      "coin": "EIGEN",
+      "mexc_usdt_vol": 107632.290276,
+      "kucoin_usdt_vol": 17282.056608000003,
+      "avg_usdt_vol": 62457.173442,
+      "m_price": 0.1841,
+      "k_price": 0.1842,
+      "spread_pct": 0.05428881650379423
+    },
+    {
+      "coin": "SFI",
+      "mexc_usdt_vol": 122820.79188705,
+      "kucoin_usdt_vol": 2131.379546,
+      "avg_usdt_vol": 62476.085716525,
+      "m_price": 0.005685,
+      "k_price": 0.00569,
+      "spread_pct": 0.08787346221440767
+    },
+    {
+      "coin": "IKA",
+      "mexc_usdt_vol": 60450.26392548,
+      "kucoin_usdt_vol": 64568.423526,
+      "avg_usdt_vol": 62509.34372574,
+      "m_price": 0.003669,
+      "k_price": 0.003657,
+      "spread_pct": 0.32706459525755954
+    },
+    {
+      "coin": "MERL",
+      "mexc_usdt_vol": 71562.22256760001,
+      "kucoin_usdt_vol": 53931.289197,
+      "avg_usdt_vol": 62746.7558823,
+      "m_price": 0.03841,
+      "k_price": 0.03847,
+      "spread_pct": 0.15596568754873294
+    },
+    {
+      "coin": "FIGHT",
+      "mexc_usdt_vol": 90752.7654724,
+      "kucoin_usdt_vol": 35460.18795,
+      "avg_usdt_vol": 63106.4767112,
+      "m_price": 0.00398,
+      "k_price": 0.003975,
+      "spread_pct": 0.12562814070351247
+    },
+    {
+      "coin": "ZTC",
+      "mexc_usdt_vol": 66494.507199143,
+      "kucoin_usdt_vol": 60642.50343799999,
+      "avg_usdt_vol": 63568.50531857149,
+      "m_price": 0.0005119,
+      "k_price": 0.0005087,
+      "spread_pct": 0.6251220941590305
+    },
+    {
+      "coin": "NUM",
+      "mexc_usdt_vol": 60674.769875280006,
+      "kucoin_usdt_vol": 67079.339407756,
+      "avg_usdt_vol": 63877.054641518,
+      "m_price": 0.004877,
+      "k_price": 0.00482,
+      "spread_pct": 1.1687512815255408
+    },
+    {
+      "coin": "ARCSOL",
+      "mexc_usdt_vol": 84119.2521242,
+      "kucoin_usdt_vol": 43688.66213199999,
+      "avg_usdt_vol": 63903.957128099995,
+      "m_price": 0.06478,
+      "k_price": 0.06491,
+      "spread_pct": 0.20027730704050414
+    },
+    {
+      "coin": "AEVO",
+      "mexc_usdt_vol": 68049.9470277,
+      "kucoin_usdt_vol": 60643.62584093476,
+      "avg_usdt_vol": 64346.78643431737,
+      "m_price": 0.02827,
+      "k_price": 0.02831,
+      "spread_pct": 0.14129282938890275
+    },
+    {
+      "coin": "DBR",
+      "mexc_usdt_vol": 58353.2330392,
+      "kucoin_usdt_vol": 70977.162816,
+      "avg_usdt_vol": 64665.1979276,
+      "m_price": 0.01396,
+      "k_price": 0.013968,
+      "spread_pct": 0.05727376861396999
+    },
+    {
+      "coin": "AVAAI",
+      "mexc_usdt_vol": 73571.74308161999,
+      "kucoin_usdt_vol": 55842.942440000006,
+      "avg_usdt_vol": 64707.34276081,
+      "m_price": 0.008582,
+      "k_price": 0.0086,
+      "spread_pct": 0.20930232558140296
+    },
+    {
+      "coin": "WARD",
+      "mexc_usdt_vol": 75086.70439167,
+      "kucoin_usdt_vol": 54676.15386,
+      "avg_usdt_vol": 64881.429125835,
+      "m_price": 0.003379,
+      "k_price": 0.003372,
+      "spread_pct": 0.2071618822136745
+    },
+    {
+      "coin": "GPS",
+      "mexc_usdt_vol": 56393.479077660006,
+      "kucoin_usdt_vol": 73609.619508,
+      "avg_usdt_vol": 65001.54929283001,
+      "m_price": 0.008826,
+      "k_price": 0.00894,
+      "spread_pct": 1.275167785234894
+    },
+    {
+      "coin": "GLQ",
+      "mexc_usdt_vol": 64552.084283519995,
+      "kucoin_usdt_vol": 66938.8937672,
+      "avg_usdt_vol": 65745.48902536,
+      "m_price": 0.004384,
+      "k_price": 0.004394,
+      "spread_pct": 0.22758306781976465
+    },
+    {
+      "coin": "HAEDAL",
+      "mexc_usdt_vol": 65015.83224900001,
+      "kucoin_usdt_vol": 66626.40857599999,
+      "avg_usdt_vol": 65821.1204125,
+      "m_price": 0.03429,
+      "k_price": 0.03419,
+      "spread_pct": 0.29163021289006374
+    },
+    {
+      "coin": "HSK",
+      "mexc_usdt_vol": 88555.61939400001,
+      "kucoin_usdt_vol": 44685.369404,
+      "avg_usdt_vol": 66620.494399,
+      "m_price": 0.1683,
+      "k_price": 0.1679,
+      "spread_pct": 0.23767082590612681
+    },
+    {
+      "coin": "MAVIA",
+      "mexc_usdt_vol": 65855.960874,
+      "kucoin_usdt_vol": 67746.0308868,
+      "avg_usdt_vol": 66800.9958804,
+      "m_price": 0.03482,
+      "k_price": 0.03486,
+      "spread_pct": 0.1147446930579613
+    },
+    {
+      "coin": "CELO",
+      "mexc_usdt_vol": 103389.6220507,
+      "kucoin_usdt_vol": 30526.256222980002,
+      "avg_usdt_vol": 66957.93913684,
+      "m_price": 0.09433,
+      "k_price": 0.0941,
+      "spread_pct": 0.24382487013674772
+    },
+    {
+      "coin": "YFI",
+      "mexc_usdt_vol": 59449.29984,
+      "kucoin_usdt_vol": 75044.4192648,
+      "avg_usdt_vol": 67246.8595524,
+      "m_price": 2707.2,
+      "k_price": 2722.54,
+      "spread_pct": 0.5634444305685186
+    },
+    {
+      "coin": "DN",
+      "mexc_usdt_vol": 63409.8758892,
+      "kucoin_usdt_vol": 72001.71209,
+      "avg_usdt_vol": 67705.7939896,
+      "m_price": 0.09186,
+      "k_price": 0.0917,
+      "spread_pct": 0.17417809710428203
+    },
+    {
+      "coin": "JELLYJELLY",
+      "mexc_usdt_vol": 64713.17688407999,
+      "kucoin_usdt_vol": 70903.166688,
+      "avg_usdt_vol": 67808.17178604,
+      "m_price": 0.045873,
+      "k_price": 0.04584,
+      "spread_pct": 0.07193774115492406
+    },
+    {
+      "coin": "BAN",
+      "mexc_usdt_vol": 69134.0775576,
+      "kucoin_usdt_vol": 66599.1842964,
+      "avg_usdt_vol": 67866.63092699999,
+      "m_price": 0.07788,
+      "k_price": 0.07802,
+      "spread_pct": 0.1794411689310449
+    },
+    {
+      "coin": "BNC",
+      "mexc_usdt_vol": 62932.97506499999,
+      "kucoin_usdt_vol": 73177.552728,
+      "avg_usdt_vol": 68055.2638965,
+      "m_price": 0.03235,
+      "k_price": 0.03206,
+      "spread_pct": 0.8964451313755754
+    },
+    {
+      "coin": "MUBARAK",
+      "mexc_usdt_vol": 116930.00112192,
+      "kucoin_usdt_vol": 19713.43592,
+      "avg_usdt_vol": 68321.71852096,
+      "m_price": 0.013944,
+      "k_price": 0.0139,
+      "spread_pct": 0.3155479059093563
+    },
+    {
+      "coin": "KLV",
+      "mexc_usdt_vol": 57728.638621340004,
+      "kucoin_usdt_vol": 79998.5330695368,
+      "avg_usdt_vol": 68863.5858454384,
+      "m_price": 0.0009089,
+      "k_price": 0.000909,
+      "spread_pct": 0.011001100110005305
+    },
+    {
+      "coin": "ALICE",
+      "mexc_usdt_vol": 78098.7257772,
+      "kucoin_usdt_vol": 59782.31648679999,
+      "avg_usdt_vol": 68940.521132,
+      "m_price": 0.15459,
+      "k_price": 0.1541,
+      "spread_pct": 0.3169674623196961
+    },
+    {
+      "coin": "VANA",
+      "mexc_usdt_vol": 106172.24772,
+      "kucoin_usdt_vol": 32641.674099999997,
+      "avg_usdt_vol": 69406.96091,
+      "m_price": 1.514,
+      "k_price": 1.505,
+      "spread_pct": 0.594451783355358
+    },
+    {
+      "coin": "POP",
+      "mexc_usdt_vol": 54350.614810716004,
+      "kucoin_usdt_vol": 84849.445674,
+      "avg_usdt_vol": 69600.030242358,
+      "m_price": 0.0017574,
+      "k_price": 0.001743,
+      "spread_pct": 0.8193922840559994
+    },
+    {
+      "coin": "VSYS",
+      "mexc_usdt_vol": 52156.02458682,
+      "kucoin_usdt_vol": 87656.812758,
+      "avg_usdt_vol": 69906.41867241,
+      "m_price": 0.0002355,
+      "k_price": 0.0002367,
+      "spread_pct": 0.5069708491761732
+    },
+    {
+      "coin": "LQTY",
+      "mexc_usdt_vol": 68331.643899,
+      "kucoin_usdt_vol": 72305.38943864,
+      "avg_usdt_vol": 70318.51666882,
+      "m_price": 0.3117,
+      "k_price": 0.3118,
+      "spread_pct": 0.03207184092368329
+    },
+    {
+      "coin": "DOGS",
+      "mexc_usdt_vol": 63391.3816206864,
+      "kucoin_usdt_vol": 78120.80858788,
+      "avg_usdt_vol": 70756.0951042832,
+      "m_price": 3.316e-05,
+      "k_price": 3.317e-05,
+      "spread_pct": 0.030147723846854376
+    },
+    {
+      "coin": "U2U",
+      "mexc_usdt_vol": 55681.12300344,
+      "kucoin_usdt_vol": 86628.64161600001,
+      "avg_usdt_vol": 71154.88230972001,
+      "m_price": 0.000424,
+      "k_price": 0.000424,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "DODO",
+      "mexc_usdt_vol": 77610.49965689999,
+      "kucoin_usdt_vol": 65653.15568,
+      "avg_usdt_vol": 71631.82766844999,
+      "m_price": 0.02001,
+      "k_price": 0.02009,
+      "spread_pct": 0.3982080637132912
+    },
+    {
+      "coin": "LKI",
+      "mexc_usdt_vol": 53164.738373538006,
+      "kucoin_usdt_vol": 90482.771687,
+      "avg_usdt_vol": 71823.755030269,
+      "m_price": 0.0002211,
+      "k_price": 0.0002219,
+      "spread_pct": 0.3605227579990952
+    },
+    {
+      "coin": "MEZO",
+      "mexc_usdt_vol": 71013.3246976,
+      "kucoin_usdt_vol": 72647.37125,
+      "avg_usdt_vol": 71830.3479738,
+      "m_price": 0.03712,
+      "k_price": 0.03725,
+      "spread_pct": 0.34899328859059914
+    },
+    {
+      "coin": "CSPR",
+      "mexc_usdt_vol": 63064.7656592,
+      "kucoin_usdt_vol": 81953.32608,
+      "avg_usdt_vol": 72509.0458696,
+      "m_price": 0.00298,
+      "k_price": 0.002976,
+      "spread_pct": 0.13422818791946636
+    },
+    {
+      "coin": "XU3O8",
+      "mexc_usdt_vol": 52454.380600000004,
+      "kucoin_usdt_vol": 92947.32935999999,
+      "avg_usdt_vol": 72700.85498,
+      "m_price": 5.42,
+      "k_price": 5.433,
+      "spread_pct": 0.23927848334253454
+    },
+    {
+      "coin": "RVV",
+      "mexc_usdt_vol": 124607.72899490301,
+      "kucoin_usdt_vol": 21508.338139199997,
+      "avg_usdt_vol": 73058.0335670515,
+      "m_price": 0.0001873,
+      "k_price": 0.0001881,
+      "spread_pct": 0.42530568846357913
+    },
+    {
+      "coin": "PEOPLE",
+      "mexc_usdt_vol": 68741.97273431999,
+      "kucoin_usdt_vol": 77763.64354302,
+      "avg_usdt_vol": 73252.80813866999,
+      "m_price": 0.008126,
+      "k_price": 0.00809,
+      "spread_pct": 0.44302239724341097
+    },
+    {
+      "coin": "DUSK",
+      "mexc_usdt_vol": 103583.6849766,
+      "kucoin_usdt_vol": 43264.652271595995,
+      "avg_usdt_vol": 73424.16862409799,
+      "m_price": 0.13974,
+      "k_price": 0.14042,
+      "spread_pct": 0.484261501210644
+    },
+    {
+      "coin": "SAND",
+      "mexc_usdt_vol": 96060.6482164,
+      "kucoin_usdt_vol": 51274.346814079996,
+      "avg_usdt_vol": 73667.49751524,
+      "m_price": 0.07892,
+      "k_price": 0.07904,
+      "spread_pct": 0.15182186234817197
+    },
+    {
+      "coin": "IP",
+      "mexc_usdt_vol": 92521.02545,
+      "kucoin_usdt_vol": 55495.814080000004,
+      "avg_usdt_vol": 74008.419765,
+      "m_price": 0.5234,
+      "k_price": 0.52402,
+      "spread_pct": 0.11831609480555416
+    },
+    {
+      "coin": "OORT",
+      "mexc_usdt_vol": 86167.8648809,
+      "kucoin_usdt_vol": 61996.318912,
+      "avg_usdt_vol": 74082.09189645,
+      "m_price": 0.01727,
+      "k_price": 0.01744,
+      "spread_pct": 0.974770642201835
+    },
+    {
+      "coin": "COTI",
+      "mexc_usdt_vol": 61368.03160950001,
+      "kucoin_usdt_vol": 87793.82456719999,
+      "avg_usdt_vol": 74580.92808835,
+      "m_price": 0.01463,
+      "k_price": 0.01462,
+      "spread_pct": 0.06835269993165637
+    },
+    {
+      "coin": "TURTLE",
+      "mexc_usdt_vol": 79895.8310448,
+      "kucoin_usdt_vol": 69649.289556,
+      "avg_usdt_vol": 74772.5603004,
+      "m_price": 0.04702,
+      "k_price": 0.04711,
+      "spread_pct": 0.19104224156230057
+    },
+    {
+      "coin": "MANYU",
+      "mexc_usdt_vol": 112176.4787798293,
+      "kucoin_usdt_vol": 37955.1808739012,
+      "avg_usdt_vol": 75065.82982686524,
+      "m_price": 6.384e-09,
+      "k_price": 6.37e-09,
+      "spread_pct": 0.21929824561403755
+    },
+    {
+      "coin": "BOB",
+      "mexc_usdt_vol": 80329.84934575,
+      "kucoin_usdt_vol": 70119.61956,
+      "avg_usdt_vol": 75224.73445287501,
+      "m_price": 0.006085,
+      "k_price": 0.0061,
+      "spread_pct": 0.24590163934426648
+    },
+    {
+      "coin": "BIRB",
+      "mexc_usdt_vol": 80872.10495099999,
+      "kucoin_usdt_vol": 70120.38542400001,
+      "avg_usdt_vol": 75496.2451875,
+      "m_price": 0.1611,
+      "k_price": 0.16084,
+      "spread_pct": 0.16139044072003877
+    },
+    {
+      "coin": "BLUR",
+      "mexc_usdt_vol": 101063.9783051,
+      "kucoin_usdt_vol": 51191.46697260001,
+      "avg_usdt_vol": 76127.72263885,
+      "m_price": 0.03349,
+      "k_price": 0.03323,
+      "spread_pct": 0.7763511495968837
+    },
+    {
+      "coin": "TRADE",
+      "mexc_usdt_vol": 64430.508249,
+      "kucoin_usdt_vol": 88170.917952,
+      "avg_usdt_vol": 76300.7131005,
+      "m_price": 0.04045,
+      "k_price": 0.04056,
+      "spread_pct": 0.27120315581853793
+    },
+    {
+      "coin": "TRUST",
+      "mexc_usdt_vol": 88724.727755,
+      "kucoin_usdt_vol": 64014.69744,
+      "avg_usdt_vol": 76369.71259750001,
+      "m_price": 0.07178,
+      "k_price": 0.07155,
+      "spread_pct": 0.32042351629979676
+    },
+    {
+      "coin": "2Z",
+      "mexc_usdt_vol": 58098.008232,
+      "kucoin_usdt_vol": 95050.27073599999,
+      "avg_usdt_vol": 76574.139484,
+      "m_price": 0.08415,
+      "k_price": 0.08408,
+      "spread_pct": 0.08318478906714274
+    },
+    {
+      "coin": "TURBO",
+      "mexc_usdt_vol": 115932.711948435,
+      "kucoin_usdt_vol": 37352.36022,
+      "avg_usdt_vol": 76642.5360842175,
+      "m_price": 0.0011859,
+      "k_price": 0.00119,
+      "spread_pct": 0.3445378151260633
+    },
+    {
+      "coin": "EDEN",
+      "mexc_usdt_vol": 93895.37327889999,
+      "kucoin_usdt_vol": 60357.557089999995,
+      "avg_usdt_vol": 77126.46518444999,
+      "m_price": 0.03893,
+      "k_price": 0.0395,
+      "spread_pct": 1.443037974683547
+    },
+    {
+      "coin": "BSW",
+      "mexc_usdt_vol": 60220.163329359995,
+      "kucoin_usdt_vol": 94478.3842406,
+      "avg_usdt_vol": 77349.27378498,
+      "m_price": 0.001042,
+      "k_price": 0.001,
+      "spread_pct": 4.030710172744715
+    },
+    {
+      "coin": "EMYC",
+      "mexc_usdt_vol": 69208.24896216001,
+      "kucoin_usdt_vol": 85899.74552,
+      "avg_usdt_vol": 77553.99724108001,
+      "m_price": 0.004302,
+      "k_price": 0.00428,
+      "spread_pct": 0.5113900511390125
+    },
+    {
+      "coin": "XOXO",
+      "mexc_usdt_vol": 91451.3828830356,
+      "kucoin_usdt_vol": 64593.983764259996,
+      "avg_usdt_vol": 78022.6833236478,
+      "m_price": 8.066e-05,
+      "k_price": 8.007e-05,
+      "spread_pct": 0.7314654103645006
+    },
+    {
+      "coin": "PHA",
+      "mexc_usdt_vol": 102056.8838575,
+      "kucoin_usdt_vol": 54021.978137879996,
+      "avg_usdt_vol": 78039.43099769,
+      "m_price": 0.03245,
+      "k_price": 0.0326,
+      "spread_pct": 0.460122699386495
+    },
+    {
+      "coin": "COLS",
+      "mexc_usdt_vol": 52019.5231192,
+      "kucoin_usdt_vol": 104561.68405799998,
+      "avg_usdt_vol": 78290.60358859999,
+      "m_price": 0.01079,
+      "k_price": 0.01079,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "EGLD",
+      "mexc_usdt_vol": 97671.698432,
+      "kucoin_usdt_vol": 59314.954423999996,
+      "avg_usdt_vol": 78493.326428,
+      "m_price": 4.312,
+      "k_price": 4.31,
+      "spread_pct": 0.04638218923934759
+    },
+    {
+      "coin": "MASK",
+      "mexc_usdt_vol": 112332.142048,
+      "kucoin_usdt_vol": 45734.4581983,
+      "avg_usdt_vol": 79033.30012315,
+      "m_price": 0.5152,
+      "k_price": 0.5155,
+      "spread_pct": 0.05819592628515364
+    },
+    {
+      "coin": "OXT",
+      "mexc_usdt_vol": 61141.64071659,
+      "kucoin_usdt_vol": 97478.08473437002,
+      "avg_usdt_vol": 79309.86272548001,
+      "m_price": 0.009561,
+      "k_price": 0.00961,
+      "spread_pct": 0.5098855359001085
+    },
+    {
+      "coin": "XPIN",
+      "mexc_usdt_vol": 81238.366613339,
+      "kucoin_usdt_vol": 77542.71907199999,
+      "avg_usdt_vol": 79390.5428426695,
+      "m_price": 0.0013063,
+      "k_price": 0.0013065,
+      "spread_pct": 0.015308075009559623
+    },
+    {
+      "coin": "ATH",
+      "mexc_usdt_vol": 80277.67858910999,
+      "kucoin_usdt_vol": 78505.6339266,
+      "avg_usdt_vol": 79391.656257855,
+      "m_price": 0.006101,
+      "k_price": 0.006101,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "TRUF",
+      "mexc_usdt_vol": 54578.724123,
+      "kucoin_usdt_vol": 105380.97451199999,
+      "avg_usdt_vol": 79979.84931749999,
+      "m_price": 0.00462,
+      "k_price": 0.00458,
+      "spread_pct": 0.865800865800868
+    },
+    {
+      "coin": "TOWER",
+      "mexc_usdt_vol": 31441.382759516,
+      "kucoin_usdt_vol": 128944.35065099999,
+      "avg_usdt_vol": 80192.866705258,
+      "m_price": 0.0002491,
+      "k_price": 0.0002465,
+      "spread_pct": 1.0437575270975548
+    },
+    {
+      "coin": "ORAI",
+      "mexc_usdt_vol": 72988.762788,
+      "kucoin_usdt_vol": 88428.68705499999,
+      "avg_usdt_vol": 80708.72492149999,
+      "m_price": 0.5011,
+      "k_price": 0.505,
+      "spread_pct": 0.7722772277227752
+    },
+    {
+      "coin": "CETUS",
+      "mexc_usdt_vol": 87401.271335,
+      "kucoin_usdt_vol": 74030.49698226,
+      "avg_usdt_vol": 80715.88415863,
+      "m_price": 0.02815,
+      "k_price": 0.02814,
+      "spread_pct": 0.03552397868562367
+    },
+    {
+      "coin": "TLOS",
+      "mexc_usdt_vol": 70953.74710559999,
+      "kucoin_usdt_vol": 91253.03513391998,
+      "avg_usdt_vol": 81103.39111976,
+      "m_price": 0.00912,
+      "k_price": 0.00913,
+      "spread_pct": 0.10952902519167135
+    },
+    {
+      "coin": "SWARMS",
+      "mexc_usdt_vol": 70833.6846048,
+      "kucoin_usdt_vol": 93065.32848,
+      "avg_usdt_vol": 81949.50654239999,
+      "m_price": 0.01794,
+      "k_price": 0.01788,
+      "spread_pct": 0.3344481605351227
+    },
+    {
+      "coin": "SOLV",
+      "mexc_usdt_vol": 108230.30956384,
+      "kucoin_usdt_vol": 56030.956586,
+      "avg_usdt_vol": 82130.63307492,
+      "m_price": 0.004064,
+      "k_price": 0.00407,
+      "spread_pct": 0.14742014742014567
+    },
+    {
+      "coin": "PTB",
+      "mexc_usdt_vol": 66661.589419902,
+      "kucoin_usdt_vol": 97793.035722,
+      "avg_usdt_vol": 82227.312570951,
+      "m_price": 0.0008758,
+      "k_price": 0.000873,
+      "spread_pct": 0.3197076958209714
+    },
+    {
+      "coin": "HEART",
+      "mexc_usdt_vol": 61197.592867467,
+      "kucoin_usdt_vol": 103850.8952073152,
+      "avg_usdt_vol": 82524.2440373911,
+      "m_price": 0.0004767,
+      "k_price": 0.000476,
+      "spread_pct": 0.14684287812040336
+    },
+    {
+      "coin": "ALPINE",
+      "mexc_usdt_vol": 158007.194492,
+      "kucoin_usdt_vol": 10499.619627999999,
+      "avg_usdt_vol": 84253.40706,
+      "m_price": 0.4756,
+      "k_price": 0.4709,
+      "spread_pct": 0.9882253994953821
+    },
+    {
+      "coin": "KGEN",
+      "mexc_usdt_vol": 92913.552252,
+      "kucoin_usdt_vol": 75952.76736,
+      "avg_usdt_vol": 84433.159806,
+      "m_price": 0.1868,
+      "k_price": 0.1888,
+      "spread_pct": 1.059322033898306
+    },
+    {
+      "coin": "EAT",
+      "mexc_usdt_vol": 54859.59558939999,
+      "kucoin_usdt_vol": 114246.82431000001,
+      "avg_usdt_vol": 84553.2099497,
+      "m_price": 0.02098,
+      "k_price": 0.02091,
+      "spread_pct": 0.33365109628215994
+    },
+    {
+      "coin": "MORPHO",
+      "mexc_usdt_vol": 70977.2128,
+      "kucoin_usdt_vol": 98232.936676,
+      "avg_usdt_vol": 84605.074738,
+      "m_price": 1.8596,
+      "k_price": 1.8613,
+      "spread_pct": 0.09133401386128162
+    },
+    {
+      "coin": "PIXEL",
+      "mexc_usdt_vol": 69598.8121984,
+      "kucoin_usdt_vol": 100477.45234956,
+      "avg_usdt_vol": 85038.13227398001,
+      "m_price": 0.007808,
+      "k_price": 0.0078,
+      "spread_pct": 0.10245901639344512
+    },
+    {
+      "coin": "SCRT",
+      "mexc_usdt_vol": 94852.72540970001,
+      "kucoin_usdt_vol": 76682.0025884,
+      "avg_usdt_vol": 85767.36399905001,
+      "m_price": 0.11093,
+      "k_price": 0.1111,
+      "spread_pct": 0.15301530153015613
+    },
+    {
+      "coin": "PROVE",
+      "mexc_usdt_vol": 51588.611067000005,
+      "kucoin_usdt_vol": 121298.71235,
+      "avg_usdt_vol": 86443.6617085,
+      "m_price": 0.2523,
+      "k_price": 0.2525,
+      "spread_pct": 0.07920792079207048
+    },
+    {
+      "coin": "RECALL",
+      "mexc_usdt_vol": 116808.611137,
+      "kucoin_usdt_vol": 56371.29867000001,
+      "avg_usdt_vol": 86589.95490350001,
+      "m_price": 0.0503,
+      "k_price": 0.0505,
+      "spread_pct": 0.3960396039604073
+    },
+    {
+      "coin": "VSN",
+      "mexc_usdt_vol": 114825.34070249999,
+      "kucoin_usdt_vol": 58985.442368,
+      "avg_usdt_vol": 86905.39153525,
+      "m_price": 0.05275,
+      "k_price": 0.052768,
+      "spread_pct": 0.03411158277744869
+    },
+    {
+      "coin": "PUSH",
+      "mexc_usdt_vol": 61273.87793495999,
+      "kucoin_usdt_vol": 113353.26172800001,
+      "avg_usdt_vol": 87313.56983148001,
+      "m_price": 0.011764,
+      "k_price": 0.01176,
+      "spread_pct": 0.034002040122411856
+    },
+    {
+      "coin": "SKY",
+      "mexc_usdt_vol": 67618.15127999999,
+      "kucoin_usdt_vol": 107233.11897000001,
+      "avg_usdt_vol": 87425.635125,
+      "m_price": 0.0834,
+      "k_price": 0.08339,
+      "spread_pct": 0.011990407673856262
+    },
+    {
+      "coin": "CYPR",
+      "mexc_usdt_vol": 85136.61914955,
+      "kucoin_usdt_vol": 89825.178626,
+      "avg_usdt_vol": 87480.898887775,
+      "m_price": 0.010917,
+      "k_price": 0.01091,
+      "spread_pct": 0.06412017953650327
+    },
+    {
+      "coin": "MOODENG",
+      "mexc_usdt_vol": 93765.3689052,
+      "kucoin_usdt_vol": 82200.30036000001,
+      "avg_usdt_vol": 87982.8346326,
+      "m_price": 0.06068,
+      "k_price": 0.0606,
+      "spread_pct": 0.13183915622939477
+    },
+    {
+      "coin": "CPOOL",
+      "mexc_usdt_vol": 70373.2326348,
+      "kucoin_usdt_vol": 105891.846592224,
+      "avg_usdt_vol": 88132.539613512,
+      "m_price": 0.02812,
+      "k_price": 0.02814,
+      "spread_pct": 0.07107320540156072
+    },
+    {
+      "coin": "BLZ",
+      "mexc_usdt_vol": 55670.64050205,
+      "kucoin_usdt_vol": 121585.552754,
+      "avg_usdt_vol": 88628.096628025,
+      "m_price": 0.010045,
+      "k_price": 0.01,
+      "spread_pct": 0.44798407167745047
+    },
+    {
+      "coin": "BNKR",
+      "mexc_usdt_vol": 57212.160743399,
+      "kucoin_usdt_vol": 121495.454574,
+      "avg_usdt_vol": 89353.8076586995,
+      "m_price": 0.0003307,
+      "k_price": 0.000331,
+      "spread_pct": 0.0906344410876155
+    },
+    {
+      "coin": "METIS",
+      "mexc_usdt_vol": 85889.03991600001,
+      "kucoin_usdt_vol": 93041.59566,
+      "avg_usdt_vol": 89465.31778800001,
+      "m_price": 3.644,
+      "k_price": 3.66,
+      "spread_pct": 0.43715846994535557
+    },
+    {
+      "coin": "ART",
+      "mexc_usdt_vol": 56850.35083677,
+      "kucoin_usdt_vol": 123441.1731916,
+      "avg_usdt_vol": 90145.76201418499,
+      "m_price": 0.000267,
+      "k_price": 0.0002629,
+      "spread_pct": 1.5355805243445662
+    },
+    {
+      "coin": "VELVET",
+      "mexc_usdt_vol": 132275.563488,
+      "kucoin_usdt_vol": 48328.691223999995,
+      "avg_usdt_vol": 90302.12735600001,
+      "m_price": 0.0922,
+      "k_price": 0.09187,
+      "spread_pct": 0.35791757049892714
+    },
+    {
+      "coin": "ENS",
+      "mexc_usdt_vol": 64833.44092,
+      "kucoin_usdt_vol": 116247.4286272,
+      "avg_usdt_vol": 90540.4347736,
+      "m_price": 6.364,
+      "k_price": 6.368,
+      "spread_pct": 0.06281407035176582
+    },
+    {
+      "coin": "TUT",
+      "mexc_usdt_vol": 149921.35128444,
+      "kucoin_usdt_vol": 33110.070552000005,
+      "avg_usdt_vol": 91515.71091822,
+      "m_price": 0.011329,
+      "k_price": 0.01116,
+      "spread_pct": 1.4917468443816817
+    },
+    {
+      "coin": "EDU",
+      "mexc_usdt_vol": 163264.09571449997,
+      "kucoin_usdt_vol": 20177.94867,
+      "avg_usdt_vol": 91721.02219224999,
+      "m_price": 0.04649,
+      "k_price": 0.0465,
+      "spread_pct": 0.021505376344092605
+    },
+    {
+      "coin": "ROSE",
+      "mexc_usdt_vol": 83009.09572776001,
+      "kucoin_usdt_vol": 101254.43324433599,
+      "avg_usdt_vol": 92131.76448604799,
+      "m_price": 0.010854,
+      "k_price": 0.01086,
+      "spread_pct": 0.05524861878452175
+    },
+    {
+      "coin": "ZK",
+      "mexc_usdt_vol": 116832.9721356,
+      "kucoin_usdt_vol": 71136.3242,
+      "avg_usdt_vol": 93984.6481678,
+      "m_price": 0.01662,
+      "k_price": 0.01658,
+      "spread_pct": 0.24067388688326338
+    },
+    {
+      "coin": "A",
+      "mexc_usdt_vol": 74607.9060381,
+      "kucoin_usdt_vol": 115130.68996,
+      "avg_usdt_vol": 94869.29799905,
+      "m_price": 0.09041,
+      "k_price": 0.0905,
+      "spread_pct": 0.09944751381214681
+    },
+    {
+      "coin": "APR",
+      "mexc_usdt_vol": 61829.3345082,
+      "kucoin_usdt_vol": 129559.41081999999,
+      "avg_usdt_vol": 95694.3726641,
+      "m_price": 0.17283,
+      "k_price": 0.1735,
+      "spread_pct": 0.3861671469740497
+    },
+    {
+      "coin": "ETN",
+      "mexc_usdt_vol": 64252.6135392,
+      "kucoin_usdt_vol": 129071.77080000001,
+      "avg_usdt_vol": 96662.1921696,
+      "m_price": 0.001038,
+      "k_price": 0.001038,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "DAG",
+      "mexc_usdt_vol": 73383.26267574,
+      "kucoin_usdt_vol": 120538.48611396279,
+      "avg_usdt_vol": 96960.87439485139,
+      "m_price": 0.007597,
+      "k_price": 0.007618,
+      "spread_pct": 0.2756629036492542
+    },
+    {
+      "coin": "PEAQ",
+      "mexc_usdt_vol": 46776.846025000006,
+      "kucoin_usdt_vol": 148455.95375000002,
+      "avg_usdt_vol": 97616.39988750001,
+      "m_price": 0.01625,
+      "k_price": 0.01625,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "SOON",
+      "mexc_usdt_vol": 140416.79139,
+      "kucoin_usdt_vol": 54943.827119999994,
+      "avg_usdt_vol": 97680.309255,
+      "m_price": 0.1845,
+      "k_price": 0.1846,
+      "spread_pct": 0.054171180931738346
+    },
+    {
+      "coin": "MARS4",
+      "mexc_usdt_vol": 72109.212938162,
+      "kucoin_usdt_vol": 124107.04146934081,
+      "avg_usdt_vol": 98108.12720375141,
+      "m_price": 9.697e-05,
+      "k_price": 9.7e-05,
+      "spread_pct": 0.03092783505154435
+    },
+    {
+      "coin": "SAPIEN",
+      "mexc_usdt_vol": 90852.7488974,
+      "kucoin_usdt_vol": 105821.4245,
+      "avg_usdt_vol": 98337.0866987,
+      "m_price": 0.09238,
+      "k_price": 0.0925,
+      "spread_pct": 0.12972972972972446
+    },
+    {
+      "coin": "XMN",
+      "mexc_usdt_vol": 82639.91816160001,
+      "kucoin_usdt_vol": 114266.046108,
+      "avg_usdt_vol": 98452.9821348,
+      "m_price": 0.00464,
+      "k_price": 0.00463,
+      "spread_pct": 0.21551724137932027
+    },
+    {
+      "coin": "DEEP",
+      "mexc_usdt_vol": 70383.98344878001,
+      "kucoin_usdt_vol": 126803.764464,
+      "avg_usdt_vol": 98593.87395639002,
+      "m_price": 0.031302,
+      "k_price": 0.031278,
+      "spread_pct": 0.07667241709795918
+    },
+    {
+      "coin": "ARKM",
+      "mexc_usdt_vol": 63070.5432744,
+      "kucoin_usdt_vol": 134291.38165838,
+      "avg_usdt_vol": 98680.96246639,
+      "m_price": 0.12312,
+      "k_price": 0.1231,
+      "spread_pct": 0.016244314489922227
+    },
+    {
+      "coin": "PROM",
+      "mexc_usdt_vol": 61155.14398400001,
+      "kucoin_usdt_vol": 138618.288022,
+      "avg_usdt_vol": 99886.71600300001,
+      "m_price": 2.2768,
+      "k_price": 2.269,
+      "spread_pct": 0.3425860857343653
+    },
+    {
+      "coin": "RSR",
+      "mexc_usdt_vol": 89421.68193332,
+      "kucoin_usdt_vol": 110762.6255730752,
+      "avg_usdt_vol": 100092.1537531976,
+      "m_price": 0.001804,
+      "k_price": 0.001808,
+      "spread_pct": 0.22123893805309075
+    },
+    {
+      "coin": "ALLO",
+      "mexc_usdt_vol": 86909.44389400001,
+      "kucoin_usdt_vol": 116395.918262,
+      "avg_usdt_vol": 101652.68107800001,
+      "m_price": 0.12341,
+      "k_price": 0.1237,
+      "spread_pct": 0.2344381568310417
+    },
+    {
+      "coin": "WBTC",
+      "mexc_usdt_vol": 176629.09503277,
+      "kucoin_usdt_vol": 27848.53652,
+      "avg_usdt_vol": 102238.815776385,
+      "m_price": 77655.88,
+      "k_price": 77919.8,
+      "spread_pct": 0.33870723487483057
+    },
+    {
+      "coin": "VELO",
+      "mexc_usdt_vol": 20945.99424504,
+      "kucoin_usdt_vol": 183950.617647432,
+      "avg_usdt_vol": 102448.305946236,
+      "m_price": 0.003144,
+      "k_price": 0.003156,
+      "spread_pct": 0.38022813688212476
+    },
+    {
+      "coin": "SD",
+      "mexc_usdt_vol": 200295.89316600002,
+      "kucoin_usdt_vol": 5131.7060371200005,
+      "avg_usdt_vol": 102713.79960156001,
+      "m_price": 0.1406,
+      "k_price": 0.1404,
+      "spread_pct": 0.14224751066856736
+    },
+    {
+      "coin": "DEGEN",
+      "mexc_usdt_vol": 56555.09114831401,
+      "kucoin_usdt_vol": 149343.8375,
+      "avg_usdt_vol": 102949.464324157,
+      "m_price": 0.0006798,
+      "k_price": 0.00067,
+      "spread_pct": 1.4416004707266874
+    },
+    {
+      "coin": "GRT",
+      "mexc_usdt_vol": 60259.84633099999,
+      "kucoin_usdt_vol": 146861.858272194,
+      "avg_usdt_vol": 103560.85230159698,
+      "m_price": 0.02482,
+      "k_price": 0.02483,
+      "spread_pct": 0.04027386226340339
+    },
+    {
+      "coin": "DEXE",
+      "mexc_usdt_vol": 97549.39349999999,
+      "kucoin_usdt_vol": 109792.24071764,
+      "avg_usdt_vol": 103670.81710881999,
+      "m_price": 13.325,
+      "k_price": 13.3393,
+      "spread_pct": 0.10720202709287913
+    },
+    {
+      "coin": "HFT",
+      "mexc_usdt_vol": 56121.58370260001,
+      "kucoin_usdt_vol": 152590.57612,
+      "avg_usdt_vol": 104356.07991130001,
+      "m_price": 0.01574,
+      "k_price": 0.0158,
+      "spread_pct": 0.37974683544304444
+    },
+    {
+      "coin": "ARTY",
+      "mexc_usdt_vol": 60665.81277999999,
+      "kucoin_usdt_vol": 149723.26936,
+      "avg_usdt_vol": 105194.54107,
+      "m_price": 0.05492,
+      "k_price": 0.05524,
+      "spread_pct": 0.5792903692976119
+    },
+    {
+      "coin": "LAT",
+      "mexc_usdt_vol": 53801.483191620006,
+      "kucoin_usdt_vol": 156999.89788,
+      "avg_usdt_vol": 105400.69053581,
+      "m_price": 0.001322,
+      "k_price": 0.00133,
+      "spread_pct": 0.6015037593984945
+    },
+    {
+      "coin": "GHX",
+      "mexc_usdt_vol": 86625.9046404,
+      "kucoin_usdt_vol": 124423.78461799999,
+      "avg_usdt_vol": 105524.8446292,
+      "m_price": 0.00886,
+      "k_price": 0.008993,
+      "spread_pct": 1.4789280551540025
+    },
+    {
+      "coin": "FOGO",
+      "mexc_usdt_vol": 58596.038874,
+      "kucoin_usdt_vol": 153623.84899199998,
+      "avg_usdt_vol": 106109.94393299999,
+      "m_price": 0.01865,
+      "k_price": 0.01864,
+      "spread_pct": 0.05361930294905948
+    },
+    {
+      "coin": "MGO",
+      "mexc_usdt_vol": 56256.44749970001,
+      "kucoin_usdt_vol": 156442.75408999997,
+      "avg_usdt_vol": 106349.60079484999,
+      "m_price": 0.01717,
+      "k_price": 0.017129,
+      "spread_pct": 0.23878858474084352
+    },
+    {
+      "coin": "GWEI",
+      "mexc_usdt_vol": 51842.0019159,
+      "kucoin_usdt_vol": 162568.120416,
+      "avg_usdt_vol": 107205.06116595,
+      "m_price": 0.10143,
+      "k_price": 0.101712,
+      "spread_pct": 0.2772534214251913
+    },
+    {
+      "coin": "PORTAL",
+      "mexc_usdt_vol": 96523.35331751998,
+      "kucoin_usdt_vol": 119966.029534,
+      "avg_usdt_vol": 108244.69142575999,
+      "m_price": 0.011652,
+      "k_price": 0.01163,
+      "spread_pct": 0.18880878819086383
+    },
+    {
+      "coin": "WCT",
+      "mexc_usdt_vol": 61794.3955336,
+      "kucoin_usdt_vol": 154774.758096,
+      "avg_usdt_vol": 108284.5768148,
+      "m_price": 0.06268,
+      "k_price": 0.06264,
+      "spread_pct": 0.06381620931716396
+    },
+    {
+      "coin": "DCR",
+      "mexc_usdt_vol": 111459.2231,
+      "kucoin_usdt_vol": 107069.80661999999,
+      "avg_usdt_vol": 109264.51486,
+      "m_price": 20.018,
+      "k_price": 19.95,
+      "spread_pct": 0.33969427515236983
+    },
+    {
+      "coin": "FF",
+      "mexc_usdt_vol": 67247.596618,
+      "kucoin_usdt_vol": 151366.9479,
+      "avg_usdt_vol": 109307.27225899999,
+      "m_price": 0.07388,
+      "k_price": 0.07385,
+      "spread_pct": 0.0406063887384979
+    },
+    {
+      "coin": "POPCAT",
+      "mexc_usdt_vol": 74754.1460291,
+      "kucoin_usdt_vol": 145481.99058399998,
+      "avg_usdt_vol": 110118.06830654999,
+      "m_price": 0.06157,
+      "k_price": 0.06146,
+      "spread_pct": 0.1786584375507536
+    },
+    {
+      "coin": "HNT",
+      "mexc_usdt_vol": 80832.683155,
+      "kucoin_usdt_vol": 139554.651507,
+      "avg_usdt_vol": 110193.667331,
+      "m_price": 1.0235,
+      "k_price": 1.019,
+      "spread_pct": 0.43966780654618176
+    },
+    {
+      "coin": "AIXBT",
+      "mexc_usdt_vol": 96720.54365159999,
+      "kucoin_usdt_vol": 124537.74354000001,
+      "avg_usdt_vol": 110629.14359580001,
+      "m_price": 0.02871,
+      "k_price": 0.0287,
+      "spread_pct": 0.03483106931382651
+    },
+    {
+      "coin": "GMX",
+      "mexc_usdt_vol": 66388.08971999999,
+      "kucoin_usdt_vol": 155042.0368,
+      "avg_usdt_vol": 110715.06326,
+      "m_price": 6.914,
+      "k_price": 6.86,
+      "spread_pct": 0.7810240092565719
+    },
+    {
+      "coin": "WAL",
+      "mexc_usdt_vol": 93819.44517139999,
+      "kucoin_usdt_vol": 133440.76304000002,
+      "avg_usdt_vol": 113630.10410570001,
+      "m_price": 0.07186,
+      "k_price": 0.0719,
+      "spread_pct": 0.05563282336580284
+    },
+    {
+      "coin": "ZETA",
+      "mexc_usdt_vol": 154902.5993379,
+      "kucoin_usdt_vol": 72598.7219738,
+      "avg_usdt_vol": 113750.66065584999,
+      "m_price": 0.05637,
+      "k_price": 0.0563,
+      "spread_pct": 0.12417952811779424
+    },
+    {
+      "coin": "COMMON",
+      "mexc_usdt_vol": 92694.47747258801,
+      "kucoin_usdt_vol": 136727.67438,
+      "avg_usdt_vol": 114711.07592629401,
+      "m_price": 0.0003308,
+      "k_price": 0.00033,
+      "spread_pct": 0.24183796856106998
+    },
+    {
+      "coin": "VET",
+      "mexc_usdt_vol": 90466.6393785,
+      "kucoin_usdt_vol": 140878.17323999997,
+      "avg_usdt_vol": 115672.40630924999,
+      "m_price": 0.00735,
+      "k_price": 0.00735,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "ZKP",
+      "mexc_usdt_vol": 150310.18862519998,
+      "kucoin_usdt_vol": 82699.201436,
+      "avg_usdt_vol": 116504.69503059999,
+      "m_price": 0.07797,
+      "k_price": 0.07786,
+      "spread_pct": 0.1410799025266115
+    },
+    {
+      "coin": "BLUAI",
+      "mexc_usdt_vol": 162629.6273625,
+      "kucoin_usdt_vol": 70822.56729,
+      "avg_usdt_vol": 116726.09732625,
+      "m_price": 0.010497,
+      "k_price": 0.010455,
+      "spread_pct": 0.4001143183766661
+    },
+    {
+      "coin": "WOD",
+      "mexc_usdt_vol": 65492.602471599996,
+      "kucoin_usdt_vol": 168785.12026199998,
+      "avg_usdt_vol": 117138.86136679999,
+      "m_price": 0.00818,
+      "k_price": 0.00813,
+      "spread_pct": 0.6112469437652774
+    },
+    {
+      "coin": "NPC",
+      "mexc_usdt_vol": 177342.95284398002,
+      "kucoin_usdt_vol": 57288.588126,
+      "avg_usdt_vol": 117315.77048499,
+      "m_price": 0.008442,
+      "k_price": 0.00847,
+      "spread_pct": 0.3305785123966971
+    },
+    {
+      "coin": "TNSR",
+      "mexc_usdt_vol": 131481.5576084,
+      "kucoin_usdt_vol": 103489.2685,
+      "avg_usdt_vol": 117485.4130542,
+      "m_price": 0.04106,
+      "k_price": 0.041,
+      "spread_pct": 0.1461276181198187
+    },
+    {
+      "coin": "LINEA",
+      "mexc_usdt_vol": 95962.41544585,
+      "kucoin_usdt_vol": 139124.44061999998,
+      "avg_usdt_vol": 117543.42803292499,
+      "m_price": 0.003391,
+      "k_price": 0.00339,
+      "spread_pct": 0.029489826010030456
+    },
+    {
+      "coin": "ONE",
+      "mexc_usdt_vol": 55393.7761494,
+      "kucoin_usdt_vol": 180166.79200971784,
+      "avg_usdt_vol": 117780.28407955891,
+      "m_price": 0.00234,
+      "k_price": 0.002331,
+      "spread_pct": 0.38461538461538003
+    },
+    {
+      "coin": "PLAI",
+      "mexc_usdt_vol": 65022.05058954,
+      "kucoin_usdt_vol": 170772.39659999998,
+      "avg_usdt_vol": 117897.22359476998,
+      "m_price": 0.001947,
+      "k_price": 0.00195,
+      "spread_pct": 0.15384615384615202
+    },
+    {
+      "coin": "MNT",
+      "mexc_usdt_vol": 153916.679241,
+      "kucoin_usdt_vol": 84462.9974769,
+      "avg_usdt_vol": 119189.83835895,
+      "m_price": 0.6487,
+      "k_price": 0.6495,
+      "spread_pct": 0.1231716705157678
+    },
+    {
+      "coin": "ETC",
+      "mexc_usdt_vol": 77857.43211,
+      "kucoin_usdt_vol": 161317.4776468,
+      "avg_usdt_vol": 119587.45487839999,
+      "m_price": 8.59,
+      "k_price": 8.6,
+      "spread_pct": 0.11627906976743939
+    },
+    {
+      "coin": "CRO",
+      "mexc_usdt_vol": 71630.6413513,
+      "kucoin_usdt_vol": 169009.513098492,
+      "avg_usdt_vol": 120320.077224896,
+      "m_price": 0.06947,
+      "k_price": 0.06941,
+      "spread_pct": 0.08636821649633582
+    },
+    {
+      "coin": "CCD",
+      "mexc_usdt_vol": 108767.6236139,
+      "kucoin_usdt_vol": 132381.3837075184,
+      "avg_usdt_vol": 120574.50366070919,
+      "m_price": 0.005066,
+      "k_price": 0.005044,
+      "spread_pct": 0.43426766679826917
+    },
+    {
+      "coin": "FLR",
+      "mexc_usdt_vol": 100380.25866155,
+      "kucoin_usdt_vol": 146415.84325272002,
+      "avg_usdt_vol": 123398.05095713501,
+      "m_price": 0.007945,
+      "k_price": 0.00795,
+      "spread_pct": 0.06289308176100372
+    },
+    {
+      "coin": "PRO",
+      "mexc_usdt_vol": 157997.17743,
+      "kucoin_usdt_vol": 94279.81694399999,
+      "avg_usdt_vol": 126138.497187,
+      "m_price": 0.339,
+      "k_price": 0.3384,
+      "spread_pct": 0.1769911504424911
+    },
+    {
+      "coin": "AKE",
+      "mexc_usdt_vol": 138127.119428243,
+      "kucoin_usdt_vol": 115979.06918220001,
+      "avg_usdt_vol": 127053.0943052215,
+      "m_price": 0.0004037,
+      "k_price": 0.0003999,
+      "spread_pct": 0.9412930393856784
+    },
+    {
+      "coin": "LIGHT",
+      "mexc_usdt_vol": 118700.575457,
+      "kucoin_usdt_vol": 137837.878094,
+      "avg_usdt_vol": 128269.2267755,
+      "m_price": 0.1591,
+      "k_price": 0.1589,
+      "spread_pct": 0.12570710245127467
+    },
+    {
+      "coin": "NAKA",
+      "mexc_usdt_vol": 96317.9144352,
+      "kucoin_usdt_vol": 161783.990208,
+      "avg_usdt_vol": 129050.9523216,
+      "m_price": 0.05286,
+      "k_price": 0.05284,
+      "spread_pct": 0.037835792659854685
+    },
+    {
+      "coin": "NIBI",
+      "mexc_usdt_vol": 250237.54748677002,
+      "kucoin_usdt_vol": 11781.433476,
+      "avg_usdt_vol": 131009.49048138502,
+      "m_price": 0.002047,
+      "k_price": 0.002043,
+      "spread_pct": 0.19540791402052254
+    },
+    {
+      "coin": "CROSS",
+      "mexc_usdt_vol": 173634.61608039998,
+      "kucoin_usdt_vol": 90774.782626,
+      "avg_usdt_vol": 132204.69935319998,
+      "m_price": 0.10853,
+      "k_price": 0.10861,
+      "spread_pct": 0.07365804253751657
+    },
+    {
+      "coin": "EWT",
+      "mexc_usdt_vol": 20000.28825,
+      "kucoin_usdt_vol": 249986.1306624,
+      "avg_usdt_vol": 134993.2094562,
+      "m_price": 0.437,
+      "k_price": 0.43872,
+      "spread_pct": 0.3920495988329685
+    },
+    {
+      "coin": "STX",
+      "mexc_usdt_vol": 78408.259785,
+      "kucoin_usdt_vol": 191950.68651436002,
+      "avg_usdt_vol": 135179.47314968,
+      "m_price": 0.2313,
+      "k_price": 0.2311,
+      "spread_pct": 0.08646779074794887
+    },
+    {
+      "coin": "REACT",
+      "mexc_usdt_vol": 11314.2310512,
+      "kucoin_usdt_vol": 259840.321632,
+      "avg_usdt_vol": 135577.2763416,
+      "m_price": 0.01767,
+      "k_price": 0.0177,
+      "spread_pct": 0.16949152542372192
+    },
+    {
+      "coin": "CGPT",
+      "mexc_usdt_vol": 128325.2092353,
+      "kucoin_usdt_vol": 145780.357216,
+      "avg_usdt_vol": 137052.78322565,
+      "m_price": 0.024437,
+      "k_price": 0.02444,
+      "spread_pct": 0.012274959083467802
+    },
+    {
+      "coin": "SSV",
+      "mexc_usdt_vol": 60707.41786999999,
+      "kucoin_usdt_vol": 214133.278788,
+      "avg_usdt_vol": 137420.348329,
+      "m_price": 2.687,
+      "k_price": 2.691,
+      "spread_pct": 0.14864362690449662
+    },
+    {
+      "coin": "JASMY",
+      "mexc_usdt_vol": 100200.59355402,
+      "kucoin_usdt_vol": 175210.5533606463,
+      "avg_usdt_vol": 137705.57345733314,
+      "m_price": 0.005766,
+      "k_price": 0.005773,
+      "spread_pct": 0.1212541139788682
+    },
+    {
+      "coin": "RESOLV",
+      "mexc_usdt_vol": 156017.09571,
+      "kucoin_usdt_vol": 120030.301304,
+      "avg_usdt_vol": 138023.698507,
+      "m_price": 0.0285,
+      "k_price": 0.0284,
+      "spread_pct": 0.350877192982454
+    },
+    {
+      "coin": "VANRY",
+      "mexc_usdt_vol": 119063.87080122,
+      "kucoin_usdt_vol": 157864.63513140002,
+      "avg_usdt_vol": 138464.25296631,
+      "m_price": 0.004762,
+      "k_price": 0.0054,
+      "spread_pct": 11.814814814814824
+    },
+    {
+      "coin": "KAITO",
+      "mexc_usdt_vol": 75693.149565,
+      "kucoin_usdt_vol": 201301.99282800002,
+      "avg_usdt_vol": 138497.5711965,
+      "m_price": 0.4065,
+      "k_price": 0.40514,
+      "spread_pct": 0.3345633456334496
+    },
+    {
+      "coin": "XCN",
+      "mexc_usdt_vol": 116205.255157608,
+      "kucoin_usdt_vol": 162855.72859375924,
+      "avg_usdt_vol": 139530.49187568363,
+      "m_price": 0.0048456,
+      "k_price": 0.0048022,
+      "spread_pct": 0.895657916460291
+    },
+    {
+      "coin": "FLOKI",
+      "mexc_usdt_vol": 131842.48091593,
+      "kucoin_usdt_vol": 150205.5869535,
+      "avg_usdt_vol": 141024.033934715,
+      "m_price": 3.347e-05,
+      "k_price": 3.345e-05,
+      "spread_pct": 0.059755004481634885
+    },
+    {
+      "coin": "BERA",
+      "mexc_usdt_vol": 77393.494752,
+      "kucoin_usdt_vol": 205308.468784,
+      "avg_usdt_vol": 141350.981768,
+      "m_price": 0.3984,
+      "k_price": 0.3989,
+      "spread_pct": 0.12534469791927813
+    },
+    {
+      "coin": "MOG",
+      "mexc_usdt_vol": 137764.03853081702,
+      "kucoin_usdt_vol": 147420.797605182,
+      "avg_usdt_vol": 142592.4180679995,
+      "m_price": 1.601e-07,
+      "k_price": 1.602e-07,
+      "spread_pct": 0.062421972534320254
+    },
+    {
+      "coin": "SWFTC",
+      "mexc_usdt_vol": 214817.29391304,
+      "kucoin_usdt_vol": 74760.83305688536,
+      "avg_usdt_vol": 144789.06348496268,
+      "m_price": 0.003276,
+      "k_price": 0.0032767,
+      "spread_pct": 0.021362956633203516
+    },
+    {
+      "coin": "NOT",
+      "mexc_usdt_vol": 74671.61609169899,
+      "kucoin_usdt_vol": 215207.70851904195,
+      "avg_usdt_vol": 144939.66230537047,
+      "m_price": 0.0004191,
+      "k_price": 0.00042,
+      "spread_pct": 0.2142857142857195
+    },
+    {
+      "coin": "BERT",
+      "mexc_usdt_vol": 77272.427277,
+      "kucoin_usdt_vol": 213804.54097,
+      "avg_usdt_vol": 145538.4841235,
+      "m_price": 0.010869,
+      "k_price": 0.01087,
+      "spread_pct": 0.009199632014712654
+    },
+    {
+      "coin": "AR",
+      "mexc_usdt_vol": 111774.66955,
+      "kucoin_usdt_vol": 180360.22551432336,
+      "avg_usdt_vol": 146067.4475321617,
+      "m_price": 1.943,
+      "k_price": 1.947,
+      "spread_pct": 0.2054442732408836
+    },
+    {
+      "coin": "GOMINING",
+      "mexc_usdt_vol": 146764.305648,
+      "kucoin_usdt_vol": 149581.734336,
+      "avg_usdt_vol": 148173.01999200002,
+      "m_price": 0.3032,
+      "k_price": 0.3006,
+      "spread_pct": 0.8575197889182212
+    },
+    {
+      "coin": "BREV",
+      "mexc_usdt_vol": 75486.384162,
+      "kucoin_usdt_vol": 222989.886918,
+      "avg_usdt_vol": 149238.13554,
+      "m_price": 0.1358,
+      "k_price": 0.1359,
+      "spread_pct": 0.07358351729211847
+    },
+    {
+      "coin": "QNT",
+      "mexc_usdt_vol": 116493.63300000002,
+      "kucoin_usdt_vol": 182709.57024000003,
+      "avg_usdt_vol": 149601.60162000003,
+      "m_price": 71.79,
+      "k_price": 71.79,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "SCR",
+      "mexc_usdt_vol": 53995.52825629999,
+      "kucoin_usdt_vol": 245296.09953200002,
+      "avg_usdt_vol": 149645.81389415002,
+      "m_price": 0.04591,
+      "k_price": 0.04598,
+      "spread_pct": 0.15224010439321578
+    },
+    {
+      "coin": "PROPS",
+      "mexc_usdt_vol": 184609.1963114,
+      "kucoin_usdt_vol": 120273.26941000001,
+      "avg_usdt_vol": 152441.2328607,
+      "m_price": 0.005026,
+      "k_price": 0.005041,
+      "spread_pct": 0.2975600079349386
+    },
+    {
+      "coin": "VFY",
+      "mexc_usdt_vol": 137558.92354160998,
+      "kucoin_usdt_vol": 169197.641024,
+      "avg_usdt_vol": 153378.282282805,
+      "m_price": 0.008719,
+      "k_price": 0.00872,
+      "spread_pct": 0.01146788990826835
+    },
+    {
+      "coin": "MET",
+      "mexc_usdt_vol": 162209.668256,
+      "kucoin_usdt_vol": 149802.541448,
+      "avg_usdt_vol": 156006.10485200002,
+      "m_price": 0.1702,
+      "k_price": 0.1708,
+      "spread_pct": 0.35128805620609904
+    },
+    {
+      "coin": "ELSA",
+      "mexc_usdt_vol": 130401.02423800001,
+      "kucoin_usdt_vol": 182148.89436000003,
+      "avg_usdt_vol": 156274.95929900004,
+      "m_price": 0.07391,
+      "k_price": 0.0738,
+      "spread_pct": 0.14882965769178594
+    },
+    {
+      "coin": "USTC",
+      "mexc_usdt_vol": 163682.87681584,
+      "kucoin_usdt_vol": 149783.700851278,
+      "avg_usdt_vol": 156733.288833559,
+      "m_price": 0.005612,
+      "k_price": 0.00557,
+      "spread_pct": 0.7483962936564417
+    },
+    {
+      "coin": "SHR",
+      "mexc_usdt_vol": 128010.71338067402,
+      "kucoin_usdt_vol": 185908.565997,
+      "avg_usdt_vol": 156959.639688837,
+      "m_price": 0.0003463,
+      "k_price": 0.0003465,
+      "spread_pct": 0.05772005772005912
+    },
+    {
+      "coin": "TRUTH",
+      "mexc_usdt_vol": 137065.27457268,
+      "kucoin_usdt_vol": 179538.678736,
+      "avg_usdt_vol": 158301.97665434,
+      "m_price": 0.009311,
+      "k_price": 0.009346,
+      "spread_pct": 0.3744917611812573
+    },
+    {
+      "coin": "JST",
+      "mexc_usdt_vol": 187464.6022834,
+      "kucoin_usdt_vol": 137733.986112,
+      "avg_usdt_vol": 162599.2941977,
+      "m_price": 0.08138,
+      "k_price": 0.08097,
+      "spread_pct": 0.5038092897517741
+    },
+    {
+      "coin": "S",
+      "mexc_usdt_vol": 77732.21824409999,
+      "kucoin_usdt_vol": 247658.10706,
+      "avg_usdt_vol": 162695.16265205,
+      "m_price": 0.04557,
+      "k_price": 0.0455,
+      "spread_pct": 0.15360983102918724
+    },
+    {
+      "coin": "INIT",
+      "mexc_usdt_vol": 61139.11349160001,
+      "kucoin_usdt_vol": 266914.268404,
+      "avg_usdt_vol": 164026.6909478,
+      "m_price": 0.08676,
+      "k_price": 0.086546,
+      "spread_pct": 0.246657445827577
+    },
+    {
+      "coin": "BABY",
+      "mexc_usdt_vol": 248352.4199696,
+      "kucoin_usdt_vol": 80617.99416399999,
+      "avg_usdt_vol": 164485.2070668,
+      "m_price": 0.01592,
+      "k_price": 0.01594,
+      "spread_pct": 0.12547051442910406
+    },
+    {
+      "coin": "TWT",
+      "mexc_usdt_vol": 222179.173827,
+      "kucoin_usdt_vol": 112266.46744152,
+      "avg_usdt_vol": 167222.82063426,
+      "m_price": 0.4407,
+      "k_price": 0.4417,
+      "spread_pct": 0.22639800769753246
+    },
+    {
+      "coin": "U",
+      "mexc_usdt_vol": 321721.32997200004,
+      "kucoin_usdt_vol": 16545.263472000002,
+      "avg_usdt_vol": 169133.29672200003,
+      "m_price": 0.9996,
+      "k_price": 0.000648,
+      "spread_pct": 99.93517406962785
+    },
+    {
+      "coin": "SAROS",
+      "mexc_usdt_vol": 58070.515047396,
+      "kucoin_usdt_vol": 282090.664738,
+      "avg_usdt_vol": 170080.58989269802,
+      "m_price": 0.0005366,
+      "k_price": 0.0005389,
+      "spread_pct": 0.42679532380775687
+    },
+    {
+      "coin": "AZTEC",
+      "mexc_usdt_vol": 106400.3743407,
+      "kucoin_usdt_vol": 234377.108496,
+      "avg_usdt_vol": 170388.74141835,
+      "m_price": 0.02343,
+      "k_price": 0.02344,
+      "spread_pct": 0.0426621160409539
+    },
+    {
+      "coin": "FTT",
+      "mexc_usdt_vol": 81098.768744,
+      "kucoin_usdt_vol": 260935.22527800003,
+      "avg_usdt_vol": 171016.997011,
+      "m_price": 0.2968,
+      "k_price": 0.2982,
+      "spread_pct": 0.4694835680751215
+    },
+    {
+      "coin": "XNY",
+      "mexc_usdt_vol": 147268.99368825002,
+      "kucoin_usdt_vol": 197315.681928,
+      "avg_usdt_vol": 172292.337808125,
+      "m_price": 0.006675,
+      "k_price": 0.006683,
+      "spread_pct": 0.11970671853956798
+    },
+    {
+      "coin": "C",
+      "mexc_usdt_vol": 167271.00422,
+      "kucoin_usdt_vol": 184952.385592,
+      "avg_usdt_vol": 176111.694906,
+      "m_price": 0.0955,
+      "k_price": 0.09556,
+      "spread_pct": 0.06278777731268782
+    },
+    {
+      "coin": "UAI",
+      "mexc_usdt_vol": 161473.801251,
+      "kucoin_usdt_vol": 191845.59962000002,
+      "avg_usdt_vol": 176659.7004355,
+      "m_price": 0.2891,
+      "k_price": 0.28927,
+      "spread_pct": 0.05876862446849084
+    },
+    {
+      "coin": "BB",
+      "mexc_usdt_vol": 170657.03577599998,
+      "kucoin_usdt_vol": 186703.61628599997,
+      "avg_usdt_vol": 178680.32603099998,
+      "m_price": 0.0288,
+      "k_price": 0.02871,
+      "spread_pct": 0.31249999999999933
+    },
+    {
+      "coin": "KITE",
+      "mexc_usdt_vol": 88454.9863218,
+      "kucoin_usdt_vol": 269662.058928,
+      "avg_usdt_vol": 179058.52262489998,
+      "m_price": 0.15094,
+      "k_price": 0.15052,
+      "spread_pct": 0.2782562607658697
+    },
+    {
+      "coin": "ICNT",
+      "mexc_usdt_vol": 58052.1776024,
+      "kucoin_usdt_vol": 300182.546056,
+      "avg_usdt_vol": 179117.3618292,
+      "m_price": 0.36299,
+      "k_price": 0.36349,
+      "spread_pct": 0.13755536603482915
+    },
+    {
+      "coin": "IRYS",
+      "mexc_usdt_vol": 195302.63551959998,
+      "kucoin_usdt_vol": 163535.45712,
+      "avg_usdt_vol": 179419.0463198,
+      "m_price": 0.03326,
+      "k_price": 0.03336,
+      "spread_pct": 0.29976019184653135
+    },
+    {
+      "coin": "LIT",
+      "mexc_usdt_vol": 160979.19597399997,
+      "kucoin_usdt_vol": 200949.96456,
+      "avg_usdt_vol": 180964.58026699998,
+      "m_price": 0.9437,
+      "k_price": 0.942,
+      "spread_pct": 0.18014199427784625
+    },
+    {
+      "coin": "BRISE",
+      "mexc_usdt_vol": 345201.824774504,
+      "kucoin_usdt_vol": 19798.65510989436,
+      "avg_usdt_vol": 182500.23994219917,
+      "m_price": 2.273e-08,
+      "k_price": 2.298e-08,
+      "spread_pct": 1.087902523933865
+    },
+    {
+      "coin": "VVV",
+      "mexc_usdt_vol": 137030.668176,
+      "kucoin_usdt_vol": 240027.27372000003,
+      "avg_usdt_vol": 188528.97094800003,
+      "m_price": 8.5296,
+      "k_price": 8.502,
+      "spread_pct": 0.3235790658413012
+    },
+    {
+      "coin": "ZIL",
+      "mexc_usdt_vol": 75728.50523796001,
+      "kucoin_usdt_vol": 305429.17350000003,
+      "avg_usdt_vol": 190578.83936898003,
+      "m_price": 0.004138,
+      "k_price": 0.004125,
+      "spread_pct": 0.3141614306428224
+    },
+    {
+      "coin": "IR",
+      "mexc_usdt_vol": 180465.52367619998,
+      "kucoin_usdt_vol": 207952.6326,
+      "avg_usdt_vol": 194209.07813809998,
+      "m_price": 0.03227,
+      "k_price": 0.0323,
+      "spread_pct": 0.09287925696595123
+    },
+    {
+      "coin": "CC",
+      "mexc_usdt_vol": 225883.2374624,
+      "kucoin_usdt_vol": 165834.80234400003,
+      "avg_usdt_vol": 195859.0199032,
+      "m_price": 0.15344,
+      "k_price": 0.15348,
+      "spread_pct": 0.026062027625757263
+    },
+    {
+      "coin": "CLO",
+      "mexc_usdt_vol": 246907.51374559998,
+      "kucoin_usdt_vol": 146782.952224,
+      "avg_usdt_vol": 196845.2329848,
+      "m_price": 0.13243,
+      "k_price": 0.13264,
+      "spread_pct": 0.15832328106153173
+    },
+    {
+      "coin": "AVNT",
+      "mexc_usdt_vol": 164811.20131999996,
+      "kucoin_usdt_vol": 228896.316792,
+      "avg_usdt_vol": 196853.75905599998,
+      "m_price": 0.1523,
+      "k_price": 0.15219,
+      "spread_pct": 0.07222586999343335
+    },
+    {
+      "coin": "EUL",
+      "mexc_usdt_vol": 124753.644522,
+      "kucoin_usdt_vol": 274475.3872482,
+      "avg_usdt_vol": 199614.5158851,
+      "m_price": 1.4778,
+      "k_price": 1.479,
+      "spread_pct": 0.08113590263692291
+    },
+    {
+      "coin": "REZ",
+      "mexc_usdt_vol": 133478.6040621,
+      "kucoin_usdt_vol": 269598.11368,
+      "avg_usdt_vol": 201538.35887105,
+      "m_price": 0.003915,
+      "k_price": 0.00392,
+      "spread_pct": 0.12755102040815808
+    },
+    {
+      "coin": "GIGGLE",
+      "mexc_usdt_vol": 196834.2502,
+      "kucoin_usdt_vol": 212797.8918,
+      "avg_usdt_vol": 204816.071,
+      "m_price": 35.14,
+      "k_price": 35.1,
+      "spread_pct": 0.11383039271485244
+    },
+    {
+      "coin": "SPX",
+      "mexc_usdt_vol": 121982.781546,
+      "kucoin_usdt_vol": 291052.211682,
+      "avg_usdt_vol": 206517.496614,
+      "m_price": 0.3842,
+      "k_price": 0.3849,
+      "spread_pct": 0.18186541958951258
+    },
+    {
+      "coin": "SUPRA",
+      "mexc_usdt_vol": 145905.459222296,
+      "kucoin_usdt_vol": 267814.262064,
+      "avg_usdt_vol": 206859.86064314801,
+      "m_price": 0.0003698,
+      "k_price": 0.000372,
+      "spread_pct": 0.5913978494623654
+    },
+    {
+      "coin": "LDO",
+      "mexc_usdt_vol": 210624.20112999997,
+      "kucoin_usdt_vol": 214951.91676161473,
+      "avg_usdt_vol": 212788.05894580734,
+      "m_price": 0.3838,
+      "k_price": 0.3838,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "NEIROCTO",
+      "mexc_usdt_vol": 133222.18568170068,
+      "kucoin_usdt_vol": 298474.645933,
+      "avg_usdt_vol": 215848.41580735036,
+      "m_price": 9.061e-05,
+      "k_price": 9.05e-05,
+      "spread_pct": 0.12139940403928624
+    },
+    {
+      "coin": "NOM",
+      "mexc_usdt_vol": 116889.14386982,
+      "kucoin_usdt_vol": 329204.26447800006,
+      "avg_usdt_vol": 223046.70417391002,
+      "m_price": 0.002903,
+      "k_price": 0.00289,
+      "spread_pct": 0.4478126076472611
+    },
+    {
+      "coin": "BOME",
+      "mexc_usdt_vol": 86834.642082669,
+      "kucoin_usdt_vol": 361396.45593959995,
+      "avg_usdt_vol": 224115.54901113448,
+      "m_price": 0.0005499,
+      "k_price": 0.0005518,
+      "spread_pct": 0.3443276549474433
+    },
+    {
+      "coin": "PENDLE",
+      "mexc_usdt_vol": 376629.67600000004,
+      "kucoin_usdt_vol": 74817.67017892,
+      "avg_usdt_vol": 225723.67308946,
+      "m_price": 1.315,
+      "k_price": 1.3186,
+      "spread_pct": 0.27301683603822596
+    },
+    {
+      "coin": "NATIX",
+      "mexc_usdt_vol": 211595.94424482854,
+      "kucoin_usdt_vol": 242132.75729726,
+      "avg_usdt_vol": 226864.35077104426,
+      "m_price": 7.945e-05,
+      "k_price": 7.907e-05,
+      "spread_pct": 0.4782882315922045
+    },
+    {
+      "coin": "RATS",
+      "mexc_usdt_vol": 109771.56314014802,
+      "kucoin_usdt_vol": 349356.8148212918,
+      "avg_usdt_vol": 229564.1889807199,
+      "m_price": 3.822e-05,
+      "k_price": 3.812e-05,
+      "spread_pct": 0.26164311878598223
+    },
+    {
+      "coin": "ENSO",
+      "mexc_usdt_vol": 106405.58599800001,
+      "kucoin_usdt_vol": 361244.768934,
+      "avg_usdt_vol": 233825.177466,
+      "m_price": 0.8277,
+      "k_price": 0.8267,
+      "spread_pct": 0.12081672103419124
+    },
+    {
+      "coin": "USELESS",
+      "mexc_usdt_vol": 174906.48722176,
+      "kucoin_usdt_vol": 301809.480592,
+      "avg_usdt_vol": 238357.98390688002,
+      "m_price": 0.043456,
+      "k_price": 0.04348,
+      "spread_pct": 0.055197792088307836
+    },
+    {
+      "coin": "VINE",
+      "mexc_usdt_vol": 219805.87852230002,
+      "kucoin_usdt_vol": 259343.21015400003,
+      "avg_usdt_vol": 239574.54433815,
+      "m_price": 0.01589,
+      "k_price": 0.01589,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "HUMA",
+      "mexc_usdt_vol": 114226.83057939999,
+      "kucoin_usdt_vol": 369760.216104,
+      "avg_usdt_vol": 241993.5233417,
+      "m_price": 0.02674,
+      "k_price": 0.026674,
+      "spread_pct": 0.24682124158563978
+    },
+    {
+      "coin": "EDGE",
+      "mexc_usdt_vol": 94383.58573800001,
+      "kucoin_usdt_vol": 394318.487972,
+      "avg_usdt_vol": 244351.03685499998,
+      "m_price": 1.4167,
+      "k_price": 1.4153,
+      "spread_pct": 0.09882120420696462
+    },
+    {
+      "coin": "\u5e01\u5b89\u4eba\u751f",
+      "mexc_usdt_vol": 253107.00698009998,
+      "kucoin_usdt_vol": 245130.771466,
+      "avg_usdt_vol": 249118.88922304998,
+      "m_price": 0.33431,
+      "k_price": 0.33469,
+      "spread_pct": 0.11353790074396948
+    },
+    {
+      "coin": "TEL",
+      "mexc_usdt_vol": 125447.28603968001,
+      "kucoin_usdt_vol": 377049.0648,
+      "avg_usdt_vol": 251248.17541984,
+      "m_price": 0.002078,
+      "k_price": 0.002085,
+      "spread_pct": 0.3357314148681084
+    },
+    {
+      "coin": "LUNA",
+      "mexc_usdt_vol": 276263.4904739,
+      "kucoin_usdt_vol": 226369.4359017,
+      "avg_usdt_vol": 251316.4631878,
+      "m_price": 0.06161,
+      "k_price": 0.0615,
+      "spread_pct": 0.17854244440837364
+    },
+    {
+      "coin": "ZEN",
+      "mexc_usdt_vol": 133024.63763,
+      "kucoin_usdt_vol": 369643.2431712,
+      "avg_usdt_vol": 251333.9404006,
+      "m_price": 6.203,
+      "k_price": 6.196,
+      "spread_pct": 0.11284862163470194
+    },
+    {
+      "coin": "PLUME",
+      "mexc_usdt_vol": 150478.09110572003,
+      "kucoin_usdt_vol": 360597.277824,
+      "avg_usdt_vol": 255537.68446486,
+      "m_price": 0.013076,
+      "k_price": 0.013088,
+      "spread_pct": 0.09168704156479109
+    },
+    {
+      "coin": "FLUX",
+      "mexc_usdt_vol": 92888.3548496,
+      "kucoin_usdt_vol": 433124.97472928,
+      "avg_usdt_vol": 263006.66478944,
+      "m_price": 0.07528,
+      "k_price": 0.0752,
+      "spread_pct": 0.10626992561104776
+    },
+    {
+      "coin": "GUN",
+      "mexc_usdt_vol": 350742.14736,
+      "kucoin_usdt_vol": 192994.03034,
+      "avg_usdt_vol": 271868.08885,
+      "m_price": 0.01551,
+      "k_price": 0.01549,
+      "spread_pct": 0.12894906511927265
+    },
+    {
+      "coin": "AGT",
+      "mexc_usdt_vol": 48860.9677124,
+      "kucoin_usdt_vol": 497830.84297799994,
+      "avg_usdt_vol": 273345.9053452,
+      "m_price": 0.01102,
+      "k_price": 0.011123,
+      "spread_pct": 0.9260091701878893
+    },
+    {
+      "coin": "OFC",
+      "mexc_usdt_vol": 137586.6270415,
+      "kucoin_usdt_vol": 413924.91352799995,
+      "avg_usdt_vol": 275755.77028475,
+      "m_price": 0.05629,
+      "k_price": 0.05628,
+      "spread_pct": 0.017765144785935445
+    },
+    {
+      "coin": "ZAMA",
+      "mexc_usdt_vol": 298482.111598,
+      "kucoin_usdt_vol": 253169.62519199998,
+      "avg_usdt_vol": 275825.868395,
+      "m_price": 0.03202,
+      "k_price": 0.03201,
+      "spread_pct": 0.031230480949416183
+    },
+    {
+      "coin": "CAKE",
+      "mexc_usdt_vol": 489156.40728,
+      "kucoin_usdt_vol": 69053.550318,
+      "avg_usdt_vol": 279104.978799,
+      "m_price": 1.517,
+      "k_price": 1.515,
+      "spread_pct": 0.13183915622940026
+    },
+    {
+      "coin": "LYN",
+      "mexc_usdt_vol": 329874.4767836,
+      "kucoin_usdt_vol": 228918.87093,
+      "avg_usdt_vol": 279396.6738568,
+      "m_price": 0.06196,
+      "k_price": 0.0619,
+      "spread_pct": 0.09683666881859988
+    },
+    {
+      "coin": "VR",
+      "mexc_usdt_vol": 343237.43940636,
+      "kucoin_usdt_vol": 239307.002384,
+      "avg_usdt_vol": 291272.22089518,
+      "m_price": 0.001858,
+      "k_price": 0.001861,
+      "spread_pct": 0.1612036539494876
+    },
+    {
+      "coin": "9BIT",
+      "mexc_usdt_vol": 295584.08304555004,
+      "kucoin_usdt_vol": 293333.59860800003,
+      "avg_usdt_vol": 294458.84082677506,
+      "m_price": 0.022581,
+      "k_price": 0.022804,
+      "spread_pct": 0.977898614278201
+    },
+    {
+      "coin": "BULLA",
+      "mexc_usdt_vol": 368818.47308320005,
+      "kucoin_usdt_vol": 236025.28833000004,
+      "avg_usdt_vol": 302421.88070660003,
+      "m_price": 0.01039,
+      "k_price": 0.01105,
+      "spread_pct": 5.972850678733039
+    },
+    {
+      "coin": "DYDX",
+      "mexc_usdt_vol": 234922.14752499998,
+      "kucoin_usdt_vol": 377172.199092,
+      "avg_usdt_vol": 306047.1733085,
+      "m_price": 0.15646,
+      "k_price": 0.156,
+      "spread_pct": 0.2940048574715507
+    },
+    {
+      "coin": "INX",
+      "mexc_usdt_vol": 181924.18476470996,
+      "kucoin_usdt_vol": 436850.96286,
+      "avg_usdt_vol": 309387.573812355,
+      "m_price": 0.010587,
+      "k_price": 0.010545,
+      "spread_pct": 0.39671294984413563
+    },
+    {
+      "coin": "AERO",
+      "mexc_usdt_vol": 127886.73945000001,
+      "kucoin_usdt_vol": 493130.025938,
+      "avg_usdt_vol": 310508.382694,
+      "m_price": 0.4283,
+      "k_price": 0.4279,
+      "spread_pct": 0.0933924819052093
+    },
+    {
+      "coin": "TIA",
+      "mexc_usdt_vol": 375760.87842200004,
+      "kucoin_usdt_vol": 247642.98739389528,
+      "avg_usdt_vol": 311701.9329079477,
+      "m_price": 0.3629,
+      "k_price": 0.363,
+      "spread_pct": 0.027548209366388153
+    },
+    {
+      "coin": "TOKEN",
+      "mexc_usdt_vol": 146780.562312,
+      "kucoin_usdt_vol": 478152.54816067795,
+      "avg_usdt_vol": 312466.555236339,
+      "m_price": 0.0036,
+      "k_price": 0.003609,
+      "spread_pct": 0.2493765586034883
+    },
+    {
+      "coin": "ARIA",
+      "mexc_usdt_vol": 147136.6591071,
+      "kucoin_usdt_vol": 495307.787436,
+      "avg_usdt_vol": 321222.22327155,
+      "m_price": 0.07081,
+      "k_price": 0.07101,
+      "spread_pct": 0.28165047176454827
+    },
+    {
+      "coin": "POL",
+      "mexc_usdt_vol": 356724.1785528,
+      "kucoin_usdt_vol": 286794.23480381997,
+      "avg_usdt_vol": 321759.20667830994,
+      "m_price": 0.09512,
+      "k_price": 0.0951,
+      "spread_pct": 0.02102607232968066
+    },
+    {
+      "coin": "GLMR",
+      "mexc_usdt_vol": 218857.2419138,
+      "kucoin_usdt_vol": 442242.730768,
+      "avg_usdt_vol": 330549.9863409,
+      "m_price": 0.01778,
+      "k_price": 0.01762,
+      "spread_pct": 0.8998875140607447
+    },
+    {
+      "coin": "IO",
+      "mexc_usdt_vol": 359917.77447630005,
+      "kucoin_usdt_vol": 337965.552084,
+      "avg_usdt_vol": 348941.66328015004,
+      "m_price": 0.12587,
+      "k_price": 0.1259,
+      "spread_pct": 0.023828435266085975
+    },
+    {
+      "coin": "ZBT",
+      "mexc_usdt_vol": 113941.12637599999,
+      "kucoin_usdt_vol": 584701.386806,
+      "avg_usdt_vol": 349321.256591,
+      "m_price": 0.1243,
+      "k_price": 0.12433,
+      "spread_pct": 0.02412933322609366
+    },
+    {
+      "coin": "ROBO",
+      "mexc_usdt_vol": 437010.8553488,
+      "kucoin_usdt_vol": 267856.51106000005,
+      "avg_usdt_vol": 352433.6832044,
+      "m_price": 0.02396,
+      "k_price": 0.0239,
+      "spread_pct": 0.25041736227044054
+    },
+    {
+      "coin": "GALA",
+      "mexc_usdt_vol": 622518.81766704,
+      "kucoin_usdt_vol": 99457.478652224,
+      "avg_usdt_vol": 360988.148159632,
+      "m_price": 0.003318,
+      "k_price": 0.00332,
+      "spread_pct": 0.06024096385541662
+    },
+    {
+      "coin": "ACU",
+      "mexc_usdt_vol": 129727.13623919999,
+      "kucoin_usdt_vol": 599277.6915719999,
+      "avg_usdt_vol": 364502.41390559997,
+      "m_price": 0.10002,
+      "k_price": 0.10002,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "GRASS",
+      "mexc_usdt_vol": 210504.99516000002,
+      "kucoin_usdt_vol": 541358.49312,
+      "avg_usdt_vol": 375931.74414,
+      "m_price": 0.393,
+      "k_price": 0.3924,
+      "spread_pct": 0.15267175572518815
+    },
+    {
+      "coin": "HIGH",
+      "mexc_usdt_vol": 217795.5465399,
+      "kucoin_usdt_vol": 561204.77184,
+      "avg_usdt_vol": 389500.15918995,
+      "m_price": 0.2121,
+      "k_price": 0.212,
+      "spread_pct": 0.047147571900055044
+    },
+    {
+      "coin": "DEGO",
+      "mexc_usdt_vol": 140664.068456,
+      "kucoin_usdt_vol": 649211.2348179601,
+      "avg_usdt_vol": 394937.65163698,
+      "m_price": 0.0646,
+      "k_price": 0.0951,
+      "spread_pct": 32.07150368033649
+    },
+    {
+      "coin": "D",
+      "mexc_usdt_vol": 103975.46180736,
+      "kucoin_usdt_vol": 708901.5317999999,
+      "avg_usdt_vol": 406438.49680367997,
+      "m_price": 0.011176,
+      "k_price": 0.011,
+      "spread_pct": 1.5748031496063064
+    },
+    {
+      "coin": "CFG",
+      "mexc_usdt_vol": 158270.184832,
+      "kucoin_usdt_vol": 656002.4641599001,
+      "avg_usdt_vol": 407136.32449595,
+      "m_price": 0.2432,
+      "k_price": 0.2431,
+      "spread_pct": 0.04111842105262705
+    },
+    {
+      "coin": "ULTIMA",
+      "mexc_usdt_vol": 556357.848594,
+      "kucoin_usdt_vol": 294646.27126,
+      "avg_usdt_vol": 425502.05992699997,
+      "m_price": 3098.91,
+      "k_price": 3199.13,
+      "spread_pct": 3.1327267100743095
+    },
+    {
+      "coin": "XPL",
+      "mexc_usdt_vol": 492372.0064032,
+      "kucoin_usdt_vol": 367159.304904,
+      "avg_usdt_vol": 429765.6556536,
+      "m_price": 0.10021,
+      "k_price": 0.1002,
+      "spread_pct": 0.009979044007580205
+    },
+    {
+      "coin": "SENT",
+      "mexc_usdt_vol": 465717.64530199993,
+      "kucoin_usdt_vol": 394049.057934,
+      "avg_usdt_vol": 429883.35161799996,
+      "m_price": 0.01978,
+      "k_price": 0.01981,
+      "spread_pct": 0.15143866733973874
+    },
+    {
+      "coin": "BASED",
+      "mexc_usdt_vol": 425792.7056712,
+      "kucoin_usdt_vol": 469509.2403334,
+      "avg_usdt_vol": 447650.9730023,
+      "m_price": 0.12757,
+      "k_price": 0.12731,
+      "spread_pct": 0.20380967312062592
+    },
+    {
+      "coin": "CHZ",
+      "mexc_usdt_vol": 273128.407504,
+      "kucoin_usdt_vol": 635091.6322479404,
+      "avg_usdt_vol": 454110.0198759702,
+      "m_price": 0.04904,
+      "k_price": 0.04907,
+      "spread_pct": 0.061137151008767564
+    },
+    {
+      "coin": "RAIN",
+      "mexc_usdt_vol": 383302.685073952,
+      "kucoin_usdt_vol": 546141.250608,
+      "avg_usdt_vol": 464721.96784097597,
+      "m_price": 0.0076216,
+      "k_price": 0.007603,
+      "spread_pct": 0.2440432455127492
+    },
+    {
+      "coin": "ZKJ",
+      "mexc_usdt_vol": 130429.555988,
+      "kucoin_usdt_vol": 833536.047408,
+      "avg_usdt_vol": 481982.801698,
+      "m_price": 0.01423,
+      "k_price": 0.01423,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "GRIFFAIN",
+      "mexc_usdt_vol": 737011.85097676,
+      "kucoin_usdt_vol": 233921.69708399998,
+      "avg_usdt_vol": 485466.77403038,
+      "m_price": 0.020642,
+      "k_price": 0.02062,
+      "spread_pct": 0.10657881988180014
+    },
+    {
+      "coin": "RUNE",
+      "mexc_usdt_vol": 709367.939436,
+      "kucoin_usdt_vol": 282644.7106551,
+      "avg_usdt_vol": 496006.32504555,
+      "m_price": 0.4836,
+      "k_price": 0.4845,
+      "spread_pct": 0.185758513931891
+    },
+    {
+      "coin": "ESP",
+      "mexc_usdt_vol": 331593.0197335,
+      "kucoin_usdt_vol": 679994.844,
+      "avg_usdt_vol": 505793.93186675,
+      "m_price": 0.07981,
+      "k_price": 0.08025,
+      "spread_pct": 0.5482866043613657
+    },
+    {
+      "coin": "ZEREBRO",
+      "mexc_usdt_vol": 330664.55979732,
+      "kucoin_usdt_vol": 743734.68433,
+      "avg_usdt_vol": 537199.62206366,
+      "m_price": 0.017013,
+      "k_price": 0.01705,
+      "spread_pct": 0.21700879765395215
+    },
+    {
+      "coin": "W",
+      "mexc_usdt_vol": 371770.10894099995,
+      "kucoin_usdt_vol": 738934.05628,
+      "avg_usdt_vol": 555352.0826105,
+      "m_price": 0.0133,
+      "k_price": 0.0133,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "APT",
+      "mexc_usdt_vol": 364580.92045800004,
+      "kucoin_usdt_vol": 750395.4025223599,
+      "avg_usdt_vol": 557488.16149018,
+      "m_price": 0.9629,
+      "k_price": 0.9634,
+      "spread_pct": 0.051899522524398584
+    },
+    {
+      "coin": "STABLE",
+      "mexc_usdt_vol": 624901.84229952,
+      "kucoin_usdt_vol": 542445.18408,
+      "avg_usdt_vol": 583673.51318976,
+      "m_price": 0.032796,
+      "k_price": 0.032796,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "BIO",
+      "mexc_usdt_vol": 172015.81744050002,
+      "kucoin_usdt_vol": 999944.3710377688,
+      "avg_usdt_vol": 585980.0942391343,
+      "m_price": 0.03245,
+      "k_price": 0.03247,
+      "spread_pct": 0.06159531875577206
+    },
+    {
+      "coin": "PLAY",
+      "mexc_usdt_vol": 688744.254404,
+      "kucoin_usdt_vol": 514502.831808,
+      "avg_usdt_vol": 601623.5431059999,
+      "m_price": 0.1412,
+      "k_price": 0.14112,
+      "spread_pct": 0.05665722379603169
+    },
+    {
+      "coin": "STRK",
+      "mexc_usdt_vol": 827056.9489959,
+      "kucoin_usdt_vol": 399165.3231156,
+      "avg_usdt_vol": 613111.13605575,
+      "m_price": 0.04193,
+      "k_price": 0.04194,
+      "spread_pct": 0.023843586075336487
+    },
+    {
+      "coin": "PRL",
+      "mexc_usdt_vol": 273240.39329999994,
+      "kucoin_usdt_vol": 967537.5574719999,
+      "avg_usdt_vol": 620388.9753859999,
+      "m_price": 0.207,
+      "k_price": 0.20632,
+      "spread_pct": 0.32850241545893055
+    },
+    {
+      "coin": "TREE",
+      "mexc_usdt_vol": 104766.7704483,
+      "kucoin_usdt_vol": 1147683.46475,
+      "avg_usdt_vol": 626225.11759915,
+      "m_price": 0.07729,
+      "k_price": 0.0775,
+      "spread_pct": 0.2709677419354863
+    },
+    {
+      "coin": "MON",
+      "mexc_usdt_vol": 246995.080907,
+      "kucoin_usdt_vol": 1009935.6301559999,
+      "avg_usdt_vol": 628465.3555315,
+      "m_price": 0.03139,
+      "k_price": 0.03142,
+      "spread_pct": 0.09548058561424351
+    },
+    {
+      "coin": "SPK",
+      "mexc_usdt_vol": 315054.034256,
+      "kucoin_usdt_vol": 944567.589888,
+      "avg_usdt_vol": 629810.812072,
+      "m_price": 0.0436,
+      "k_price": 0.04348,
+      "spread_pct": 0.2752293577981698
+    },
+    {
+      "coin": "FUN",
+      "mexc_usdt_vol": 264488.184234,
+      "kucoin_usdt_vol": 1032161.2874639999,
+      "avg_usdt_vol": 648324.7358489999,
+      "m_price": 0.0457,
+      "k_price": 0.04572,
+      "spread_pct": 0.04374453193350653
+    },
+    {
+      "coin": "ORDI",
+      "mexc_usdt_vol": 350052.7407,
+      "kucoin_usdt_vol": 992866.73904,
+      "avg_usdt_vol": 671459.73987,
+      "m_price": 4.602,
+      "k_price": 4.598,
+      "spread_pct": 0.08691873098653731
+    },
+    {
+      "coin": "SEI",
+      "mexc_usdt_vol": 243098.6279451,
+      "kucoin_usdt_vol": 1117820.70705704,
+      "avg_usdt_vol": 680459.66750107,
+      "m_price": 0.06217,
+      "k_price": 0.0623,
+      "spread_pct": 0.20866773675762146
+    },
+    {
+      "coin": "WLFI",
+      "mexc_usdt_vol": 214780.00658729998,
+      "kucoin_usdt_vol": 1165748.0565,
+      "avg_usdt_vol": 690264.03154365,
+      "m_price": 0.07491,
+      "k_price": 0.075,
+      "spread_pct": 0.11999999999999049
+    },
+    {
+      "coin": "H",
+      "mexc_usdt_vol": 181804.56208600002,
+      "kucoin_usdt_vol": 1199476.5946223638,
+      "avg_usdt_vol": 690640.578354182,
+      "m_price": 0.1337,
+      "k_price": 0.134051,
+      "spread_pct": 0.2618406427404422
+    },
+    {
+      "coin": "BAS",
+      "mexc_usdt_vol": 449196.10377486,
+      "kucoin_usdt_vol": 933861.6863279999,
+      "avg_usdt_vol": 691528.89505143,
+      "m_price": 0.017114,
+      "k_price": 0.01698,
+      "spread_pct": 0.7829846908963548
+    },
+    {
+      "coin": "XDC",
+      "mexc_usdt_vol": 144633.292665,
+      "kucoin_usdt_vol": 1254573.6138801002,
+      "avg_usdt_vol": 699603.4532725501,
+      "m_price": 0.03077,
+      "k_price": 0.03075,
+      "spread_pct": 0.06499837504062134
+    },
+    {
+      "coin": "RENDER",
+      "mexc_usdt_vol": 113603.38384000001,
+      "kucoin_usdt_vol": 1337437.2363,
+      "avg_usdt_vol": 725520.31007,
+      "m_price": 1.808,
+      "k_price": 1.815,
+      "spread_pct": 0.3856749311294708
+    },
+    {
+      "coin": "JUP",
+      "mexc_usdt_vol": 180403.906084,
+      "kucoin_usdt_vol": 1341281.79970192,
+      "avg_usdt_vol": 760842.85289296,
+      "m_price": 0.1747,
+      "k_price": 0.1748,
+      "spread_pct": 0.057208237986279595
+    },
+    {
+      "coin": "INJ",
+      "mexc_usdt_vol": 1150517.7684,
+      "kucoin_usdt_vol": 373888.388016,
+      "avg_usdt_vol": 762203.0782079999,
+      "m_price": 3.432,
+      "k_price": 3.432,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "CYS",
+      "mexc_usdt_vol": 239176.977984,
+      "kucoin_usdt_vol": 1290998.42298,
+      "avg_usdt_vol": 765087.700482,
+      "m_price": 0.4704,
+      "k_price": 0.47215,
+      "spread_pct": 0.3706449221645725
+    },
+    {
+      "coin": "ETHFI",
+      "mexc_usdt_vol": 1415680.1528,
+      "kucoin_usdt_vol": 132018.19989,
+      "avg_usdt_vol": 773849.176345,
+      "m_price": 0.4555,
+      "k_price": 0.4559,
+      "spread_pct": 0.0877385391533256
+    },
+    {
+      "coin": "XPR",
+      "mexc_usdt_vol": 125089.2025212,
+      "kucoin_usdt_vol": 1491087.9188392428,
+      "avg_usdt_vol": 808088.5606802214,
+      "m_price": 0.0028148,
+      "k_price": 0.002815,
+      "spread_pct": 0.0071047957371111765
+    },
+    {
+      "coin": "FARTCOIN",
+      "mexc_usdt_vol": 500140.97855450003,
+      "kucoin_usdt_vol": 1126763.43736,
+      "avg_usdt_vol": 813452.2079572501,
+      "m_price": 0.20065,
+      "k_price": 0.2008,
+      "spread_pct": 0.0747011952191291
+    },
+    {
+      "coin": "BONK",
+      "mexc_usdt_vol": 1143536.0791896211,
+      "kucoin_usdt_vol": 510814.8108922546,
+      "avg_usdt_vol": 827175.4450409379,
+      "m_price": 6.423e-06,
+      "k_price": 6.426e-06,
+      "spread_pct": 0.04668534080298478
+    },
+    {
+      "coin": "PYTH",
+      "mexc_usdt_vol": 1027564.0269544,
+      "kucoin_usdt_vol": 667241.40113928,
+      "avg_usdt_vol": 847402.71404684,
+      "m_price": 0.05156,
+      "k_price": 0.0516,
+      "spread_pct": 0.07751937984495809
+    },
+    {
+      "coin": "OP",
+      "mexc_usdt_vol": 68628.157581,
+      "kucoin_usdt_vol": 1644336.0668415998,
+      "avg_usdt_vol": 856482.1122112998,
+      "m_price": 0.1237,
+      "k_price": 0.1238,
+      "spread_pct": 0.08077544426493456
+    },
+    {
+      "coin": "ZRO",
+      "mexc_usdt_vol": 1033777.0074,
+      "kucoin_usdt_vol": 753258.154656,
+      "avg_usdt_vol": 893517.581028,
+      "m_price": 1.581,
+      "k_price": 1.5792,
+      "spread_pct": 0.11385199240986868
+    },
+    {
+      "coin": "FET",
+      "mexc_usdt_vol": 466186.5241220001,
+      "kucoin_usdt_vol": 1458866.51714108,
+      "avg_usdt_vol": 962526.5206315401,
+      "m_price": 0.2101,
+      "k_price": 0.2102,
+      "spread_pct": 0.04757373929590342
+    },
+    {
+      "coin": "ALGO",
+      "mexc_usdt_vol": 124249.57017959999,
+      "kucoin_usdt_vol": 1813922.3887983,
+      "avg_usdt_vol": 969085.97948895,
+      "m_price": 0.10867,
+      "k_price": 0.1089,
+      "spread_pct": 0.21120293847566035
+    },
+    {
+      "coin": "BLEND",
+      "mexc_usdt_vol": 483608.181705,
+      "kucoin_usdt_vol": 1468065.862956,
+      "avg_usdt_vol": 975837.0223305,
+      "m_price": 0.1045,
+      "k_price": 0.10483,
+      "spread_pct": 0.31479538300105964
+    },
+    {
+      "coin": "SPACE",
+      "mexc_usdt_vol": 1910501.1899729401,
+      "kucoin_usdt_vol": 66200.728932,
+      "avg_usdt_vol": 988350.9594524701,
+      "m_price": 0.006806,
+      "k_price": 0.006822,
+      "spread_pct": 0.23453532688360482
+    },
+    {
+      "coin": "MOVR",
+      "mexc_usdt_vol": 1202909.5599282,
+      "kucoin_usdt_vol": 815968.1179249801,
+      "avg_usdt_vol": 1009438.83892659,
+      "m_price": 2.202,
+      "k_price": 2.2063,
+      "spread_pct": 0.19489643294203837
+    },
+    {
+      "coin": "XLM",
+      "mexc_usdt_vol": 416249.579193,
+      "kucoin_usdt_vol": 1768524.3393969648,
+      "avg_usdt_vol": 1092386.9592949823,
+      "m_price": 0.1743,
+      "k_price": 0.1744,
+      "spread_pct": 0.057339449541278086
+    },
+    {
+      "coin": "SKR",
+      "mexc_usdt_vol": 266935.23008966004,
+      "kucoin_usdt_vol": 1926979.7325359997,
+      "avg_usdt_vol": 1096957.48131283,
+      "m_price": 0.019778,
+      "k_price": 0.019651,
+      "spread_pct": 0.642127616543645
+    },
+    {
+      "coin": "ZBCN",
+      "mexc_usdt_vol": 940066.952578318,
+      "kucoin_usdt_vol": 1375323.4644096,
+      "avg_usdt_vol": 1157695.208493959,
+      "m_price": 0.0035447,
+      "k_price": 0.0035437,
+      "spread_pct": 0.02821113211273543
+    },
+    {
+      "coin": "BDX",
+      "mexc_usdt_vol": 1002307.0876002,
+      "kucoin_usdt_vol": 1594278.9185368621,
+      "avg_usdt_vol": 1298293.003068531,
+      "m_price": 0.08014,
+      "k_price": 0.08031,
+      "spread_pct": 0.2116797410036153
+    },
+    {
+      "coin": "Q",
+      "mexc_usdt_vol": 575174.3884642,
+      "kucoin_usdt_vol": 2081003.150888,
+      "avg_usdt_vol": 1328088.7696761,
+      "m_price": 0.010657,
+      "k_price": 0.010636,
+      "spread_pct": 0.19705357980670155
+    },
+    {
+      "coin": "LUNC",
+      "mexc_usdt_vol": 617421.4151132886,
+      "kucoin_usdt_vol": 2136789.294550879,
+      "avg_usdt_vol": 1377105.3548320837,
+      "m_price": 5.147e-05,
+      "k_price": 5.131e-05,
+      "spread_pct": 0.3108606955508033
+    },
+    {
+      "coin": "ENA",
+      "mexc_usdt_vol": 278425.0674247,
+      "kucoin_usdt_vol": 2595805.2636386794,
+      "avg_usdt_vol": 1437115.1655316898,
+      "m_price": 0.10843,
+      "k_price": 0.1086,
+      "spread_pct": 0.1565377532228393
+    },
+    {
+      "coin": "PUMP",
+      "mexc_usdt_vol": 151809.9827651,
+      "kucoin_usdt_vol": 2739776.230272,
+      "avg_usdt_vol": 1445793.10651855,
+      "m_price": 0.001786,
+      "k_price": 0.001784,
+      "spread_pct": 0.11198208286674403
+    },
+    {
+      "coin": "WIF",
+      "mexc_usdt_vol": 1018542.577584,
+      "kucoin_usdt_vol": 2360923.52959488,
+      "avg_usdt_vol": 1689733.05358944,
+      "m_price": 0.1806,
+      "k_price": 0.1812,
+      "spread_pct": 0.33112582781456373
+    },
+    {
+      "coin": "CRV",
+      "mexc_usdt_vol": 705852.3088860001,
+      "kucoin_usdt_vol": 2679462.7040518736,
+      "avg_usdt_vol": 1692657.5064689368,
+      "m_price": 0.2246,
+      "k_price": 0.2247,
+      "spread_pct": 0.04450378282154728
+    },
+    {
+      "coin": "FOLKS",
+      "mexc_usdt_vol": 1226963.7711099999,
+      "kucoin_usdt_vol": 2266609.140352,
+      "avg_usdt_vol": 1746786.4557309998,
+      "m_price": 1.529,
+      "k_price": 1.5244,
+      "spread_pct": 0.3008502289077788
+    },
+    {
+      "coin": "STO",
+      "mexc_usdt_vol": 1205637.1736507998,
+      "kucoin_usdt_vol": 2488184.090022,
+      "avg_usdt_vol": 1846910.6318364,
+      "m_price": 0.10182,
+      "k_price": 0.10181,
+      "spread_pct": 0.009821253191903481
+    },
+    {
+      "coin": "ICP",
+      "mexc_usdt_vol": 217504.19832,
+      "kucoin_usdt_vol": 3589247.8565591997,
+      "avg_usdt_vol": 1903376.0274395999,
+      "m_price": 2.468,
+      "k_price": 2.469,
+      "spread_pct": 0.04050222762251478
+    },
+    {
+      "coin": "HBAR",
+      "mexc_usdt_vol": 213841.16190700003,
+      "kucoin_usdt_vol": 3807295.6218368798,
+      "avg_usdt_vol": 2010568.3918719399,
+      "m_price": 0.09145,
+      "k_price": 0.0914,
+      "spread_pct": 0.05467468562056683
+    },
+    {
+      "coin": "WLD",
+      "mexc_usdt_vol": 532536.00051,
+      "kucoin_usdt_vol": 3525381.4208135507,
+      "avg_usdt_vol": 2028958.7106617754,
+      "m_price": 0.2631,
+      "k_price": 0.2631,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "ENJ",
+      "mexc_usdt_vol": 952468.3876938999,
+      "kucoin_usdt_vol": 3259358.1955000004,
+      "avg_usdt_vol": 2105913.29159695,
+      "m_price": 0.06391,
+      "k_price": 0.06395,
+      "spread_pct": 0.06254886630181743
+    },
+    {
+      "coin": "SIREN",
+      "mexc_usdt_vol": 517660.605726,
+      "kucoin_usdt_vol": 3774785.0859199995,
+      "avg_usdt_vol": 2146222.8458229997,
+      "m_price": 0.6774,
+      "k_price": 0.67651,
+      "spread_pct": 0.13138470622971027
+    },
+    {
+      "coin": "ARB",
+      "mexc_usdt_vol": 252288.66986700002,
+      "kucoin_usdt_vol": 4044544.8624836574,
+      "avg_usdt_vol": 2148416.7661753288,
+      "m_price": 0.1317,
+      "k_price": 0.1317,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "KAT",
+      "mexc_usdt_vol": 2070432.4990527,
+      "kucoin_usdt_vol": 2291389.930758,
+      "avg_usdt_vol": 2180911.21490535,
+      "m_price": 0.021618,
+      "k_price": 0.02157,
+      "spread_pct": 0.2220371912295283
+    },
+    {
+      "coin": "TRUMP",
+      "mexc_usdt_vol": 3038470.1529,
+      "kucoin_usdt_vol": 1534681.15506,
+      "avg_usdt_vol": 2286575.65398,
+      "m_price": 2.93,
+      "k_price": 2.931,
+      "spread_pct": 0.03411804844762504
+    },
+    {
+      "coin": "KAS",
+      "mexc_usdt_vol": 459731.0794725,
+      "kucoin_usdt_vol": 5027926.866854584,
+      "avg_usdt_vol": 2743828.973163542,
+      "m_price": 0.033875,
+      "k_price": 0.03388,
+      "spread_pct": 0.014757969303418127
+    },
+    {
+      "coin": "UB",
+      "mexc_usdt_vol": 440958.4585978,
+      "kucoin_usdt_vol": 5074174.691459999,
+      "avg_usdt_vol": 2757566.5750288996,
+      "m_price": 0.04598,
+      "k_price": 0.046305,
+      "spread_pct": 0.701868048806822
+    },
+    {
+      "coin": "APE",
+      "mexc_usdt_vol": 3398817.456936,
+      "kucoin_usdt_vol": 2147393.39226776,
+      "avg_usdt_vol": 2773105.42460188,
+      "m_price": 0.1738,
+      "k_price": 0.1739,
+      "spread_pct": 0.05750431282345543
+    },
+    {
+      "coin": "LAB",
+      "mexc_usdt_vol": 1593748.2047296,
+      "kucoin_usdt_vol": 4373443.687384,
+      "avg_usdt_vol": 2983595.9460568,
+      "m_price": 0.69152,
+      "k_price": 0.69263,
+      "spread_pct": 0.16025872399404364
+    },
+    {
+      "coin": "VIRTUAL",
+      "mexc_usdt_vol": 198576.759348,
+      "kucoin_usdt_vol": 5831653.638048001,
+      "avg_usdt_vol": 3015115.1986980005,
+      "m_price": 0.7062,
+      "k_price": 0.7064,
+      "spread_pct": 0.028312570781423834
+    },
+    {
+      "coin": "TRIA",
+      "mexc_usdt_vol": 3925249.1349718003,
+      "kucoin_usdt_vol": 2163468.570264,
+      "avg_usdt_vol": 3044358.8526179,
+      "m_price": 0.03314,
+      "k_price": 0.033188,
+      "spread_pct": 0.14463058936964995
+    },
+    {
+      "coin": "SHIB",
+      "mexc_usdt_vol": 1280300.774543208,
+      "kucoin_usdt_vol": 5070654.508575366,
+      "avg_usdt_vol": 3175477.641559287,
+      "m_price": 6.236e-06,
+      "k_price": 6.236e-06,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "BCH",
+      "mexc_usdt_vol": 1546350.7386299998,
+      "kucoin_usdt_vol": 4854950.616384,
+      "avg_usdt_vol": 3200650.6775069996,
+      "m_price": 460.5,
+      "k_price": 460.26,
+      "spread_pct": 0.05211726384365019
+    },
+    {
+      "coin": "SUI",
+      "mexc_usdt_vol": 1461066.268256,
+      "kucoin_usdt_vol": 5141294.944668814,
+      "avg_usdt_vol": 3301180.606462407,
+      "m_price": 0.9506,
+      "k_price": 0.9505,
+      "spread_pct": 0.010519671786239112
+    },
+    {
+      "coin": "KCS",
+      "mexc_usdt_vol": 60278.443744,
+      "kucoin_usdt_vol": 6684593.5390278,
+      "avg_usdt_vol": 3372435.9913859,
+      "m_price": 8.4598,
+      "k_price": 8.479,
+      "spread_pct": 0.22644179738176276
+    },
+    {
+      "coin": "NIGHT",
+      "mexc_usdt_vol": 95658.8996356,
+      "kucoin_usdt_vol": 6671678.362322,
+      "avg_usdt_vol": 3383668.6309788,
+      "m_price": 0.03746,
+      "k_price": 0.03743,
+      "spread_pct": 0.0800854244527556
+    },
+    {
+      "coin": "SNEK",
+      "mexc_usdt_vol": 60762.948972768,
+      "kucoin_usdt_vol": 6936829.870375999,
+      "avg_usdt_vol": 3498796.4096743837,
+      "m_price": 0.0005319,
+      "k_price": 0.000529,
+      "spread_pct": 0.5452152660274519
+    },
+    {
+      "coin": "ONDO",
+      "mexc_usdt_vol": 279654.7334756,
+      "kucoin_usdt_vol": 6780575.305704541,
+      "avg_usdt_vol": 3530115.0195900705,
+      "m_price": 0.26659,
+      "k_price": 0.26655,
+      "spread_pct": 0.015004313740194489
+    },
+    {
+      "coin": "AVAX",
+      "mexc_usdt_vol": 369627.64038,
+      "kucoin_usdt_vol": 7271201.6261856,
+      "avg_usdt_vol": 3820414.6332827997,
+      "m_price": 9.459,
+      "k_price": 9.456,
+      "spread_pct": 0.031715826197273644
+    },
+    {
+      "coin": "PEPE",
+      "mexc_usdt_vol": 987920.30958896,
+      "kucoin_usdt_vol": 6674000.278615979,
+      "avg_usdt_vol": 3830960.2941024695,
+      "m_price": 3.88e-06,
+      "k_price": 3.878e-06,
+      "spread_pct": 0.05154639175258119
+    },
+    {
+      "coin": "USD1",
+      "mexc_usdt_vol": 8201359.190042,
+      "kucoin_usdt_vol": 106877.08725200001,
+      "avg_usdt_vol": 4154118.1386470003,
+      "m_price": 0.9998,
+      "k_price": 0.9997,
+      "spread_pct": 0.010002000400078915
+    },
+    {
+      "coin": "ADA",
+      "mexc_usdt_vol": 5082707.8058400005,
+      "kucoin_usdt_vol": 4604108.502158,
+      "avg_usdt_vol": 4843408.153999001,
+      "m_price": 0.252,
+      "k_price": 0.2519,
+      "spread_pct": 0.039682539682535316
+    },
+    {
+      "coin": "LTC",
+      "mexc_usdt_vol": 4767399.566539,
+      "kucoin_usdt_vol": 5816442.77128,
+      "avg_usdt_vol": 5291921.168909499,
+      "m_price": 56.57,
+      "k_price": 56.57,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "TON",
+      "mexc_usdt_vol": 991673.56394,
+      "kucoin_usdt_vol": 9628441.406232001,
+      "avg_usdt_vol": 5310057.4850860005,
+      "m_price": 1.321,
+      "k_price": 1.32,
+      "spread_pct": 0.07570022710067296
+    },
+    {
+      "coin": "LINK",
+      "mexc_usdt_vol": 498806.79237,
+      "kucoin_usdt_vol": 10419502.8646024,
+      "avg_usdt_vol": 5459154.8284862,
+      "m_price": 9.357,
+      "k_price": 9.3595,
+      "spread_pct": 0.026710828569915898
+    },
+    {
+      "coin": "CFX",
+      "mexc_usdt_vol": 128901.0308879,
+      "kucoin_usdt_vol": 11225633.83832,
+      "avg_usdt_vol": 5677267.43460395,
+      "m_price": 0.06283,
+      "k_price": 0.06281,
+      "spread_pct": 0.031831927423193136
+    },
+    {
+      "coin": "CHIP",
+      "mexc_usdt_vol": 1775242.4365224002,
+      "kucoin_usdt_vol": 9918749.730918,
+      "avg_usdt_vol": 5846996.0837202,
+      "m_price": 0.08644,
+      "k_price": 0.086883,
+      "spread_pct": 0.5098811044738314
+    },
+    {
+      "coin": "DASH",
+      "mexc_usdt_vol": 855212.22106476,
+      "kucoin_usdt_vol": 11124980.309972676,
+      "avg_usdt_vol": 5990096.2655187175,
+      "m_price": 36.76,
+      "k_price": 36.64,
+      "spread_pct": 0.32644178454841527
+    },
+    {
+      "coin": "ATOM",
+      "mexc_usdt_vol": 854724.8972799999,
+      "kucoin_usdt_vol": 11363448.774605999,
+      "avg_usdt_vol": 6109086.835942999,
+      "m_price": 1.984,
+      "k_price": 1.9842,
+      "spread_pct": 0.010079629069649126
+    },
+    {
+      "coin": "WMTX",
+      "mexc_usdt_vol": 56042.2356406,
+      "kucoin_usdt_vol": 12918716.072271999,
+      "avg_usdt_vol": 6487379.1539563,
+      "m_price": 0.06338,
+      "k_price": 0.06332,
+      "spread_pct": 0.09466708740928446
+    },
+    {
+      "coin": "RAVE",
+      "mexc_usdt_vol": 376993.90925400006,
+      "kucoin_usdt_vol": 13474680.343039999,
+      "avg_usdt_vol": 6925837.126146999,
+      "m_price": 1.1127,
+      "k_price": 0.992,
+      "spread_pct": 10.847488092028401
+    },
+    {
+      "coin": "TRX",
+      "mexc_usdt_vol": 9041260.831131,
+      "kucoin_usdt_vol": 5957120.788849999,
+      "avg_usdt_vol": 7499190.809990499,
+      "m_price": 0.3229,
+      "k_price": 0.3233,
+      "spread_pct": 0.12372409526753975
+    },
+    {
+      "coin": "PENGU",
+      "mexc_usdt_vol": 840740.2655961599,
+      "kucoin_usdt_vol": 14342739.138897447,
+      "avg_usdt_vol": 7591739.702246804,
+      "m_price": 0.008608,
+      "k_price": 0.0086,
+      "spread_pct": 0.09293680297396989
+    },
+    {
+      "coin": "HYPE",
+      "mexc_usdt_vol": 866191.3092,
+      "kucoin_usdt_vol": 14713246.519199999,
+      "avg_usdt_vol": 7789718.9141999995,
+      "m_price": 41.22,
+      "k_price": 41.22,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "FIL",
+      "mexc_usdt_vol": 1198472.9507725998,
+      "kucoin_usdt_vol": 14665865.269472342,
+      "avg_usdt_vol": 7932169.110122471,
+      "m_price": 0.9467,
+      "k_price": 0.9471,
+      "spread_pct": 0.04223418857565906
+    },
+    {
+      "coin": "UNI",
+      "mexc_usdt_vol": 278949.7893,
+      "kucoin_usdt_vol": 17466869.73897029,
+      "avg_usdt_vol": 8872909.764135145,
+      "m_price": 3.255,
+      "k_price": 3.2557,
+      "spread_pct": 0.021500752526342874
+    },
+    {
+      "coin": "BNB",
+      "mexc_usdt_vol": 11123790.5224,
+      "kucoin_usdt_vol": 10258799.62895,
+      "avg_usdt_vol": 10691295.075675,
+      "m_price": 639.68,
+      "k_price": 639.575,
+      "spread_pct": 0.01641445722859938
+    },
+    {
+      "coin": "DOT",
+      "mexc_usdt_vol": 2661279.94104,
+      "kucoin_usdt_vol": 19959965.668692,
+      "avg_usdt_vol": 11310622.804866001,
+      "m_price": 1.259,
+      "k_price": 1.26,
+      "spread_pct": 0.07936507936508824
+    },
+    {
+      "coin": "DOGE",
+      "mexc_usdt_vol": 18288736.393243,
+      "kucoin_usdt_vol": 8356778.807157053,
+      "avg_usdt_vol": 13322757.600200027,
+      "m_price": 0.09803,
+      "k_price": 0.09799,
+      "spread_pct": 0.04080383556055518
+    },
+    {
+      "coin": "ASTER",
+      "mexc_usdt_vol": 1426328.9151119997,
+      "kucoin_usdt_vol": 25706641.14984,
+      "avg_usdt_vol": 13566485.032476,
+      "m_price": 0.6687,
+      "k_price": 0.6685,
+      "spread_pct": 0.029908778226406158
+    },
+    {
+      "coin": "NEAR",
+      "mexc_usdt_vol": 286850.45676000003,
+      "kucoin_usdt_vol": 44900618.05171662,
+      "avg_usdt_vol": 22593734.254238307,
+      "m_price": 1.428,
+      "k_price": 1.4272,
+      "spread_pct": 0.056022408963579275
+    },
+    {
+      "coin": "TAO",
+      "mexc_usdt_vol": 3104840.67328,
+      "kucoin_usdt_vol": 42476851.673472,
+      "avg_usdt_vol": 22790846.173376,
+      "m_price": 246.58,
+      "k_price": 246.72,
+      "spread_pct": 0.056744487678334295
+    },
+    {
+      "coin": "AAVE",
+      "mexc_usdt_vol": 620105.41984,
+      "kucoin_usdt_vol": 45195977.3084456,
+      "avg_usdt_vol": 22908041.3641428,
+      "m_price": 94.24,
+      "k_price": 94.289,
+      "spread_pct": 0.051967885967617214
+    },
+    {
+      "coin": "XMR",
+      "mexc_usdt_vol": 2282546.80899,
+      "kucoin_usdt_vol": 46709070.0335,
+      "avg_usdt_vol": 24495808.421245,
+      "m_price": 370.23,
+      "k_price": 370.57,
+      "spread_pct": 0.09175054645545376
+    },
+    {
+      "coin": "ZEC",
+      "mexc_usdt_vol": 2749067.7642605198,
+      "kucoin_usdt_vol": 50449506.02069765,
+      "avg_usdt_vol": 26599286.89247909,
+      "m_price": 357.08,
+      "k_price": 356.775,
+      "spread_pct": 0.08541503304581798
+    },
+    {
+      "coin": "USDC",
+      "mexc_usdt_vol": 40213627.652184,
+      "kucoin_usdt_vol": 13594462.565516,
+      "avg_usdt_vol": 26904045.108850002,
+      "m_price": 0.9996,
+      "k_price": 0.9994,
+      "spread_pct": 0.020008003201289416
+    },
+    {
+      "coin": "SOL",
+      "mexc_usdt_vol": 48720681.054239996,
+      "kucoin_usdt_vol": 29071369.899469495,
+      "avg_usdt_vol": 38896025.47685474,
+      "m_price": 86.32,
+      "k_price": 86.32,
+      "spread_pct": 0.0
+    },
+    {
+      "coin": "XRP",
+      "mexc_usdt_vol": 35327742.638116,
+      "kucoin_usdt_vol": 216456168.72832397,
+      "avg_usdt_vol": 125891955.68321998,
+      "m_price": 1.4449,
+      "k_price": 1.44468,
+      "spread_pct": 0.015225967194969133
+    },
+    {
+      "coin": "ETH",
+      "mexc_usdt_vol": 180861105.6381568,
+      "kucoin_usdt_vol": 287674305.63495684,
+      "avg_usdt_vol": 234267705.6365568,
+      "m_price": 2321.86,
+      "k_price": 2321.88,
+      "spread_pct": 0.000861370958015996
+    },
+    {
+      "coin": "BTC",
+      "mexc_usdt_vol": 373387067.956679,
+      "kucoin_usdt_vol": 298552471.19199216,
+      "avg_usdt_vol": 335969769.5743356,
+      "m_price": 77947.93,
+      "k_price": 77944.3,
+      "spread_pct": 0.004656954969798563
+    }
+  ]
+}

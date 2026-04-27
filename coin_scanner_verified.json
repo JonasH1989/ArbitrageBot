@@ -1,0 +1,542 @@
+{
+  "timestamp": "2026-04-24T23:35:17.964499",
+  "results": [
+    {
+      "coin": "ASI",
+      "cg_name": "Basic Attention",
+      "cg_price": 0.104764,
+      "m_price": 0.001322,
+      "k_price": 0.001281,
+      "m_diff": 98.73811614676798,
+      "k_diff": 98.77725172769271,
+      "spread": 3.1013615733736777,
+      "avg_vol": 0.0,
+      "status": "\u274c ANDERER COIN"
+    },
+    {
+      "coin": "AI3",
+      "cg_name": "Autonomys Network",
+      "cg_price": 0.00545644,
+      "m_price": 0.0055,
+      "k_price": 0.00556,
+      "m_diff": 0.7983227159100033,
+      "k_diff": 1.8979407819017518,
+      "spread": 1.0791366906474849,
+      "avg_vol": 75.3498075,
+      "status": "\u2705 GLEICH"
+    },
+    {
+      "coin": "TEN",
+      "cg_name": "Bittensor",
+      "cg_price": 250.25,
+      "m_price": 0.0009291,
+      "k_price": 0.000831,
+      "m_diff": 99.99962873126873,
+      "k_diff": 99.99966793206792,
+      "spread": 10.55860510171133,
+      "avg_vol": 90.02299275,
+      "status": "\u274c ANDERER COIN"
+    },
+    {
+      "coin": "SCA",
+      "cg_name": "Banana For Scale",
+      "cg_price": null,
+      "m_price": 0.0175,
+      "k_price": 0.0178,
+      "spread": 1.6853932584269562,
+      "avg_vol": 168.354375,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "BAX",
+      "cg_name": "BABB",
+      "cg_price": null,
+      "m_price": 1.2849e-05,
+      "k_price": 1.271e-05,
+      "spread": 1.081796248735309,
+      "avg_vol": 503.398632876511,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "A47",
+      "cg_name": "AGENDA 47",
+      "cg_price": null,
+      "m_price": 0.002779,
+      "k_price": 0.00273,
+      "spread": 1.7632241813602016,
+      "avg_vol": 590.259357205,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "IDOS",
+      "cg_name": "IdOS",
+      "cg_price": null,
+      "m_price": 0.0132,
+      "k_price": 0.01324,
+      "spread": 0.3021148036253784,
+      "avg_vol": 708.144738,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "CSIX",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.0003401,
+      "k_price": 0.000345,
+      "spread": 1.4202898550724512,
+      "avg_vol": 794.9009290285
+    },
+    {
+      "coin": "ROOT",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 5.398e-05,
+      "k_price": 0.000116,
+      "spread": 53.46551724137931,
+      "avg_vol": 880.9030935148
+    },
+    {
+      "coin": "MPC",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.01101,
+      "k_price": 0.010944,
+      "spread": 0.5994550408719354,
+      "avg_vol": 1839.4477023
+    },
+    {
+      "coin": "SFUND",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.01745,
+      "k_price": 0.0173,
+      "spread": 0.8595988538681996,
+      "avg_vol": 1946.09269025
+    },
+    {
+      "coin": "BOS",
+      "cg_name": "Pikaboss",
+      "cg_price": null,
+      "m_price": 0.000406,
+      "k_price": 0.000404,
+      "spread": 0.49261083743842227,
+      "avg_vol": 2419.6307663400003,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "SIDUS",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 6.072e-05,
+      "k_price": 6.17e-05,
+      "spread": 1.5883306320907522,
+      "avg_vol": 2680.7996218631997
+    },
+    {
+      "coin": "NEXI",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.00974,
+      "k_price": 0.00966,
+      "spread": 0.8213552361396325,
+      "avg_vol": 3155.4526133
+    },
+    {
+      "coin": "CTA",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.01188,
+      "k_price": 0.01174,
+      "spread": 1.1784511784511742,
+      "avg_vol": 3529.3835680000007
+    },
+    {
+      "coin": "USDP",
+      "cg_name": "Pax Dollar",
+      "cg_price": null,
+      "m_price": 0.9995,
+      "k_price": 0.997,
+      "spread": 0.25012506253127137,
+      "avg_vol": 3583.1424867,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "POKT",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.012047,
+      "k_price": 0.01195,
+      "spread": 0.8051797127915652,
+      "avg_vol": 3609.29195679
+    },
+    {
+      "coin": "FUEL",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.00094,
+      "k_price": 0.000942,
+      "spread": 0.21231422505308373,
+      "avg_vol": 3707.5025794000003
+    },
+    {
+      "coin": "NXRA",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.002022,
+      "k_price": 0.00196,
+      "spread": 3.0662710187932736,
+      "avg_vol": 3728.7980594
+    },
+    {
+      "coin": "KRL",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.1514,
+      "k_price": 0.15127,
+      "spread": 0.08586525759578532,
+      "avg_vol": 4584.120300607
+    },
+    {
+      "coin": "SUT",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.655,
+      "k_price": 0.6865,
+      "spread": 4.588492352512741,
+      "avg_vol": 4626.8389050000005
+    },
+    {
+      "coin": "XL1",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.0002624,
+      "k_price": 0.0002614,
+      "spread": 0.3810975609755984,
+      "avg_vol": 4644.0097398319995
+    },
+    {
+      "coin": "ALKIMI",
+      "cg_name": "ALKIMI",
+      "cg_price": null,
+      "m_price": 0.00372,
+      "k_price": 0.00374,
+      "spread": 0.5347593582887599,
+      "avg_vol": 4893.4351526,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "POLYX",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.0507,
+      "k_price": 0.051,
+      "spread": 0.5882352941176368,
+      "avg_vol": 4915.864014299999
+    },
+    {
+      "coin": "ELP",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.000888,
+      "k_price": 0.000889,
+      "spread": 0.11248593925759552,
+      "avg_vol": 5248.2729804
+    },
+    {
+      "coin": "KIMA",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.00338,
+      "k_price": 0.0037,
+      "spread": 8.648648648648647,
+      "avg_vol": 5725.3492707
+    },
+    {
+      "coin": "GIGA",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.00188,
+      "k_price": 0.00187,
+      "spread": 0.5319148936170226,
+      "avg_vol": 6007.8726018
+    },
+    {
+      "coin": "TRN",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.00199,
+      "k_price": 0.00195,
+      "spread": 2.0100502512562866,
+      "avg_vol": 7162.632592850001
+    },
+    {
+      "coin": "PRCL",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.01393,
+      "k_price": 0.01393,
+      "spread": 0.0,
+      "avg_vol": 7266.958799099999
+    },
+    {
+      "coin": "PUNDIAI",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.5901,
+      "k_price": 0.5816,
+      "spread": 1.4404338247754538,
+      "avg_vol": 7975.856073499999
+    }
+  ],
+  "verified": [
+    {
+      "coin": "AI3",
+      "cg_name": "Autonomys Network",
+      "cg_price": 0.00545644,
+      "m_price": 0.0055,
+      "k_price": 0.00556,
+      "m_diff": 0.7983227159100033,
+      "k_diff": 1.8979407819017518,
+      "spread": 1.0791366906474849,
+      "avg_vol": 75.3498075,
+      "status": "\u2705 GLEICH"
+    }
+  ],
+  "suspicious": [],
+  "unknown": [
+    {
+      "coin": "ASI",
+      "cg_name": "Basic Attention",
+      "cg_price": 0.104764,
+      "m_price": 0.001322,
+      "k_price": 0.001281,
+      "m_diff": 98.73811614676798,
+      "k_diff": 98.77725172769271,
+      "spread": 3.1013615733736777,
+      "avg_vol": 0.0,
+      "status": "\u274c ANDERER COIN"
+    },
+    {
+      "coin": "TEN",
+      "cg_name": "Bittensor",
+      "cg_price": 250.25,
+      "m_price": 0.0009291,
+      "k_price": 0.000831,
+      "m_diff": 99.99962873126873,
+      "k_diff": 99.99966793206792,
+      "spread": 10.55860510171133,
+      "avg_vol": 90.02299275,
+      "status": "\u274c ANDERER COIN"
+    },
+    {
+      "coin": "SCA",
+      "cg_name": "Banana For Scale",
+      "cg_price": null,
+      "m_price": 0.0175,
+      "k_price": 0.0178,
+      "spread": 1.6853932584269562,
+      "avg_vol": 168.354375,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "BAX",
+      "cg_name": "BABB",
+      "cg_price": null,
+      "m_price": 1.2849e-05,
+      "k_price": 1.271e-05,
+      "spread": 1.081796248735309,
+      "avg_vol": 503.398632876511,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "A47",
+      "cg_name": "AGENDA 47",
+      "cg_price": null,
+      "m_price": 0.002779,
+      "k_price": 0.00273,
+      "spread": 1.7632241813602016,
+      "avg_vol": 590.259357205,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "IDOS",
+      "cg_name": "IdOS",
+      "cg_price": null,
+      "m_price": 0.0132,
+      "k_price": 0.01324,
+      "spread": 0.3021148036253784,
+      "avg_vol": 708.144738,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "CSIX",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.0003401,
+      "k_price": 0.000345,
+      "spread": 1.4202898550724512,
+      "avg_vol": 794.9009290285
+    },
+    {
+      "coin": "ROOT",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 5.398e-05,
+      "k_price": 0.000116,
+      "spread": 53.46551724137931,
+      "avg_vol": 880.9030935148
+    },
+    {
+      "coin": "MPC",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.01101,
+      "k_price": 0.010944,
+      "spread": 0.5994550408719354,
+      "avg_vol": 1839.4477023
+    },
+    {
+      "coin": "SFUND",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.01745,
+      "k_price": 0.0173,
+      "spread": 0.8595988538681996,
+      "avg_vol": 1946.09269025
+    },
+    {
+      "coin": "BOS",
+      "cg_name": "Pikaboss",
+      "cg_price": null,
+      "m_price": 0.000406,
+      "k_price": 0.000404,
+      "spread": 0.49261083743842227,
+      "avg_vol": 2419.6307663400003,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "SIDUS",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 6.072e-05,
+      "k_price": 6.17e-05,
+      "spread": 1.5883306320907522,
+      "avg_vol": 2680.7996218631997
+    },
+    {
+      "coin": "NEXI",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.00974,
+      "k_price": 0.00966,
+      "spread": 0.8213552361396325,
+      "avg_vol": 3155.4526133
+    },
+    {
+      "coin": "CTA",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.01188,
+      "k_price": 0.01174,
+      "spread": 1.1784511784511742,
+      "avg_vol": 3529.3835680000007
+    },
+    {
+      "coin": "USDP",
+      "cg_name": "Pax Dollar",
+      "cg_price": null,
+      "m_price": 0.9995,
+      "k_price": 0.997,
+      "spread": 0.25012506253127137,
+      "avg_vol": 3583.1424867,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "POKT",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.012047,
+      "k_price": 0.01195,
+      "spread": 0.8051797127915652,
+      "avg_vol": 3609.29195679
+    },
+    {
+      "coin": "FUEL",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.00094,
+      "k_price": 0.000942,
+      "spread": 0.21231422505308373,
+      "avg_vol": 3707.5025794000003
+    },
+    {
+      "coin": "NXRA",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.002022,
+      "k_price": 0.00196,
+      "spread": 3.0662710187932736,
+      "avg_vol": 3728.7980594
+    },
+    {
+      "coin": "KRL",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.1514,
+      "k_price": 0.15127,
+      "spread": 0.08586525759578532,
+      "avg_vol": 4584.120300607
+    },
+    {
+      "coin": "SUT",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.655,
+      "k_price": 0.6865,
+      "spread": 4.588492352512741,
+      "avg_vol": 4626.8389050000005
+    },
+    {
+      "coin": "XL1",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.0002624,
+      "k_price": 0.0002614,
+      "spread": 0.3810975609755984,
+      "avg_vol": 4644.0097398319995
+    },
+    {
+      "coin": "ALKIMI",
+      "cg_name": "ALKIMI",
+      "cg_price": null,
+      "m_price": 0.00372,
+      "k_price": 0.00374,
+      "spread": 0.5347593582887599,
+      "avg_vol": 4893.4351526,
+      "status": "\u2753 KEIN CG PREIS"
+    },
+    {
+      "coin": "POLYX",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.0507,
+      "k_price": 0.051,
+      "spread": 0.5882352941176368,
+      "avg_vol": 4915.864014299999
+    },
+    {
+      "coin": "ELP",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.000888,
+      "k_price": 0.000889,
+      "spread": 0.11248593925759552,
+      "avg_vol": 5248.2729804
+    },
+    {
+      "coin": "KIMA",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.00338,
+      "k_price": 0.0037,
+      "spread": 8.648648648648647,
+      "avg_vol": 5725.3492707
+    },
+    {
+      "coin": "GIGA",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.00188,
+      "k_price": 0.00187,
+      "spread": 0.5319148936170226,
+      "avg_vol": 6007.8726018
+    },
+    {
+      "coin": "TRN",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.00199,
+      "k_price": 0.00195,
+      "spread": 2.0100502512562866,
+      "avg_vol": 7162.632592850001
+    },
+    {
+      "coin": "PRCL",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.01393,
+      "k_price": 0.01393,
+      "spread": 0.0,
+      "avg_vol": 7266.958799099999
+    },
+    {
+      "coin": "PUNDIAI",
+      "status": "\u274c NICHT AUF CG",
+      "m_price": 0.5901,
+      "k_price": 0.5816,
+      "spread": 1.4404338247754538,
+      "avg_vol": 7975.856073499999
+    }
+  ]
+}
