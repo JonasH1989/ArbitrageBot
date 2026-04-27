@@ -59,13 +59,19 @@ MEXC_KEY = _cfg.get('mexc', {}).get('api_key', '')
 MEXC_SECRET = _cfg.get('mexc', {}).get('api_secret', '')
 
 MEXC_MIN_USDT = 1.0
-KUCOIN_MIN_MPC = 85  # Minimum ~85 MPC per order (≈1 USDT at ~$0.012)
 
-# Exchange precision (decimal places)
-MEXC_PRICE_PRECISION = 5  # MEXC uses 5 decimal places for MPC
-KUCOIN_PRICE_PRECISION = 6  # KuCoin uses 6 decimal places for MPC
+# ==============================================================================
+# Trading Pair Configuration - Change COIN for different coins!
+# ==============================================================================
+COIN_SYMBOL = "MPC-USDT"      # KuCoin format (e.g., BTC-USDT, ETH-USDT)
+COIN_SYMBOL_MEXC = "MPCUSDT"  # MEXC format (e.g., BTCUSDT, ETHUSDT)
+KUCOIN_MIN_QTY = 85           # Minimum quantity per order (will be adjusted per coin)
 
-TRADING_PAIR = "MPC-USDT"
+# Exchange precision (decimal places) - adjust per coin as needed
+MEXC_PRICE_PRECISION = 5
+KUCOIN_PRICE_PRECISION = 6
+
+TRADING_PAIR = COIN_SYMBOL
 
 def is_active():
     """Check if bot is marked as active"""
@@ -120,11 +126,11 @@ def get_orderbook_levels():
     """Get detailed orderbook levels from both exchanges for multi-level spread check"""
     try:
         # MEXC depth API - get top 10 levels
-        resp_m = requests.get('https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=10', timeout=5)
+        resp_m = requests.get(f'https://api.mexc.com/api/v3/depth?symbol={COIN_SYMBOL_MEXC}&limit=10', timeout=5)
         m_depth = resp_m.json()
         
         # KuCoin Level2 API - get top 20
-        resp_k = requests.get('https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol=MPC-USDT', timeout=5)
+        resp_k = requests.get(f'https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol={COIN_SYMBOL}', timeout=5)
         k_depth = resp_k.json().get('data', {})
         
         # Parse MEXC asks (sorted low to high - we need to buy)
@@ -165,11 +171,11 @@ def get_prices():
     """Get Level 1 prices from real orderbook (not ticker!)"""
     try:
         # KuCoin Level1 orderbook
-        resp_k = requests.get('https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=MPC-USDT', timeout=5)
+        resp_k = requests.get(f'https://api.kucoin.com/api/v1/market/orderbook/level1?symbol={COIN_SYMBOL}', timeout=5)
         k_data = resp_k.json()['data']
         
         # MEXC Level1 from depth (not ticker!)
-        resp_m = requests.get('https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=1', timeout=5)
+        resp_m = requests.get(f'https://api.mexc.com/api/v3/depth?symbol={COIN_SYMBOL_MEXC}&limit=1', timeout=5)
         m_depth = resp_m.json()
         
         # Extract Level 1 prices
@@ -199,9 +205,9 @@ def get_trading_strategy(pair):
     return get_setting(f'trading.pairs.{pair}.strategy', 'usdt')
 
 def execute_market_buy_kucoin(qty):
-    """Buy MPC on KuCoin at market price"""
+    """Buy COIN on KuCoin at market price"""
     ts = str(int(time.time() * 1000))
-    body = json_lib.dumps({"clientOid": ts, "symbol": "MPC-USDT", "side": "buy", "type": "market", "size": str(qty)})
+    body = json_lib.dumps({"clientOid": ts, "symbol": COIN_SYMBOL, "side": "buy", "type": "market", "size": str(qty)})
     sig = kucoin_sig(KUCOIN_SECRET, ts, 'POST', '/api/v1/orders', body)
     
     headers = {
@@ -217,9 +223,9 @@ def execute_market_buy_kucoin(qty):
     return resp.json()
 
 def execute_limit_sell_kucoin(qty, price):
-    """Sell MPC on KuCoin at limit price"""
+    """Sell COIN on KuCoin at limit price"""
     ts = str(int(time.time() * 1000))
-    body = json_lib.dumps({"clientOid": f"{ts}_sell", "symbol": "MPC-USDT", "side": "sell", "type": "limit", "size": str(qty), "price": f"{price:.6f}"})
+    body = json_lib.dumps({"clientOid": f"{ts}_sell", "symbol": COIN_SYMBOL, "side": "sell", "type": "limit", "size": str(qty), "price": f"{price:.6f}"})
     sig = kucoin_sig(KUCOIN_SECRET, ts, 'POST', '/api/v1/orders', body)
     
     headers = {
@@ -235,9 +241,9 @@ def execute_limit_sell_kucoin(qty, price):
     return resp.json()
 
 def execute_market_buy_mexc(qty):
-    """Buy MPC on MEXC at market price"""
+    """Buy COIN on MEXC at market price"""
     ts = str(int(time.time() * 1000))
-    params = f'symbol=MPCUSDT&side=BUY&type=MARKET&quantity={qty}&timestamp={ts}'
+    params = f'symbol={COIN_SYMBOL_MEXC}&side=BUY&type=MARKET&quantity={qty}&timestamp={ts}'
     sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
     
     url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
@@ -247,9 +253,9 @@ def execute_market_buy_mexc(qty):
     return resp.json()
 
 def execute_limit_sell_mexc(qty, price):
-    """Sell MPC on MEXC at limit price"""
+    """Sell COIN on MEXC at limit price"""
     ts = str(int(time.time() * 1000))
-    params = f'symbol=MPCUSDT&side=SELL&type=LIMIT&quantity={qty}&price={price:.6f}&timestamp={ts}'
+    params = f'symbol={COIN_SYMBOL_MEXC}&side=SELL&type=LIMIT&quantity={qty}&price={price:.6f}&timestamp={ts}'
     sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
     
     url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
@@ -258,25 +264,38 @@ def execute_limit_sell_mexc(qty, price):
     resp = requests.post(url, headers=headers, timeout=10)
     return resp.json()
 
-def execute_trade_M_to_K(qty, buy_price, sell_price, strategy='usdt', spread_pct=0.0):
-    """M -> K: Buy MEXC (market), Sell KuCoin (limit)
+def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, buy_price, sell_price, strategy='usdt', spread_pct=0.0):
+    """Execute arbitrage trade: Market Buy on one exchange, Limit Sell on another.
+    
+    GENERIC FUNCTION - Works with ANY two exchanges!
+    Examples:
+        - KuCoin + MEXC: execute_trade_market_buy_limit_sell("KUCOIN", "MEXC", ...)
+        - Binance + KuCoin: execute_trade_market_buy_limit_sell("BINANCE", "KUCOIN", ...)
+        - MEXC + Binance: execute_trade_market_buy_limit_sell("MEXC", "BINANCE", ...)
     
     Args:
-        qty: Quantity to buy on MEXC
-        buy_price: Expected MEXC ask price (pM)
-        sell_price: Expected KuCoin bid price (pK)
+        exchange_market: Exchange for market order (BUY) - e.g. "KUCOIN", "MEXC", "BINANCE"
+        exchange_limit: Exchange for limit order (SELL) - e.g. "MEXC", "KUCOIN", "BINANCE"
+        qty: Quantity to buy on market exchange
+        buy_price: Expected price on market exchange
+        sell_price: Expected price on limit exchange
         strategy: 'usdt' or 'coins'
         spread_pct: Spread % when trade was triggered
     
     Returns:
         (success, trade_id)
     """
-    log(f"=== EXECUTING M->K TRADE (strategy={strategy}) ===")
-    log(f"Buy MEXC: {qty} MPC @ ${buy_price:.6f}")
+    # Determine direction string for logging
+    dir_str = f"{exchange_market[:1]}->{exchange_limit[:1]}"  # e.g. "K->M" or "M->K"
+    
+    log(f"=== EXECUTING TRADE {dir_str} (strategy={strategy}) ===")
+    coin = COIN_SYMBOL.split('-')[0]
+    log(f"Market BUY on {exchange_market}: {qty} {coin} @ ${buy_price:.6f}")
+    log(f"Limit SELL on {exchange_limit}: @ ${sell_price:.6f}")
     
     # Store expected prices for logging
-    market_price_expected = buy_price  # pM
-    limit_price_expected = sell_price  # pK
+    market_price_expected = buy_price
+    limit_price_expected = sell_price
     
     # Capture internal timestamp
     internal_ts = datetime.now().isoformat()
@@ -287,25 +306,41 @@ def execute_trade_M_to_K(qty, buy_price, sell_price, strategy='usdt', spread_pct
     ex1_data = None
     ex2_data = None
     
-    # Step 1: Market Buy on MEXC
-    log("Step 1: MEXC Market BUY...")
-    result1 = execute_market_buy_mexc(qty)
+    # ========================================================================
+    # STEP 1: Market BUY on exchange_market
+    # ========================================================================
+    log(f"Step 1: {exchange_market} Market BUY...")
     
-    log(f"DEBUG MEXC Response: {result1}")
+    # Route to correct API based on exchange
+    if exchange_market.upper() == "KUCOIN":
+        result1 = execute_market_buy_kucoin(qty)
+        ex1_harmonize = harmonize_kucoin_order
+        api_success_check = lambda r: r.get('code') == '200000'
+    elif exchange_market.upper() == "MEXC":
+        result1 = execute_market_buy_mexc(qty)
+        ex1_harmonize = harmonize_mexc_order
+        api_success_check = lambda r: r.get('code') is None or 'orderId' not in r
+    else:
+        error_code = "UNKNOWN_EXCHANGE"
+        error_message = f"Unknown market exchange: {exchange_market}"
+        log(f"❌ {error_message}")
+        return False, None
+    
+    log(f"DEBUG {exchange_market} Response: {result1}")
     
     # Check for API errors
-    if result1.get('code') is None or 'orderId' not in result1:
+    if not api_success_check(result1):
         error_code = "API_ERROR"
-        error_message = f"MEXC market order failed: {result1}"
+        error_message = f"{exchange_market} market order failed: {result1}"
         log(f"❌ {error_message}")
         
         # Create failed ex1_data for logging
-        ex1_data = {"exchange": "MEXC", "order_id": "FAILED", "type": "market", 
+        ex1_data = {"exchange": exchange_market.upper(), "order_id": "FAILED", "type": "market",
                     "side": "buy", "qty_ordered": qty, "qty_filled": 0,
                     "price_expected": market_price_expected, "price_actual": 0,
                     "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "REJECTED",
                     "raw_response": result1}
-        ex2_data = {"exchange": "KUCOIN", "order_id": "FAILED", "type": "limit", 
+        ex2_data = {"exchange": exchange_limit.upper(), "order_id": "FAILED", "type": "limit",
                     "side": "sell", "qty_ordered": 0, "qty_filled": 0,
                     "price_expected": limit_price_expected, "price_actual": 0,
                     "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "NOT_PLACED",
@@ -314,7 +349,7 @@ def execute_trade_M_to_K(qty, buy_price, sell_price, strategy='usdt', spread_pct
         trade_id = log_trade(
             pair=TRADING_PAIR,
             internal_ts=internal_ts,
-            direction="M->K",
+            direction=dir_str,
             ex1_data=ex1_data,
             ex2_data=ex2_data,
             limit_watch_status="ERROR",
@@ -329,21 +364,23 @@ def execute_trade_M_to_K(qty, buy_price, sell_price, strategy='usdt', spread_pct
         return False, trade_id
     
     # Harmonize successful response
-    order_id1 = result1.get('orderId', 'unknown')
-    log(f"✅ MEXC Order placed: {order_id1}")
+    order_id1 = result1.get('orderId', 'unknown') or result1.get('orderId', 'unknown')
+    log(f"✅ {exchange_market} Order placed: {order_id1}")
     
-    ex1_data = harmonize_mexc_order(result1, "buy", "market", TRADING_PAIR)
-    ex1_data['price_expected'] = market_price_expected  # Set expected price
+    # Get the response data for harmonization (KuCoin nests in 'data', MEXC doesn't)
+    response_data1 = result1.get('data', result1) if exchange_market.upper() == "KUCOIN" else result1
+    ex1_data = ex1_harmonize(response_data1, "buy", "market", TRADING_PAIR)
+    ex1_data['price_expected'] = market_price_expected
     log(f"   Harmonized: qty_filled={ex1_data['qty_filled']}, value_usdt={ex1_data['value_usdt']:.4f}, fees={ex1_data['fees']:.4f}")
     
     # CRITICAL CHECK: qty_filled must not be 0
     if ex1_data['qty_filled'] == 0:
         error_code = "QTY_ZERO"
-        error_message = "MEXC market order returned qty_filled=0! Counter-order ABORTED."
+        error_message = f"{exchange_market} market order returned qty_filled=0! Counter-order ABORTED."
         log(f"❌ {error_message}")
         
         # Log trade with error but NO limit order placed
-        ex2_data = {"exchange": "KUCOIN", "order_id": "NOT_PLACED", "type": "limit", 
+        ex2_data = {"exchange": exchange_limit.upper(), "order_id": "NOT_PLACED", "type": "limit",
                     "side": "sell", "qty_ordered": 0, "qty_filled": 0,
                     "price_expected": limit_price_expected, "price_actual": 0,
                     "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "NOT_PLACED",
@@ -352,7 +389,7 @@ def execute_trade_M_to_K(qty, buy_price, sell_price, strategy='usdt', spread_pct
         trade_id = log_trade(
             pair=TRADING_PAIR,
             internal_ts=internal_ts,
-            direction="M->K",
+            direction=dir_str,
             ex1_data=ex1_data,
             ex2_data=ex2_data,
             limit_watch_status="ERROR",
@@ -366,46 +403,70 @@ def execute_trade_M_to_K(qty, buy_price, sell_price, strategy='usdt', spread_pct
         log(f"📝 Trade logged with error: {trade_id}")
         return False, trade_id
     
-    # Determine sell quantity based on strategy
+    # ========================================================================
+    # STEP 2: Determine sell quantity based on strategy
+    # ========================================================================
     if strategy == 'coins':
         # Coins strategy: sell less MPC to keep the spread as MPC profit
         # USDT spent (minus fees) / sell price = MPC to sell
         usdt_to_sell = ex1_data['value_usdt'] - ex1_data['fees']
         sell_qty = usdt_to_sell / sell_price if sell_price > 0 else qty
-        log(f"Strategy=COINS: USDT spent={usdt_to_sell:.4f}, calculating MPC to sell @ ${sell_price:.6f}")
+        coin = COIN_SYMBOL.split('-')[0]
+        log(f"Strategy=COINS: USDT spent={usdt_to_sell:.4f}, calculating {coin} to sell @ ${sell_price:.6f}")
     else:
         # USDT strategy: sell same quantity as bought
         sell_qty = ex1_data['qty_filled']
     
-    log(f"Step 2: KuCoin Limit SELL: {sell_qty:.4f} MPC @ ${sell_price:.6f}")
+    coin = COIN_SYMBOL.split('-')[0]
+    log(f"Step 2: {exchange_limit} Limit SELL: {sell_qty:.4f} {coin} @ ${sell_price:.6f}")
     
     # Small delay before placing limit order
     time.sleep(0.5)
     
-    # Step 2: Limit Sell on KuCoin
-    result2 = execute_limit_sell_kucoin(sell_qty, sell_price)
+    # ========================================================================
+    # STEP 3: Limit SELL on exchange_limit
+    # ========================================================================
+    log(f"Step 2: {exchange_limit} Limit SELL...")
     
-    if result2.get('code') == '200000':
-        order_id2 = result2['data'].get('orderId', 'unknown')
-        log(f"✅ KuCoin Order placed: {order_id2}")
+    # Route to correct API based on exchange
+    if exchange_limit.upper() == "KUCOIN":
+        result2 = execute_limit_sell_kucoin(sell_qty, sell_price)
+        ex2_harmonize = harmonize_kucoin_order
+        limit_success_check = lambda r: r.get('code') == '200000'
+    elif exchange_limit.upper() == "MEXC":
+        result2 = execute_limit_sell_mexc(sell_qty, sell_price)
+        ex2_harmonize = harmonize_mexc_order
+        limit_success_check = lambda r: r.get('code') is None or 'orderId' in r
+    else:
+        error_code = "UNKNOWN_EXCHANGE"
+        error_message = f"Unknown limit exchange: {exchange_limit}"
+        log(f"❌ {error_message}")
+        result2 = {"error": error_message}
+    
+    if limit_success_check(result2):
+        order_id2 = result2.get('data', {}).get('orderId') or result2.get('orderId', 'unknown')
+        log(f"✅ {exchange_limit} Order placed: {order_id2}")
         
-        # Harmonize KuCoin response
-        ex2_data = harmonize_kucoin_order(result2.get('data', {}), "sell", "limit", TRADING_PAIR)
-        ex2_data['price_expected'] = limit_price_expected  # Set expected price
+        # Get the response data for harmonization
+        response_data2 = result2.get('data', result2) if exchange_limit.upper() == "KUCOIN" else result2
+        ex2_data = ex2_harmonize(response_data2, "sell", "limit", TRADING_PAIR)
+        ex2_data['price_expected'] = limit_price_expected
         log(f"   Harmonized: qty_ordered={ex2_data['qty_ordered']}, qty_filled={ex2_data['qty_filled']}, price_actual={ex2_data['price_actual']:.6f}")
     else:
-        log(f"❌ KuCoin Error: {result2}")
+        log(f"❌ {exchange_limit} Error: {result2}")
         error_code = "LIMIT_ORDER_FAILED"
-        error_message = f"KuCoin limit order failed: {result2}"
+        error_message = f"{exchange_limit} limit order failed: {result2}"
         
         # Log trade even with limit order failure
-        ex2_data = {"exchange": "KUCOIN", "order_id": "FAILED", "type": "limit", 
+        ex2_data = {"exchange": exchange_limit.upper(), "order_id": "FAILED", "type": "limit",
                     "side": "sell", "qty_ordered": sell_qty, "qty_filled": 0,
                     "price_expected": limit_price_expected, "price_actual": 0,
                     "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "FAILED",
-                    "raw_response": result2}
+                    "raw_response": result2 if isinstance(result2, dict) else {}}
     
-    # Calculate expected profit
+    # ========================================================================
+    # STEP 4: Calculate expected profit and log trade
+    # ========================================================================
     cost = ex1_data['value_usdt']
     revenue = ex2_data['value_usdt']
     gross_profit = revenue - cost
@@ -418,7 +479,7 @@ def execute_trade_M_to_K(qty, buy_price, sell_price, strategy='usdt', spread_pct
     trade_id = log_trade(
         pair=TRADING_PAIR,
         internal_ts=internal_ts,
-        direction="M->K",
+        direction=dir_str,
         ex1_data=ex1_data,
         ex2_data=ex2_data,
         limit_watch_status="WATCHING",
@@ -436,190 +497,21 @@ def execute_trade_M_to_K(qty, buy_price, sell_price, strategy='usdt', spread_pct
     log(f"=== TRADE LOGGED (pending limit fill) ===")
     log(f"Cost: ${cost:.4f} | Revenue: ${revenue:.4f}")
     log(f"Gross Profit: ${gross_profit:.4f} | Fees: ${fee_taker + fee_maker:.4f}")
-    log(f"Expected Net Profit: ${net_profit:.4f} | MPC Gain: {mpc_gain:.4f}")
+    coin = COIN_SYMBOL.split('-')[0]
+    log(f"Expected Net Profit: ${net_profit:.4f} | {coin} Gain: {mpc_gain:.4f}")
     
     return True, trade_id
+
+
+# Legacy alias for backward compatibility (will be removed)
+def execute_trade_M_to_K(qty, buy_price, sell_price, strategy='usdt', spread_pct=0.0):
+    """Legacy: Use execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', ...) instead"""
+    return execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', qty, buy_price, sell_price, strategy, spread_pct)
 
 
 def execute_trade_K_to_M(qty, buy_price, sell_price, strategy='usdt', spread_pct=0.0):
-    """K -> M: Buy KuCoin (market), Sell MEXC (limit)
-    
-    Args:
-        qty: Quantity to buy on KuCoin
-        buy_price: Expected KuCoin ask price (pK)
-        sell_price: Expected MEXC bid price (pM)
-        strategy: 'usdt' or 'coins'
-        spread_pct: Spread % when trade was triggered
-    
-    Returns:
-        (success, trade_id)
-    """
-    log(f"=== EXECUTING K->M TRADE (strategy={strategy}) ===")
-    log(f"Buy KuCoin: {qty} MPC @ ${buy_price:.6f}")
-    
-    # Store expected prices for logging
-    market_price_expected = buy_price  # pK (KuCoin)
-    limit_price_expected = sell_price  # pM (MEXC)
-    
-    # Capture internal timestamp
-    internal_ts = datetime.now().isoformat()
-    
-    # Track error state
-    error_code = None
-    error_message = None
-    ex1_data = None
-    ex2_data = None
-    
-    # Step 1: Market Buy on KuCoin
-    log("Step 1: KuCoin Market BUY...")
-    result1 = execute_market_buy_kucoin(qty)
-    
-    log(f"DEBUG KuCoin Response: {result1}")
-    
-    # Check for API errors
-    if result1.get('code') != '200000':
-        error_code = "API_ERROR"
-        error_message = f"KuCoin market order failed: {result1}"
-        log(f"❌ {error_message}")
-        
-        # Create failed ex1_data for logging
-        ex1_data = {"exchange": "KUCOIN", "order_id": "FAILED", "type": "market",
-                    "side": "buy", "qty_ordered": qty, "qty_filled": 0,
-                    "price_expected": market_price_expected, "price_actual": 0,
-                    "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "REJECTED",
-                    "raw_response": result1}
-        ex2_data = {"exchange": "MEXC", "order_id": "FAILED", "type": "limit",
-                    "side": "sell", "qty_ordered": 0, "qty_filled": 0,
-                    "price_expected": limit_price_expected, "price_actual": 0,
-                    "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "NOT_PLACED",
-                    "raw_response": {}}
-        
-        trade_id = log_trade(
-            pair=TRADING_PAIR,
-            internal_ts=internal_ts,
-            direction="K->M",
-            ex1_data=ex1_data,
-            ex2_data=ex2_data,
-            limit_watch_status="ERROR",
-            strategy=strategy.upper(),
-            spread_pct=spread_pct,
-            market_price_expected=market_price_expected,
-            limit_price_expected=limit_price_expected,
-            error_code=error_code,
-            error_message=error_message
-        )
-        log(f"📝 Trade logged with error: {trade_id}")
-        return False, trade_id
-    
-    # Harmonize successful response
-    order_id1 = result1['data'].get('orderId', 'unknown')
-    log(f"✅ KuCoin Order placed: {order_id1}")
-    
-    ex1_data = harmonize_kucoin_order(result1['data'], "buy", "market", TRADING_PAIR)
-    ex1_data['price_expected'] = market_price_expected  # Set expected price
-    log(f"   Harmonized: qty_filled={ex1_data['qty_filled']}, value_usdt={ex1_data['value_usdt']:.4f}, fees={ex1_data['fees']:.4f}")
-    
-    # CRITICAL CHECK: qty_filled must not be 0
-    if ex1_data['qty_filled'] == 0:
-        error_code = "QTY_ZERO"
-        error_message = "KuCoin market order returned qty_filled=0! Counter-order ABORTED."
-        log(f"❌ {error_message}")
-        
-        # Log trade with error but NO limit order placed
-        ex2_data = {"exchange": "MEXC", "order_id": "NOT_PLACED", "type": "limit",
-                    "side": "sell", "qty_ordered": 0, "qty_filled": 0,
-                    "price_expected": limit_price_expected, "price_actual": 0,
-                    "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "NOT_PLACED",
-                    "raw_response": {}}
-        
-        trade_id = log_trade(
-            pair=TRADING_PAIR,
-            internal_ts=internal_ts,
-            direction="K->M",
-            ex1_data=ex1_data,
-            ex2_data=ex2_data,
-            limit_watch_status="ERROR",
-            strategy=strategy.upper(),
-            spread_pct=spread_pct,
-            market_price_expected=market_price_expected,
-            limit_price_expected=limit_price_expected,
-            error_code=error_code,
-            error_message=error_message
-        )
-        log(f"📝 Trade logged with error: {trade_id}")
-        return False, trade_id
-    
-    # Determine sell quantity based on strategy
-    if strategy == 'coins':
-        # Coins strategy: sell less MPC to keep the spread as MPC profit
-        usdt_to_sell = ex1_data['value_usdt'] - ex1_data['fees']
-        sell_qty = usdt_to_sell / sell_price if sell_price > 0 else qty
-        log(f"Strategy=COINS: USDT spent={usdt_to_sell:.4f}, calculating MPC to sell @ ${sell_price:.6f}")
-    else:
-        # USDT strategy: sell same quantity as bought
-        sell_qty = ex1_data['qty_filled']
-    
-    log(f"Step 2: MEXC Limit SELL: {sell_qty:.4f} MPC @ ${sell_price:.6f}")
-    
-    # Small delay before placing limit order
-    time.sleep(0.5)
-    
-    # Step 2: Limit Sell on MEXC
-    log("Step 2: MEXC Limit SELL...")
-    result2 = execute_limit_sell_mexc(sell_qty, sell_price)
-    
-    if result2.get('code') is None or 'orderId' in result2:
-        order_id2 = result2.get('orderId', 'unknown')
-        log(f"✅ MEXC Order placed: {order_id2}")
-        
-        # Harmonize MEXC response
-        ex2_data = harmonize_mexc_order(result2, "sell", "limit", TRADING_PAIR)
-        ex2_data['price_expected'] = limit_price_expected  # Set expected price
-        log(f"   Harmonized: qty_ordered={ex2_data['qty_ordered']}, qty_filled={ex2_data['qty_filled']}, price_actual={ex2_data['price_actual']:.6f}")
-    else:
-        log(f"❌ MEXC Error: {result2}")
-        error_code = "LIMIT_ORDER_FAILED"
-        error_message = f"MEXC limit order failed: {result2}"
-        
-        ex2_data = {"exchange": "MEXC", "order_id": "FAILED", "type": "limit", "side": "sell",
-                    "qty_ordered": sell_qty, "qty_filled": 0, 
-                    "price_expected": limit_price_expected, "price_actual": 0,
-                    "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "FAILED", "raw_response": result2}
-    
-    # Calculate expected profit
-    cost = ex1_data['value_usdt']
-    revenue = ex2_data['value_usdt']
-    gross_profit = revenue - cost
-    fee_taker = ex1_data['fees']
-    fee_maker = ex2_data.get('fees', 0)
-    net_profit = gross_profit - fee_taker - fee_maker
-    mpc_gain = net_profit / sell_price if sell_price > 0 else 0
-    
-    # Log trade with harmonized data
-    trade_id = log_trade(
-        pair=TRADING_PAIR,
-        internal_ts=internal_ts,
-        direction="K->M",
-        ex1_data=ex1_data,
-        ex2_data=ex2_data,
-        limit_watch_status="WATCHING",
-        strategy=strategy.upper(),
-        spread_pct=spread_pct,
-        market_price_expected=market_price_expected,
-        limit_price_expected=limit_price_expected,
-        profit_usdt_expected=net_profit,
-        profit_mpc_expected=mpc_gain,
-        error_code=error_code,
-        error_message=error_message
-    )
-    log(f"📝 Trade logged: {trade_id}")
-    
-    log(f"=== TRADE LOGGED (pending limit fill) ===")
-    log(f"Cost: ${cost:.4f} | Revenue: ${revenue:.4f}")
-    log(f"Gross Profit: ${gross_profit:.4f} | Fees: ${fee_taker + fee_maker:.4f}")
-    log(f"Expected Net Profit: ${net_profit:.4f} | MPC Gain: {mpc_gain:.4f}")
-    
-    return True, trade_id
+    """Legacy: Use execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', ...) instead"""
+    return execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', qty, buy_price, sell_price, strategy, spread_pct)
 
 
 
@@ -679,7 +571,7 @@ def check_limit_order_fills():
             elif ex2_exchange == 'MEXC':
                 # Check MEXC order status
                 ts = str(int(time.time() * 1000))
-                params = f'symbol=MPCUSDT&orderId={ex2_order_id}&timestamp={ts}'
+                params = f'symbol={COIN_SYMBOL_MEXC}&orderId={ex2_order_id}&timestamp={ts}'
                 sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
                 
                 url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
@@ -707,7 +599,7 @@ def check_limit_order_fills():
 
 def main():
     log("=== AUTO-TRADE BOT STARTED ===")
-    log("Strategy: Coin-Gewinn (MPC akkumulieren)")
+    log("Strategy: Coin-Gewinn (COIN akkumulieren)")
     log("Principle: ONE TRADE AT A TIME")
     log(f"Logging: Harmonized CSV per pair -> {TRADING_PAIR}_trades.csv")
     
@@ -790,7 +682,7 @@ def main():
         
         # Calculate minimum trade quantity
         mexc_min_qty = round((MEXC_MIN_USDT + 0.1) / m['ask']) if m['ask'] > 0 else 85
-        kucoin_min_qty = KUCOIN_MIN_MPC
+        kucoin_min_qty = KUCOIN_MIN_QTY
         min_trade_qty = max(mexc_min_qty, kucoin_min_qty)
         
         # Find best tradeable spread using sweep algorithm
@@ -866,9 +758,11 @@ def main():
                 total_mexc = sum(x['qty'] for x in ob_data['mexc_asks'][:5])
                 total_kucoin = sum(x['qty'] for x in ob_data['kucoin_bids'][:5])
                 strategy = get_trading_strategy(TRADING_PAIR)
-                log(f"Sweep: {strategy.upper()} strategy | MEXC top5={total_mexc:.0f} MPC, KuCoin top5={total_kucoin:.0f} MPC, min={min_trade_qty}")
+                coin = COIN_SYMBOL.split('-')[0]
+                log(f"Sweep: {strategy.upper()} strategy | MEXC top5={total_mexc:.0f} {coin}, KuCoin top5={total_kucoin:.0f} {coin}, min={min_trade_qty}")
                 if best_trade:
-                    log(f"  Best: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC | profit_usdt=${best_trade['profit_usdt']:.4f} | profit_mpc={best_trade['profit_mpc']:.4f}")
+                    coin = COIN_SYMBOL.split('-')[0]
+                    log(f"  Best: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | profit_usdt=${best_trade['profit_usdt']:.4f} | profit_{coin}={best_trade['profit_mpc']:.4f}")
                 else:
                     log(f"  No tradeable spread found (spread below thresholds or insufficient volume)")
         
@@ -876,13 +770,15 @@ def main():
         if int(time.time()) % 15 == 0 and ob_data:
             total_mexc_vol = sum(x['qty'] for x in ob_data['mexc_asks'][:5])
             total_kucoin_vol = sum(x['qty'] for x in ob_data['kucoin_bids'][:5])
-            log(f"Orderbook: MEXC top5={total_mexc_vol:.0f} MPC, KuCoin top5={total_kucoin_vol:.0f} MPC, min_needed={min_trade_qty}")
-            log(f"Best trade: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC" if best_trade else "No tradeable spread")
+            coin = COIN_SYMBOL.split('-')[0]
+            log(f"Orderbook: MEXC top5={total_mexc_vol:.0f} {coin}, KuCoin top5={total_kucoin_vol:.0f} {coin}, min_needed={min_trade_qty}")
+            coin = COIN_SYMBOL.split('-')[0]
+            log(f"Best trade: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin}" if best_trade else "No tradeable spread")
         
         if not ob_data:
             # Fallback when orderbook fetch fails
             vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 86
-            vol_for_kucoin = max(KUCOIN_MIN_MPC, vol_for_mexc)
+            vol_for_kucoin = max(KUCOIN_MIN_QTY, vol_for_mexc)
 
         
         # Log every 30 seconds
@@ -945,15 +841,16 @@ def main():
                     vol_for_mexc = best_trade['vol']
                     vol_for_kucoin = best_trade['vol']
                     trade_strategy = best_trade.get('strategy', current_strategy)
-                    log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC | strategy={trade_strategy}")
+                    coin = COIN_SYMBOL.split('-')[0]
+                    log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
                     if best_trade['dir'] == 'K→M':
-                        success, trade_id = execute_trade_K_to_M(best_trade['vol'], best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
+                        success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', best_trade['vol'], best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
                     else:
-                        success, trade_id = execute_trade_M_to_K(best_trade['vol'], best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
+                        success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', best_trade['vol'], best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
                 elif spread_pct_km >= spread_pct_mk:
-                    success, trade_id = execute_trade_K_to_M(vol_for_kucoin, k['ask'], m['bid'], current_strategy, spread_pct_km)
+                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', vol_for_kucoin, k['ask'], m['bid'], current_strategy, spread_pct_km)
                 else:
-                    success, trade_id = execute_trade_M_to_K(vol_for_mexc, m['ask'], k['bid'], current_strategy, spread_pct_mk)
+                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, m['ask'], k['bid'], current_strategy, spread_pct_mk)
                 
                 last_trade_time = time.time()
                 trade_in_progress = False
@@ -969,15 +866,16 @@ def main():
                     vol_for_mexc = best_trade['vol']
                     vol_for_kucoin = best_trade['vol']
                     trade_strategy = best_trade.get('strategy', current_strategy)
-                    log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} MPC | strategy={trade_strategy}")
+                    coin = COIN_SYMBOL.split('-')[0]
+                    log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
                     if best_trade['dir'] == 'K→M':
-                        success, trade_id = execute_trade_K_to_M(best_trade['vol'], best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
+                        success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', best_trade['vol'], best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
                     else:
-                        success, trade_id = execute_trade_M_to_K(best_trade['vol'], best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
+                        success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', best_trade['vol'], best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
                 elif spread_pct_km >= spread_pct_mk:
-                    success, trade_id = execute_trade_K_to_M(vol_for_kucoin, k['ask'], m['bid'], current_strategy, spread_pct_km)
+                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', vol_for_kucoin, k['ask'], m['bid'], current_strategy, spread_pct_km)
                 else:
-                    success, trade_id = execute_trade_M_to_K(vol_for_mexc, m['ask'], k['bid'], current_strategy, spread_pct_mk)
+                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, m['ask'], k['bid'], current_strategy, spread_pct_mk)
                 
                 last_trade_time = time.time()
                 trade_in_progress = False
