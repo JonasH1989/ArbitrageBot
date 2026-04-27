@@ -275,6 +275,7 @@ def execute_trade_M_to_K(qty, buy_price, sell_price, strategy='usdt'):
     result1 = execute_market_buy_mexc(qty)
     
     ex1_data = None
+    log(f"DEBUG MEXC Response: {result1}")
     if result1.get('code') is None or 'orderId' in result1:
         order_id1 = result1.get('orderId', 'unknown')
         log(f"✅ MEXC Order placed: {order_id1}")
@@ -365,6 +366,7 @@ def execute_trade_K_to_M(qty, buy_price, sell_price, strategy='usdt'):
     result1 = execute_market_buy_kucoin(qty)
     
     ex1_data = None
+    log(f"DEBUG KuCoin Response: {result1}")
     if result1.get('code') == '200000':
         order_id1 = result1['data'].get('orderId', 'unknown')
         log(f"✅ KuCoin Order placed: {order_id1}")
