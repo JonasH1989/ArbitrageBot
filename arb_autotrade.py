@@ -385,17 +385,19 @@ def get_mexc_order_status(order_id: str) -> dict:
     return resp.json()
 
 def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, max_wait_ms: int = 2000, fallback_price: float = 0.011) -> dict:
-    """Get MEXC market order fill data using public trades API.
+    """Get MEXC market order fill data.
     
-    MEXC market orders are async - we place the order and get an orderId + transactTime.
-    Then we poll the public trades API to find our actual trade by timestamp.
+    Strategy:
+    1. Try private my_trades API (with API key auth)
+    2. If empty or fails, try private order status API
+    3. ONLY if both fail completely, use public trades API as last resort fallback
     
     Args:
         order_id: The MEXC order ID from the initial response
         orig_qty: Original quantity ordered (for estimating if no trade found)
         transact_time: Transaction timestamp from initial response (ms)
-        max_wait_ms: How long to wait for trade to appear (default 2s)
-        fallback_price: Price to use if trade not found
+        max_wait_ms: How long to wait
+        fallback_price: Price to use if all methods fail
     
     Returns:
         dict with fill data: quantity, amount, fees, status
@@ -404,60 +406,128 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
     poll_interval = 200  # ms
     time_window = 2000  # 2 second window to match trade
     
+    # ========================================================================
+    # METHOD 1: Try private my_trades API (PRIMARY)
+    # ========================================================================
+    private_api_tried = False
+    
     while (time.time() * 1000 - start_time) < max_wait_ms:
         try:
-            # Get public trades from MEXC (no auth needed!)
-            trades_url = f'https://api.mexc.com/api/v3/trades?symbol={COIN_SYMBOL_MEXC}&limit=10'
-            resp = requests.get(trades_url, timeout=10)
-            trades = resp.json()
+            # Try private my_trades API
+            ts = str(int(time.time() * 1000))
+            params = f'symbol={COIN_SYMBOL_MEXC}&timestamp={ts}'
+            sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
+            url = f'https://api.mexc.com/api/v3/my_trades?{params}&signature={sig}'
+            headers = {'X-MEXC-APIKEY': MEXC_KEY}
             
-            if trades and isinstance(trades, list):
-                # Find trade matching our order by timestamp
-                for trade in trades:
-                    trade_time = int(trade.get('time', 0))
-                    if abs(trade_time - transact_time) <= time_window:
-                        # Found our trade!
-                        qty = float(trade.get('qty', 0))
-                        price = float(trade.get('price', 0))
-                        quote_qty = float(trade.get('quoteQty', 0))
-                        
-                        if qty > 0:
-                            log(f"   Found MEXC trade: qty={qty}, price={price}, value=${quote_qty:.4f}")
-                            return {
-                                'status': 'Filled',
-                                'quantity': str(qty),
-                                'amount': str(quote_qty),
-                                'fees': str(quote_qty * 0.001),  # ~0.1% taker fee
-                                'price': str(price),
-                                'executedQty': str(qty),
-                                'cummulativeQuoteQty': str(quote_qty)
-                            }
+            resp = requests.get(url, headers=headers, timeout=10)
+            
+            if resp.status_code == 200 and resp.text and len(resp.text) > 0:
+                private_api_tried = True
+                trades = resp.json()
+                
+                if isinstance(trades, list) and trades:
+                    # Find trade matching our order by timestamp
+                    for trade in trades:
+                        trade_time = int(trade.get('time', 0))
+                        if abs(trade_time - transact_time) <= time_window:
+                            qty = float(trade.get('qty', 0))
+                            price = float(trade.get('price', 0))
+                            quote_qty = float(trade.get('quoteQty', 0))
+                            
+                            if qty > 0:
+                                log(f"   Found MEXC trade (private API): qty={qty}, price={price}, value=${quote_qty:.4f}")
+                                return {
+                                    'status': 'Filled',
+                                    'quantity': str(qty),
+                                    'amount': str(quote_qty),
+                                    'fees': str(quote_qty * 0.001),
+                                    'price': str(price),
+                                    'executedQty': str(qty),
+                                    'cummulativeQuoteQty': str(quote_qty)
+                                }
         except Exception as e:
-            log(f"   Error polling trades: {e}")
+            pass  # Silently continue to next method
         
         time.sleep(poll_interval / 1000)
     
-    # Timeout - use recent trade price from public API
-    log(f"   Timeout waiting for trade, fetching recent trade for estimate")
-    est_price = fallback_price
+    # ========================================================================
+    # METHOD 2: Try private order status API (SECONDARY)
+    # ========================================================================
+    log(f"   Private API returned no trades, trying order status...")
+    
     try:
-        trades_url = f'https://api.mexc.com/api/v3/trades?symbol={COIN_SYMBOL_MEXC}&limit=3'
+        ts = str(int(time.time() * 1000))
+        params = f'symbol={COIN_SYMBOL_MEXC}&orderId={order_id}&timestamp={ts}'
+        sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
+        url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
+        headers = {'X-MEXC-APIKEY': MEXC_KEY}
+        
+        resp = requests.get(url, headers=headers, timeout=10)
+        
+        if resp.status_code == 200 and resp.text:
+            order_data = resp.json()
+            if order_data.get('executedQty') and float(order_data.get('executedQty', 0)) > 0:
+                qty = float(order_data.get('executedQty', 0))
+                quote = float(order_data.get('cummulativeQuoteQty', 0))
+                price = float(order_data.get('price', 0)) or fallback_price
+                log(f"   Found MEXC order (order status API): qty={qty}, value=${quote:.4f}")
+                return {
+                    'status': 'Filled',
+                    'quantity': str(qty),
+                    'amount': str(quote),
+                    'fees': str(quote * 0.001),
+                    'price': str(price),
+                    'executedQty': str(qty),
+                    'cummulativeQuoteQty': str(quote)
+                }
+    except Exception as e:
+        pass  # Silently continue to fallback
+    
+    # ========================================================================
+    # METHOD 3: Public trades API (LAST RESORT FALLBACK ONLY!)
+    # ========================================================================
+    log(f"   WARNING: Both private APIs failed - using PUBLIC API fallback!")
+    
+    try:
+        trades_url = f'https://api.mexc.com/api/v3/trades?symbol={COIN_SYMBOL_MEXC}&limit=5'
         resp = requests.get(trades_url, timeout=10)
         trades = resp.json()
-        if trades and isinstance(trades, list) and len(trades) > 0:
-            est_price = float(trades[0].get('price', fallback_price))
-            log(f"   Using recent trade price: {est_price}")
+        
+        if trades and isinstance(trades, list):
+            for trade in trades:
+                trade_time = int(trade.get('time', 0))
+                if abs(trade_time - transact_time) <= time_window:
+                    qty = float(trade.get('qty', 0))
+                    price = float(trade.get('price', 0))
+                    quote_qty = float(trade.get('quoteQty', 0))
+                    
+                    if qty > 0:
+                        log(f"   PUBLIC API fallback used: qty={qty}, price={price}")
+                        return {
+                            'status': 'Filled',
+                            'quantity': str(qty),
+                            'amount': str(quote_qty),
+                            'fees': str(quote_qty * 0.001),
+                            'price': str(price),
+                            'executedQty': str(qty),
+                            'cummulativeQuoteQty': str(quote_qty)
+                        }
     except:
         pass
     
+    # ========================================================================
+    # FINAL FALLBACK: Use estimated data
+    # ========================================================================
+    log(f"   All APIs failed - using estimated data")
     return {
         'status': 'Filled',
         'quantity': str(orig_qty),
-        'amount': str(orig_qty * est_price),
-        'fees': str(orig_qty * est_price * 0.001),
-        'price': str(est_price),
+        'amount': str(orig_qty * fallback_price),
+        'fees': str(orig_qty * fallback_price * 0.001),
+        'price': str(fallback_price),
         'executedQty': str(orig_qty),
-        'cummulativeQuoteQty': str(orig_qty * est_price)
+        'cummulativeQuoteQty': str(orig_qty * fallback_price)
     }
 
 def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, buy_price, sell_price, strategy='usdt', spread_pct=0.0):
