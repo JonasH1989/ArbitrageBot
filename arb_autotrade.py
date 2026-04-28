@@ -264,6 +264,45 @@ def execute_limit_sell_mexc(qty, price):
     resp = requests.post(url, headers=headers, timeout=10)
     return resp.json()
 
+def get_mexc_order_status(order_id: str) -> dict:
+    """Get MEXC order fill status by order ID (for polling market orders)"""
+    ts = str(int(time.time() * 1000))
+    params = f'symbol={COIN_SYMBOL_MEXC}&orderId={order_id}&timestamp={ts}'
+    sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
+    
+    url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
+    headers = {'X-MEXC-APIKEY': MEXC_KEY}
+    
+    resp = requests.get(url, headers=headers, timeout=10)
+    return resp.json()
+
+def poll_mexc_market_order(order_id: str, max_wait_ms: int = 1000) -> dict:
+    """Poll MEXC market order until filled or timeout
+    
+    MEXC market orders are async - need to poll for actual fill.
+    Returns the filled order data or last known state.
+    """
+    start_time = time.time() * 1000  # ms
+    poll_interval = 100  # ms
+    
+    while (time.time() * 1000 - start_time) < max_wait_ms:
+        status_resp = get_mexc_order_status(order_id)
+        
+        # Check if order is filled
+        if status_resp.get('status') == 'Filled':
+            return status_resp
+        
+        # Check for partial fill
+        if status_resp.get('status') == 'PartiallyFilled':
+            # If we have partial fill data, return it
+            if float(status_resp.get('quantity', 0) or 0) > 0:
+                return status_resp
+        
+        time.sleep(poll_interval / 1000)  # Convert to seconds
+    
+    # Timeout - return last known state
+    return status_resp
+
 def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, buy_price, sell_price, strategy='usdt', spread_pct=0.0):
     """Execute arbitrage trade: Market Buy on one exchange, Limit Sell on another.
     
@@ -366,6 +405,13 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     # Harmonize successful response
     order_id1 = result1.get('orderId', 'unknown') or result1.get('orderId', 'unknown')
     log(f"✅ {exchange_market} Order placed: {order_id1}")
+    
+    # MEXC market orders are async - need to poll for actual fill
+    if exchange_market.upper() == "MEXC":
+        log(f"   Polling MEXC market order {order_id1} for fill...")
+        filled_response = poll_mexc_market_order(order_id1, max_wait_ms=2000)
+        result1 = filled_response  # Use the filled response
+        log(f"   After polling: status={filled_response.get('status')}, quantity={filled_response.get('quantity')}, amount={filled_response.get('amount')}")
     
     # Get the response data for harmonization (KuCoin nests in 'data', MEXC doesn't)
     response_data1 = result1.get('data', result1) if exchange_market.upper() == "KUCOIN" else result1
@@ -707,13 +753,23 @@ def main():
                     
                     # START_THRESHOLD check - spread is interesting
                     if spread_pct >= threshold_start and cum_vol_mexc >= min_trade_qty and k_bid['qty'] >= min_trade_qty:
-                        if best_trade is None or spread_pct > best_trade['pct']:
+                        # Calculate expected profit for decision
+                        strategy = get_trading_strategy(TRADING_PAIR)
+                        expected_profit_usdt = (k_bid['price'] - m_ask['price']) * min(cum_vol_mexc, k_bid['qty'])
+                        expected_profit_mpc = expected_profit_usdt / m_ask['price'] if m_ask['price'] > 0 else 0
+                        
+                        profit_for_decision = expected_profit_mpc if strategy == 'coins' else expected_profit_usdt
+                        
+                        if best_trade is None or profit_for_decision > (best_trade.get('profit_mpc' if strategy == 'coins' else 'profit_usdt', 0)):
                             best_trade = {
                                 'dir': 'M→K',
                                 'buy': m_ask['price'],
                                 'sell': k_bid['price'],
                                 'pct': spread_pct,
-                                'vol': min(cum_vol_mexc, k_bid['qty'])
+                                'vol': min(cum_vol_mexc, k_bid['qty']),
+                                'profit_usdt': expected_profit_usdt,
+                                'profit_mpc': expected_profit_mpc,
+                                'strategy': strategy
                             }
                         break  # Found tradeable at this bid level, move to next bid
             
