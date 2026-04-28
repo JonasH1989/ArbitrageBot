@@ -117,8 +117,8 @@ def get_kucoin_balances() -> dict:
         
         log(f"DEBUG KuCoin accounts response: code={data.get('code')}, data count={len(data.get('data', []))}")
         
-        balances = {'USDT': 0.0, coin_symbol: 0.0}
         coin_symbol = COIN_SYMBOL.split('-')[0]
+        balances = {'USDT': 0.0, coin_symbol: 0.0}
         
         if data.get('code') == '200000' and 'data' in data:
             for acc in data['data']:
