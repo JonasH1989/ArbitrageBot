@@ -123,17 +123,20 @@ def get_kucoin_balances() -> dict:
         if data.get('code') == '200000' and 'data' in data:
             for acc in data['data']:
                 currency = acc.get('currency', '')
+                acc_type = acc.get('type', '')
                 available = float(acc.get('available', 0))
                 total = float(acc.get('balance', 0))
                 
                 # Debug logging for each account
                 if currency in ['USDT', coin_symbol]:
-                    log(f"DEBUG KuCoin account: {currency} | available={available} | total={total} | type={acc.get('type')}")
+                    log(f"DEBUG KuCoin account: {currency} | available={available} | total={total} | type={acc_type}")
                 
-                if currency == 'USDT':
-                    balances['USDT'] += available  # SUM all USDT accounts
-                elif currency == coin_symbol:
-                    balances[coin_symbol] += available  # SUM all coin accounts (multiple accounts possible!)
+                # ONLY use TRADE accounts for balance check (ignore main, margin, etc.)
+                if acc_type == 'trade':
+                    if currency == 'USDT':
+                        balances['USDT'] = available  # Use TRADE account balance directly
+                    elif currency == coin_symbol:
+                        balances[coin_symbol] = available  # Use TRADE account balance directly
         else:
             log(f"❌ KuCoin API error: {data}")
             
