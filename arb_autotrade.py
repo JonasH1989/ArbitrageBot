@@ -115,14 +115,29 @@ def get_kucoin_balances() -> dict:
         resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
         data = resp.json()
         
+        log(f"DEBUG KuCoin accounts response: code={data.get('code')}, data count={len(data.get('data', []))}")
+        
         balances = {'USDT': 0.0, COIN_SYMBOL.split('-')[0]: 0.0}
+        coin_symbol = COIN_SYMBOL.split('-')[0]
+        
         if data.get('code') == '200000' and 'data' in data:
             for acc in data['data']:
                 currency = acc.get('currency', '')
+                available = float(acc.get('available', 0))
+                total = float(acc.get('balance', 0))
+                
+                # Debug logging for each account
+                if currency in ['USDT', coin_symbol]:
+                    log(f"DEBUG KuCoin account: {currency} | available={available} | total={total} | type={acc.get('type')}")
+                
                 if currency == 'USDT':
-                    balances['USDT'] = float(acc.get('available', 0))
-                elif currency == COIN_SYMBOL.split('-')[0]:
-                    balances[COIN_SYMBOL.split('-')[0]] = float(acc.get('available', 0))
+                    balances['USDT'] = available
+                elif currency == coin_symbol:
+                    balances[coin_symbol] = available
+        else:
+            log(f"❌ KuCoin API error: {data}")
+            
+        log(f"DEBUG Final balances: {balances}")
         return balances
     except Exception as e:
         log(f"❌ Error getting KuCoin balances: {e}")
