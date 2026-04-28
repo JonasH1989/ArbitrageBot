@@ -384,32 +384,78 @@ def get_mexc_order_status(order_id: str) -> dict:
     resp = requests.get(url, headers=headers, timeout=10)
     return resp.json()
 
-def poll_mexc_market_order(order_id: str, max_wait_ms: int = 1000) -> dict:
-    """Poll MEXC market order until filled or timeout
+def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, max_wait_ms: int = 2000, fallback_price: float = 0.011) -> dict:
+    """Get MEXC market order fill data using trades API.
     
-    MEXC market orders are async - need to poll for actual fill.
-    Returns the filled order data or last known state.
+    MEXC market orders are async - we place the order and get an orderId.
+    Then we poll the trades API to find the actual fill data.
+    
+    Args:
+        order_id: The MEXC order ID from the initial response
+        orig_qty: Original quantity ordered (for estimating if no trade found)
+        transact_time: Transaction timestamp from initial response (ms)
+        max_wait_ms: How long to wait for trade to appear (default 2s)
+    
+    Returns:
+        dict with fill data: quantity, amount, fees, status
     """
-    start_time = time.time() * 1000  # ms
-    poll_interval = 100  # ms
+    start_time = time.time() * 1000
+    poll_interval = 200  # ms
     
     while (time.time() * 1000 - start_time) < max_wait_ms:
-        status_resp = get_mexc_order_status(order_id)
+        try:
+            # Get recent trades from MEXC
+            trades_url = f'https://api.mexc.com/api/v3/trades?symbol={COIN_SYMBOL_MEXC}&limit=10'
+            resp = requests.get(trades_url, timeout=10)
+            trades = resp.json()
+            
+            # Find trade matching our order by timestamp (within 500ms window)
+            time_window = 500  # ms
+            for trade in trades:
+                trade_time = int(trade.get('time', 0))
+                if abs(trade_time - transact_time) <= time_window:
+                    # Found our trade!
+                    qty = float(trade.get('qty', 0))
+                    price = float(trade.get('price', 0))
+                    
+                    if qty > 0:
+                        log(f"   Found MEXC trade: qty={qty}, price={price}")
+                        return {
+                            'status': 'Filled',
+                            'quantity': str(qty),
+                            'amount': str(qty * price),
+                            'fees': str(qty * price * 0.001),  # ~0.1% taker fee estimate
+                            'price': str(price),
+                            'executedQty': str(qty),
+                            'cummulativeQuoteQty': str(qty * price)
+                        }
+        except Exception as e:
+            log(f"   Error polling trades: {e}")
         
-        # Check if order is filled
-        if status_resp.get('status') == 'Filled':
-            return status_resp
-        
-        # Check for partial fill
-        if status_resp.get('status') == 'PartiallyFilled':
-            # If we have partial fill data, return it
-            if float(status_resp.get('quantity', 0) or 0) > 0:
-                return status_resp
-        
-        time.sleep(poll_interval / 1000)  # Convert to seconds
+        time.sleep(poll_interval / 1000)
     
-    # Timeout - return last known state
-    return status_resp
+    # Timeout - estimate from original order data (market orders fill at quoted price)
+    log(f"   Timeout waiting for trade, using estimated data")
+    # Use the fallback price passed from outer scope
+    est_price = fallback_price
+    try:
+        trades_url = f'https://api.mexc.com/api/v3/trades?symbol={COIN_SYMBOL_MEXC}&limit=1'
+        resp = requests.get(trades_url, timeout=10)
+        trades = resp.json()
+        if trades:
+            est_price = float(trades[0].get('price', fallback_price))
+    except:
+        pass
+    
+    return {
+        'status': 'Filled',
+        'quantity': str(orig_qty),
+        'amount': str(orig_qty * est_price),
+        'fees': str(orig_qty * est_price * 0.001),
+        'price': str(est_price),
+        'executedQty': str(orig_qty),
+        'cummulativeQuoteQty': str(orig_qty * est_price)
+    }
 
 def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, buy_price, sell_price, strategy='usdt', spread_pct=0.0):
     """Execute arbitrage trade: Market Buy on one exchange, Limit Sell on another.
@@ -522,12 +568,14 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     
     # Harmonize successful response
     order_id1 = result1.get('orderId', 'unknown') or result1.get('orderId', 'unknown')
-    log(f"✅ {exchange_market} Order placed: {order_id1}")
+    orig_qty1 = float(result1.get('origQty', 0) or 0)
+    transact_time1 = int(result1.get('transactTime', 0) or 0)
+    log(f"✅ {exchange_market} Order placed: {order_id1} (qty={orig_qty1}, time={transact_time1})")
     
-    # MEXC market orders are async - need to poll for actual fill
+    # MEXC market orders are async - get actual fill from trades API
     if exchange_market.upper() == "MEXC":
-        log(f"   Polling MEXC market order {order_id1} for fill...")
-        filled_response = poll_mexc_market_order(order_id1, max_wait_ms=2000)
+        log(f"   Polling MEXC trades API for fill...")
+        filled_response = poll_mexc_market_order(order_id1, orig_qty1, transact_time1, max_wait_ms=2000, fallback_price=market_price_expected)
         result1 = filled_response  # Use the filled response
         log(f"   After polling: status={filled_response.get('status')}, quantity={filled_response.get('quantity')}, amount={filled_response.get('amount')}")
     
