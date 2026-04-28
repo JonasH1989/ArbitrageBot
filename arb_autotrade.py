@@ -73,6 +73,96 @@ KUCOIN_PRICE_PRECISION = 6
 
 TRADING_PAIR = COIN_SYMBOL
 
+# Balance check functions
+def get_mexc_balances() -> dict:
+    """Get MEXC account balances (USDT and COIN)"""
+    try:
+        ts = str(int(time.time() * 1000))
+        params = f'timestamp={ts}'
+        sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
+        url = f'https://api.mexc.com/api/v3/account?{params}&signature={sig}'
+        headers = {'X-MEXC-APIKEY': MEXC_KEY}
+        resp = requests.get(url, headers=headers, timeout=10)
+        data = resp.json()
+        
+        balances = {'USDT': 0.0, COIN_SYMBOL.split('-')[0]: 0.0}
+        if 'balances' in data:
+            for b in data['balances']:
+                if b['asset'] == 'USDT':
+                    balances['USDT'] = float(b.get('free', 0))
+                elif b['asset'] == COIN_SYMBOL.split('-')[0]:
+                    balances[COIN_SYMBOL.split('-')[0]] = float(b.get('free', 0))
+        return balances
+    except Exception as e:
+        log(f"❌ Error getting MEXC balances: {e}")
+        return {'USDT': 0.0, COIN_SYMBOL.split('-')[0]: 0.0}
+
+def get_kucoin_balances() -> dict:
+    """Get KuCoin account balances (USDT and COIN)"""
+    try:
+        ts = str(int(time.time() * 1000))
+        path = '/api/v1/accounts'
+        method = 'GET'
+        sig = kucoin_sig(KUCOIN_SECRET, ts, method, path)
+        
+        headers = {
+            'KC-API-KEY': KUCOIN_KEY,
+            'KC-API-SIGN': sig,
+            'KC-API-TIMESTAMP': ts,
+            'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+            'KC-API-KEY-VERSION': '2'
+        }
+        resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
+        data = resp.json()
+        
+        balances = {'USDT': 0.0, COIN_SYMBOL.split('-')[0]: 0.0}
+        if data.get('code') == '200000' and 'data' in data:
+            for acc in data['data']:
+                currency = acc.get('currency', '')
+                if currency == 'USDT':
+                    balances['USDT'] = float(acc.get('available', 0))
+                elif currency == COIN_SYMBOL.split('-')[0]:
+                    balances[COIN_SYMBOL.split('-')[0]] = float(acc.get('available', 0))
+        return balances
+    except Exception as e:
+        log(f"❌ Error getting KuCoin balances: {e}")
+        return {'USDT': 0.0, COIN_SYMBOL.split('-')[0]: 0.0}
+
+def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_price: float) -> tuple:
+    """Check if we have sufficient balances for a trade.
+    
+    Returns: (can_trade: bool, error_msg: str)
+    """
+    coin = COIN_SYMBOL.split('-')[0]
+    
+    if direction in ['M->K', 'M→K']:
+        # Buying on MEXC, selling on KuCoin
+        usdt_needed = qty * buy_price * 1.002  # +0.2% for fees
+        coin_available_kucoin = get_kucoin_balances().get(coin, 0)
+        
+        if usdt_needed > 0.01:  # Need some USDT on MEXC
+            mexc_bal = get_mexc_balances()
+            if mexc_bal.get('USDT', 0) < usdt_needed:
+                return False, f"Insufficient USDT on MEXC: need ${usdt_needed:.2f}, have ${mexc_bal.get('USDT', 0):.2f}"
+        
+        if coin_available_kucoin < qty:
+            return False, f"Insufficient {coin} on KuCoin: need {qty:.2f}, have {coin_available_kucoin:.2f}"
+        
+    elif direction in ['K->M', 'K→M']:
+        # Buying on KuCoin, selling on MEXC
+        usdt_needed = qty * buy_price * 1.002  # +0.2% for fees
+        coin_available_mexc = get_mexc_balances().get(coin, 0)
+        
+        if usdt_needed > 0.01:
+            kucoin_bal = get_kucoin_balances()
+            if kucoin_bal.get('USDT', 0) < usdt_needed:
+                return False, f"Insufficient USDT on KuCoin: need ${usdt_needed:.2f}, have ${kucoin_bal.get('USDT', 0):.2f}"
+        
+        if coin_available_mexc < qty:
+            return False, f"Insufficient {coin} on MEXC: need {qty:.2f}, have {coin_available_mexc:.2f}"
+    
+    return True, ""
+
 def is_active():
     """Check if bot is marked as active"""
     return os.path.exists(ACTIVE_FLAG_FILE)
@@ -344,6 +434,16 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     error_message = None
     ex1_data = None
     ex2_data = None
+    
+    # ========================================================================
+    # PRE-TRADE BALANCE CHECK
+    # ========================================================================
+    log(f"Checking balances for {dir_str} trade...")
+    can_trade, balance_error = check_balances_for_trade(dir_str, qty, buy_price, sell_price)
+    if not can_trade:
+        log(f"❌ BALANCE CHECK FAILED: {balance_error}")
+        return False, None
+    log(f"✅ Balance check passed")
     
     # ========================================================================
     # STEP 1: Market BUY on exchange_market
