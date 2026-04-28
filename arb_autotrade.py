@@ -117,7 +117,7 @@ def get_kucoin_balances() -> dict:
         
         log(f"DEBUG KuCoin accounts response: code={data.get('code')}, data count={len(data.get('data', []))}")
         
-        balances = {'USDT': 0.0, COIN_SYMBOL.split('-')[0]: 0.0}
+        balances = {'USDT': 0.0, coin_symbol: 0.0}
         coin_symbol = COIN_SYMBOL.split('-')[0]
         
         if data.get('code') == '200000' and 'data' in data:
@@ -131,9 +131,9 @@ def get_kucoin_balances() -> dict:
                     log(f"DEBUG KuCoin account: {currency} | available={available} | total={total} | type={acc.get('type')}")
                 
                 if currency == 'USDT':
-                    balances['USDT'] = available
+                    balances['USDT'] += available  # SUM all USDT accounts
                 elif currency == coin_symbol:
-                    balances[coin_symbol] = available
+                    balances[coin_symbol] += available  # SUM all coin accounts (multiple accounts possible!)
         else:
             log(f"❌ KuCoin API error: {data}")
             
