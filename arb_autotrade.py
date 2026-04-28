@@ -385,16 +385,17 @@ def get_mexc_order_status(order_id: str) -> dict:
     return resp.json()
 
 def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, max_wait_ms: int = 2000, fallback_price: float = 0.011) -> dict:
-    """Get MEXC market order fill data using trades API.
+    """Get MEXC market order fill data using my_trades API.
     
     MEXC market orders are async - we place the order and get an orderId.
-    Then we poll the trades API to find the actual fill data.
+    Then we poll my_trades API to find our actual trade.
     
     Args:
         order_id: The MEXC order ID from the initial response
         orig_qty: Original quantity ordered (for estimating if no trade found)
         transact_time: Transaction timestamp from initial response (ms)
         max_wait_ms: How long to wait for trade to appear (default 2s)
+        fallback_price: Price to use if trade not found
     
     Returns:
         dict with fill data: quantity, amount, fees, status
@@ -404,45 +405,54 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
     
     while (time.time() * 1000 - start_time) < max_wait_ms:
         try:
-            # Get recent trades from MEXC
-            trades_url = f'https://api.mexc.com/api/v3/trades?symbol={COIN_SYMBOL_MEXC}&limit=10'
-            resp = requests.get(trades_url, timeout=10)
+            # Get our personal trades from MEXC (private API)
+            ts = str(int(time.time() * 1000))
+            params = f'symbol={COIN_SYMBOL_MEXC}&timestamp={ts}'
+            sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
+            url = f'https://api.mexc.com/api/v3/my_trades?{params}&signature={sig}'
+            headers = {'X-MEXC-APIKEY': MEXC_KEY}
+            
+            resp = requests.get(url, headers=headers, timeout=10)
             trades = resp.json()
             
-            # Find trade matching our order by timestamp (within 500ms window)
-            time_window = 500  # ms
-            for trade in trades:
-                trade_time = int(trade.get('time', 0))
-                if abs(trade_time - transact_time) <= time_window:
-                    # Found our trade!
-                    qty = float(trade.get('qty', 0))
-                    price = float(trade.get('price', 0))
-                    
-                    if qty > 0:
-                        log(f"   Found MEXC trade: qty={qty}, price={price}")
-                        return {
-                            'status': 'Filled',
-                            'quantity': str(qty),
-                            'amount': str(qty * price),
-                            'fees': str(qty * price * 0.001),  # ~0.1% taker fee estimate
-                            'price': str(price),
-                            'executedQty': str(qty),
-                            'cummulativeQuoteQty': str(qty * price)
-                        }
+            if isinstance(trades, list) and trades:
+                # Find trade matching our order by timestamp (within 1s window)
+                time_window = 1000  # 1 second
+                for trade in trades:
+                    trade_time = int(trade.get('time', 0))
+                    if abs(trade_time - transact_time) <= time_window:
+                        # Found our trade!
+                        qty = float(trade.get('qty', 0))
+                        price = float(trade.get('price', 0))
+                        quote_qty = float(trade.get('quoteQty', 0))
+                        
+                        if qty > 0:
+                            log(f"   Found MEXC trade: qty={qty}, price={price}, value=${quote_qty:.2f}")
+                            return {
+                                'status': 'Filled',
+                                'quantity': str(qty),
+                                'amount': str(quote_qty),
+                                'fees': str(quote_qty * 0.001),  # ~0.1% taker fee
+                                'price': str(price),
+                                'executedQty': str(qty),
+                                'cummulativeQuoteQty': str(quote_qty)
+                            }
         except Exception as e:
-            log(f"   Error polling trades: {e}")
+            log(f"   Error polling my_trades: {e}")
         
         time.sleep(poll_interval / 1000)
     
-    # Timeout - estimate from original order data (market orders fill at quoted price)
+    # Timeout - estimate using recent trade price
     log(f"   Timeout waiting for trade, using estimated data")
-    # Use the fallback price passed from outer scope
     est_price = fallback_price
     try:
-        trades_url = f'https://api.mexc.com/api/v3/trades?symbol={COIN_SYMBOL_MEXC}&limit=1'
-        resp = requests.get(trades_url, timeout=10)
+        ts = str(int(time.time() * 1000))
+        params = f'symbol={COIN_SYMBOL_MEXC}&timestamp={ts}'
+        sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
+        url = f'https://api.mexc.com/api/v3/my_trades?{params}&signature={sig}'
+        resp = requests.get(url, headers={'X-MEXC-APIKEY': MEXC_KEY}, timeout=10)
         trades = resp.json()
-        if trades:
+        if isinstance(trades, list) and trades:
             est_price = float(trades[0].get('price', fallback_price))
     except:
         pass
