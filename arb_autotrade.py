@@ -385,10 +385,10 @@ def get_mexc_order_status(order_id: str) -> dict:
     return resp.json()
 
 def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, max_wait_ms: int = 2000, fallback_price: float = 0.011) -> dict:
-    """Get MEXC market order fill data using my_trades API.
+    """Get MEXC market order fill data using public trades API.
     
-    MEXC market orders are async - we place the order and get an orderId.
-    Then we poll my_trades API to find our actual trade.
+    MEXC market orders are async - we place the order and get an orderId + transactTime.
+    Then we poll the public trades API to find our actual trade by timestamp.
     
     Args:
         order_id: The MEXC order ID from the initial response
@@ -402,22 +402,17 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
     """
     start_time = time.time() * 1000
     poll_interval = 200  # ms
+    time_window = 2000  # 2 second window to match trade
     
     while (time.time() * 1000 - start_time) < max_wait_ms:
         try:
-            # Get our personal trades from MEXC (private API)
-            ts = str(int(time.time() * 1000))
-            params = f'symbol={COIN_SYMBOL_MEXC}&timestamp={ts}'
-            sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
-            url = f'https://api.mexc.com/api/v3/my_trades?{params}&signature={sig}'
-            headers = {'X-MEXC-APIKEY': MEXC_KEY}
-            
-            resp = requests.get(url, headers=headers, timeout=10)
+            # Get public trades from MEXC (no auth needed!)
+            trades_url = f'https://api.mexc.com/api/v3/trades?symbol={COIN_SYMBOL_MEXC}&limit=10'
+            resp = requests.get(trades_url, timeout=10)
             trades = resp.json()
             
-            if isinstance(trades, list) and trades:
-                # Find trade matching our order by timestamp (within 1s window)
-                time_window = 1000  # 1 second
+            if trades and isinstance(trades, list):
+                # Find trade matching our order by timestamp
                 for trade in trades:
                     trade_time = int(trade.get('time', 0))
                     if abs(trade_time - transact_time) <= time_window:
@@ -427,7 +422,7 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                         quote_qty = float(trade.get('quoteQty', 0))
                         
                         if qty > 0:
-                            log(f"   Found MEXC trade: qty={qty}, price={price}, value=${quote_qty:.2f}")
+                            log(f"   Found MEXC trade: qty={qty}, price={price}, value=${quote_qty:.4f}")
                             return {
                                 'status': 'Filled',
                                 'quantity': str(qty),
@@ -438,22 +433,20 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                                 'cummulativeQuoteQty': str(quote_qty)
                             }
         except Exception as e:
-            log(f"   Error polling my_trades: {e}")
+            log(f"   Error polling trades: {e}")
         
         time.sleep(poll_interval / 1000)
     
-    # Timeout - estimate using recent trade price
-    log(f"   Timeout waiting for trade, using estimated data")
+    # Timeout - use recent trade price from public API
+    log(f"   Timeout waiting for trade, fetching recent trade for estimate")
     est_price = fallback_price
     try:
-        ts = str(int(time.time() * 1000))
-        params = f'symbol={COIN_SYMBOL_MEXC}&timestamp={ts}'
-        sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
-        url = f'https://api.mexc.com/api/v3/my_trades?{params}&signature={sig}'
-        resp = requests.get(url, headers={'X-MEXC-APIKEY': MEXC_KEY}, timeout=10)
+        trades_url = f'https://api.mexc.com/api/v3/trades?symbol={COIN_SYMBOL_MEXC}&limit=3'
+        resp = requests.get(trades_url, timeout=10)
         trades = resp.json()
-        if isinstance(trades, list) and trades:
+        if trades and isinstance(trades, list) and len(trades) > 0:
             est_price = float(trades[0].get('price', fallback_price))
+            log(f"   Using recent trade price: {est_price}")
     except:
         pass
     
