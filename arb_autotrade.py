@@ -1004,7 +1004,7 @@ def main():
     last_pair_enabled = None  # Track pair enabled changes
     
     # Start HTTP logging server for real-time monitoring
-    start_http_log_server(port=8504)
+    start_http_log_server(port=8899)
     http_log("Bot gestartet", "INFO")
     last_config_hash = None  # Track config changes for immediate logging
     last_trade_time = 0
