@@ -422,10 +422,48 @@ def execute_market_buy_kucoin(qty):
     return resp.json()
 
 def execute_limit_sell_kucoin(qty, price):
-    """Sell COIN on KuCoin at limit price"""
+    """"Sell COIN on KuCoin at limit price"""
     ts = str(int(time.time() * 1000))
     body = json_lib.dumps({"clientOid": f"{ts}_sell", "symbol": COIN_SYMBOL, "side": "sell", "type": "limit", "size": str(qty), "price": f"{price:.6f}"})
     log(f"📤 KUCOIN Limit SELL Request: {body}", "DEBUG")
+    sig = kucoin_sig(KUCOIN_SECRET, ts, 'POST', '/api/v1/orders', body)
+    
+    headers = {
+        'KC-API-KEY': KUCOIN_KEY,
+        'KC-API-SIGN': sig,
+        'KC-API-TIMESTAMP': ts,
+        'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+        'KC-API-KEY-VERSION': '2',
+        'Content-Type': 'application/json'
+    }
+    
+    resp = requests.post('https://api.kucoin.com/api/v1/orders', headers=headers, data=body, timeout=10)
+    return resp.json()
+
+def execute_limit_buy_kucoin(qty, price):
+    """Buy COIN on KuCoin at limit price"""
+    ts = str(int(time.time() * 1000))
+    body = json_lib.dumps({"clientOid": f"{ts}_buy", "symbol": COIN_SYMBOL, "side": "buy", "type": "limit", "size": str(qty), "price": f"{price:.6f}"})
+    log(f"📤 KUCOIN Limit BUY Request: {body}", "DEBUG")
+    sig = kucoin_sig(KUCOIN_SECRET, ts, 'POST', '/api/v1/orders', body)
+    
+    headers = {
+        'KC-API-KEY': KUCOIN_KEY,
+        'KC-API-SIGN': sig,
+        'KC-API-TIMESTAMP': ts,
+        'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+        'KC-API-KEY-VERSION': '2',
+        'Content-Type': 'application/json'
+    }
+    
+    resp = requests.post('https://api.kucoin.com/api/v1/orders', headers=headers, data=body, timeout=10)
+    return resp.json()
+
+def execute_market_sell_kucoin(qty):
+    """Sell COIN on KuCoin at market price"""
+    ts = str(int(time.time() * 1000))
+    body = json_lib.dumps({"clientOid": ts, "symbol": COIN_SYMBOL, "side": "sell", "type": "market", "size": str(qty)})
+    log(f"📤 KUCOIN Market SELL Request: {body}", "DEBUG")
     sig = kucoin_sig(KUCOIN_SECRET, ts, 'POST', '/api/v1/orders', body)
     
     headers = {
@@ -458,6 +496,32 @@ def execute_limit_sell_mexc(qty, price):
     log(f"📤 MEXC Limit SELL Request: quantity={qty}, price={price}", "DEBUG")
     ts = str(int(time.time() * 1000))
     params = f'symbol={COIN_SYMBOL_MEXC}&side=SELL&type=LIMIT&quantity={qty}&price={price:.6f}&timestamp={ts}'
+    sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
+    
+    url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
+    headers = {'X-MEXC-APIKEY': MEXC_KEY}
+    
+    resp = requests.post(url, headers=headers, timeout=10)
+    return resp.json()
+
+def execute_limit_buy_mexc(qty, price):
+    """Buy COIN on MEXC at limit price"""
+    log(f"📤 MEXC Limit BUY Request: quantity={qty}, price={price}", "DEBUG")
+    ts = str(int(time.time() * 1000))
+    params = f'symbol={COIN_SYMBOL_MEXC}&side=BUY&type=LIMIT&quantity={qty}&price={price:.6f}&timestamp={ts}'
+    sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
+    
+    url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
+    headers = {'X-MEXC-APIKEY': MEXC_KEY}
+    
+    resp = requests.post(url, headers=headers, timeout=10)
+    return resp.json()
+
+def execute_market_sell_mexc(qty):
+    """Sell COIN on MEXC at market price"""
+    log(f"📤 MEXC Market SELL Request: quantity={qty}", "DEBUG")
+    ts = str(int(time.time() * 1000))
+    params = f'symbol={COIN_SYMBOL_MEXC}&side=SELL&type=MARKET&quantity={qty}&timestamp={ts}'
     sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
     
     url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
