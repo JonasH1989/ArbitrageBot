@@ -49,6 +49,7 @@ from trade_logger import (
 from pathlib import Path
 
 LOG_DIR = Path('/app/logs') if Path('/app/logs').exists() else Path('/home/openclaw/.openclaw/logs')
+LOG_DIR.mkdir(parents=True, exist_ok=True)  # Ensure log directory exists
 LOG_FILE = LOG_DIR / 'arb_autotrade.log'
 CONFIG_FILE = '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot/config/config.yaml'
 ACTIVE_FLAG_FILE = LOG_DIR / 'arb_active.flag'
@@ -288,8 +289,12 @@ def log(msg, level="INFO"):
     ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
     line = f"[{ts}] [{level}] {msg}"
     print(line)
-    with open(LOG_FILE, 'a') as f:
-        f.write(line + '\n')
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        with open(LOG_FILE, 'a') as f:
+            f.write(line + '\n')
+    except Exception:
+        pass  # Silently fail if log file can't be written
     # Also send to HTTP log server
     http_log(msg, level)
 
