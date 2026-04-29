@@ -17,6 +17,14 @@ import base64
 import json as json_lib
 from datetime import datetime
 import os
+import threading
+
+# Flask for HTTP logging server (optional)
+try:
+    from flask import Flask, jsonify, request
+    FLASK_AVAILABLE = True
+except ImportError:
+    FLASK_AVAILABLE = False
 
 # Import settings_sync for config access
 sys.path.insert(0, '/app')
@@ -72,6 +80,86 @@ MEXC_PRICE_PRECISION = 5
 KUCOIN_PRICE_PRECISION = 6
 
 TRADING_PAIR = COIN_SYMBOL
+
+# ==============================================================================
+# HTTP Logging Server (for real-time monitoring)
+# ==============================================================================
+HTTP_LOGS = []  # In-memory log storage
+HTTP_LOGS_MAX = 10000  # Keep last 10000 logs
+_http_server = None
+
+def http_log(message: str, level: str = "INFO"):
+    """Add a log entry to the HTTP log buffer."""
+    global HTTP_LOGS
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+    entry = {
+        'timestamp': timestamp,
+        'level': level,
+        'message': str(message),
+        'received_at': time.time()
+    }
+    HTTP_LOGS.append(entry)
+    # Keep only last N logs
+    if len(HTTP_LOGS) > HTTP_LOGS_MAX:
+        HTTP_LOGS = HTTP_LOGS[-HTTP_LOGS_MAX:]
+    return entry
+
+def start_http_log_server(port: int = 8503):
+    """Start the Flask HTTP logging server in a background thread."""
+    global _http_server
+    
+    if not FLASK_AVAILABLE:
+        print("Flask not available, HTTP logging disabled")
+        return None
+    
+    app = Flask(__name__)
+    
+    @app.route('/log', methods=['POST'])
+    def add_log():
+        data = request.get_json() or {}
+        message = data.get('message', '')
+        level = data.get('level', 'INFO')
+        http_log(message, level)
+        return jsonify({'status': 'ok', 'logs_count': len(HTTP_LOGS)})
+    
+    @app.route('/logs', methods=['GET'])
+    def get_logs():
+        last_n = request.args.get('last', 100, type=int)
+        return jsonify(HTTP_LOGS[-last_n:])
+    
+    @app.route('/logs/today', methods=['GET'])
+    def get_today_logs():
+        today = datetime.now().date().isoformat()
+        today_logs = [l for l in HTTP_LOGS if today in l['timestamp'][:10]]
+        return jsonify(today_logs)
+    
+    @app.route('/logs/level/<level>', methods=['GET'])
+    def get_logs_by_level(level):
+        level_logs = [l for l in HTTP_LOGS if l['level'].upper() == level.upper()]
+        return jsonify(level_logs[-100:])
+    
+    @app.route('/status', methods=['GET'])
+    def get_status():
+        return jsonify({
+            'status': 'running',
+            'logs_count': len(HTTP_LOGS),
+            'uptime_seconds': time.time() - getattr(_http_server, 'start_time', time.time())
+        })
+    
+    @app.route('/clear', methods=['POST'])
+    def clear_logs():
+        global HTTP_LOGS
+        HTTP_LOGS = []
+        return jsonify({'status': 'cleared'})
+    
+    def run_server():
+        app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+    
+    thread = threading.Thread(target=run_server, daemon=True)
+    thread.start()
+    _http_server = thread
+    print(f"HTTP Logging server started on port {port}")
+    return thread
 
 # Balance check functions
 def get_mexc_balances() -> dict:
@@ -196,12 +284,14 @@ def set_active(flag):
             pass
 
 def log(msg, level="INFO"):
-    """Enhanced logging with optional level"""
+    """Enhanced logging with optional level - logs to file and HTTP server"""
     ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
     line = f"[{ts}] [{level}] {msg}"
     print(line)
     with open(LOG_FILE, 'a') as f:
         f.write(line + '\n')
+    # Also send to HTTP log server
+    http_log(msg, level)
 
 def log_decision(title, **kwargs):
     """Log a decision point with all conditions"""
@@ -912,6 +1002,10 @@ def main():
     trade_in_progress = False
     last_spread_ok = None  # Track spread condition changes
     last_pair_enabled = None  # Track pair enabled changes
+    
+    # Start HTTP logging server for real-time monitoring
+    start_http_log_server(port=8503)
+    http_log("Bot gestartet", "INFO")
     last_config_hash = None  # Track config changes for immediate logging
     last_trade_time = 0
     last_limit_check = 0
