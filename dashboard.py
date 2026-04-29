@@ -826,8 +826,16 @@ else:
             with trade_col1:
                 st.markdown("### KuCoin")
                 kucoin_action = st.selectbox("Action", ["Market BUY", "Market SELL", "Limit BUY", "Limit SELL"], key="kucoin_action")
-                kucoin_qty = st.number_input("Quantity (MPC)", 1.0, 10000.0, 100.0, 1.0, key="kucoin_qty")
-                kucoin_price = st.number_input("Price KuCoin (6 decimals)", 0.001, 1.0, 0.011000, 0.000001, key="kucoin_price")
+                kucoin_qty_str = st.text_input("Quantity (MPC)", "100", key="kucoin_qty")
+                try:
+                    kucoin_qty = float(kucoin_qty_str)
+                except:
+                    kucoin_qty = 0.0
+                kucoin_price_str = st.text_input("Price KuCoin (6 decimals)", "0.011000", key="kucoin_price")
+                try:
+                    kucoin_price = float(kucoin_price_str)
+                except:
+                    kucoin_price = 0.0
                 
                 if st.button("Execute KuCoin Order", key="exec_kucoin"):
                     try:
@@ -852,8 +860,16 @@ else:
             with trade_col2:
                 st.markdown("### MEXC")
                 mexc_action = st.selectbox("Action", ["Market BUY", "Market SELL", "Limit BUY", "Limit SELL"], key="mexc_action")
-                mexc_qty = st.number_input("Quantity (MPC)", 1.0, 10000.0, 100.0, 1.0, key="mexc_qty")
-                mexc_price = st.number_input("Price MEXC (5 decimals)", 0.001, 1.0, 0.01100, 0.00001, key="mexc_price")
+                mexc_qty_str = st.text_input("Quantity (MPC)", "100", key="mexc_qty")
+                try:
+                    mexc_qty = float(mexc_qty_str)
+                except:
+                    mexc_qty = 0.0
+                mexc_price_str = st.text_input("Price MEXC (5 decimals)", "0.01100", key="mexc_price")
+                try:
+                    mexc_price = float(mexc_price_str)
+                except:
+                    mexc_price = 0.0
                 
                 if st.button("Execute MEXC Order", key="exec_mexc"):
                     try:
