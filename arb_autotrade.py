@@ -495,7 +495,7 @@ def execute_limit_sell_mexc(qty, price):
     """Sell COIN on MEXC at limit price"""
     log(f"📤 MEXC Limit SELL Request: quantity={qty}, price={price}", "DEBUG")
     ts = str(int(time.time() * 1000))
-    params = f'symbol={COIN_SYMBOL_MEXC}&side=SELL&type=LIMIT&quantity={qty}&price={price:.6f}&timestamp={ts}'
+    params = f'symbol={COIN_SYMBOL_MEXC}&side=SELL&type=LIMIT&quantity={qty}&price={price:.5f}&timestamp={ts}'
     sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
     
     url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
@@ -508,7 +508,7 @@ def execute_limit_buy_mexc(qty, price):
     """Buy COIN on MEXC at limit price"""
     log(f"📤 MEXC Limit BUY Request: quantity={qty}, price={price}", "DEBUG")
     ts = str(int(time.time() * 1000))
-    params = f'symbol={COIN_SYMBOL_MEXC}&side=BUY&type=LIMIT&quantity={qty}&price={price:.6f}&timestamp={ts}'
+    params = f'symbol={COIN_SYMBOL_MEXC}&side=BUY&type=LIMIT&quantity={qty}&price={price:.5f}&timestamp={ts}'
     sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
     
     url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
