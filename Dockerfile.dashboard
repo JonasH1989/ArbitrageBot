@@ -16,6 +16,9 @@ COPY config/settings_sync.py /app/settings_sync.py
 # Copy trade logger
 COPY trade_logger.py .
 
+# Copy arb_autotrade.py for manual trade execution (same code as bot)
+COPY arb_autotrade.py .
+
 # Copy static assets (logos)
 COPY static/ ./static/
 

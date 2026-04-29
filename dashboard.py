@@ -812,7 +812,7 @@ else:
             st.subheader("🔧 Manual Trade Execution - Same Code as Bot")
             
             # Import the same execute functions as the bot uses
-            sys.path.insert(0, '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot')
+            sys.path.insert(0, '/app')
             from arb_autotrade import (
                 execute_market_buy_kucoin, execute_limit_sell_kucoin,
                 execute_market_buy_mexc, execute_limit_sell_mexc,
