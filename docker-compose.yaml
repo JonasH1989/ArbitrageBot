@@ -8,6 +8,9 @@ services:
       dockerfile: Dockerfile.bot
     container_name: mpc-arbitrage-bot
     restart: unless-stopped
+    ports:
+      - "8503:8503"
+      - "192.168.113.14:8503:8503"
     volumes:
       - arb-config:/app/config
       - ./logs:/app/logs
