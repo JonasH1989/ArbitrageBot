@@ -9,7 +9,7 @@ services:
     container_name: mpc-arbitrage-bot
     restart: unless-stopped
     ports:
-      - "8899:8899"
+      - "192.168.113.14:18888:8505"
     volumes:
       - arb-config:/app/config
       - ./logs:/app/logs
