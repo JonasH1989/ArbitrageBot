@@ -807,6 +807,67 @@ else:
             else:
                 st.info("Orderbook Daten nicht vollständig verfügbar")
         
+        # Manual Trade Execution (Test Panel)
+        with st.expander("🔧 Manual Trade Execution", expanded=True):
+            st.subheader("🔧 Manual Trade Execution - Same Code as Bot")
+            
+            # Import the same execute functions as the bot uses
+            sys.path.insert(0, '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot')
+            from arb_autotrade import (
+                execute_market_buy_kucoin, execute_limit_sell_kucoin,
+                execute_market_buy_mexc, execute_limit_sell_mexc,
+                COIN_SYMBOL, COIN_SYMBOL_MEXC
+            )
+            
+            trade_col1, trade_col2 = st.columns(2)
+            
+            with trade_col1:
+                st.markdown("### KuCoin")
+                kucoin_action = st.selectbox("Action", ["Market BUY", "Limit SELL"], key="kucoin_action")
+                kucoin_qty = st.number_input("Quantity (MPC)", 1.0, 10000.0, 100.0, 1.0, key="kucoin_qty")
+                kucoin_price = st.number_input("Price (for Limit)", 0.001, 1.0, 0.0110, 0.0001, key="kucoin_price")
+                
+                if st.button("Execute KuCoin Order", key="exec_kucoin"):
+                    try:
+                        if kucoin_action == "Market BUY":
+                            result = execute_market_buy_kucoin(kucoin_qty)
+                            st.info(f"📤 Request: Market BUY {kucoin_qty} MPC")
+                        else:
+                            result = execute_limit_sell_kucoin(kucoin_qty, kucoin_price)
+                            st.info(f"📤 Request: Limit SELL {kucoin_qty} MPC @ {kucoin_price:.6f}")
+                        
+                        if result.get('code') == '200000':
+                            st.success(f"✅ Order success! OrderId: {result.get('data', {}).get('orderId', 'N/A')}")
+                        else:
+                            st.error(f"❌ Order failed: {result}")
+                    except Exception as e:
+                        st.error(f"❌ Exception: {str(e)}")
+            
+            with trade_col2:
+                st.markdown("### MEXC")
+                mexc_action = st.selectbox("Action", ["Market BUY", "Limit SELL"], key="mexc_action")
+                mexc_qty = st.number_input("Quantity (MPC)", 1.0, 10000.0, 100.0, 1.0, key="mexc_qty")
+                mexc_price = st.number_input("Price (for Limit)", 0.001, 1.0, 0.0110, 0.0001, key="mexc_price")
+                
+                if st.button("Execute MEXC Order", key="exec_mexc"):
+                    try:
+                        if mexc_action == "Market BUY":
+                            result = execute_market_buy_mexc(mexc_qty)
+                            st.info(f"📤 Request: Market BUY {mexc_qty} MPC")
+                        else:
+                            result = execute_limit_sell_mexc(mexc_qty, mexc_price)
+                            st.info(f"📤 Request: Limit SELL {mexc_qty} MPC @ {mexc_price:.6f}")
+                        
+                        if result.get('code') is None or 'orderId' in result:
+                            st.success(f"✅ Order success! OrderId: {result.get('orderId', result.get('data', {}).get('orderId', 'N/A'))}")
+                        else:
+                            st.error(f"❌ Order failed: {result}")
+                    except Exception as e:
+                        st.error(f"❌ Exception: {str(e)}")
+            
+            st.markdown("---")
+            st.caption("⚠️ Manual trades use the exact same execution code as the bot. Errors here = errors in bot.")
+        
         # Einstellungen
         with st.expander("⚙️ Einstellungen", expanded=False):
             s1, s2, s3, s4 = st.columns([1, 1, 1, 1])
