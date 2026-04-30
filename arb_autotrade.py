@@ -811,9 +811,11 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
         return False, trade_id
 
     # Harmonize successful response
-    order_id1 = result1.get('orderId', 'unknown') or result1.get('orderId', 'unknown')
-    orig_qty1 = float(result1.get('origQty', 0) or 0)
-    transact_time1 = int(result1.get('transactTime', 0) or 0)
+    # KuCoin returns {'code': '200000', 'data': {'orderId': 'xxx'}} - orderId is INSIDE data
+    # MEXC returns {'orderId': 'xxx', 'origQty': 'xxx', ...} - orderId is at top level
+    order_id1 = result1.get('data', {}).get('orderId') or result1.get('orderId', 'unknown')
+    orig_qty1 = float(result1.get('data', {}).get('origQty', 0) or result1.get('origQty', 0) or 0)
+    transact_time1 = int(result1.get('data', {}).get('transactTime', 0) or result1.get('transactTime', 0) or 0)
     log(f"✅ {exchange_market} Order placed: {order_id1} (qty={orig_qty1}, time={transact_time1})")
 
     # MEXC market orders are async - get actual fill from trades API
@@ -822,6 +824,13 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
         filled_response = poll_mexc_market_order(order_id1, orig_qty1, transact_time1, max_wait_ms=2000, fallback_price=market_price_expected)
         result1 = filled_response  # Use the filled response
         log(f"   After polling: status={filled_response.get('status')}, quantity={filled_response.get('quantity')}, amount={filled_response.get('amount')}")
+    
+    # KuCoin market orders are async - poll for fill data
+    if exchange_market.upper() == "KUCOIN":
+        log(f"   Polling KuCoin order for fill...")
+        filled_response = poll_kucoin_market_order(order_id1, orig_qty1, max_wait_ms=3000, fallback_price=market_price_expected)
+        result1 = filled_response  # Replace result with filled data
+        log(f"   After polling: status={filled_response.get('status')}, dealSize={filled_response.get('dealSize', 0):.2f}, amount={filled_response.get('dealFunds', 0):.4f}")
 
     # Get the response data for harmonization (KuCoin nests in 'data', MEXC doesn't)
     response_data1 = result1.get('data', result1) if exchange_market.upper() == "KUCOIN" else result1
@@ -1371,3 +1380,82 @@ def main():
 
 if __name__ == '__main__':
     main()
+def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 3000, fallback_price: float = 0.011) -> dict:
+    """Get KuCoin market order fill data by polling the order status.
+    
+    KuCoin market orders are async - the initial response only gives orderId.
+    We need to poll to get the actual fill data (dealSize, dealFunds).
+    
+    Args:
+        order_id: The KuCoin order ID from the initial response
+        orig_qty: Original quantity ordered (for fallback if no fill found)
+        max_wait_ms: How long to wait for fill (default 3 seconds)
+        fallback_price: Price to use if all methods fail
+    
+    Returns:
+        dict with fill data: quantity, amount, fees, status, price
+    """
+    start_time = time.time() * 1000
+    poll_interval = 200  # ms
+    
+    while (time.time() * 1000 - start_time) < max_wait_ms:
+        try:
+            # Check order status via KuCoin API
+            ts = str(int(time.time() * 1000))
+            path = f'/api/v1/orders/{order_id}'
+            sig = kucoin_sig(KUCOIN_SECRET, ts, 'GET', path)
+            
+            headers = {
+                'KC-API-KEY': KUCOIN_KEY,
+                'KC-API-SIGN': sig,
+                'KC-API-TIMESTAMP': ts,
+                'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+                'KC-API-KEY-VERSION': '2',
+            }
+            
+            resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
+            data = resp.json()
+            
+            if data.get('code') == '200000':
+                order_data = data.get('data', {})
+                status = order_data.get('status', '')
+                deal_size = float(order_data.get('dealSize', 0) or 0)
+                deal_funds = float(order_data.get('dealFunds', 0) or 0)
+                fee = float(order_data.get('fee', 0) or 0)
+                
+                if status == 'Done' and deal_size > 0:
+                    price = deal_funds / deal_size if deal_size > 0 else fallback_price
+                    log(f"   Found KuCoin fill: qty={deal_size}, value=${deal_funds:.4f}, fee=${fee:.4f}")
+                    return {
+                        'status': 'FILLED',
+                        'quantity': deal_size,
+                        'amount': deal_funds,
+                        'fees': fee,
+                        'price': price,
+                        'dealSize': deal_size,
+                        'dealFunds': deal_funds,
+                        'fee': fee,
+                        'orderId': order_id
+                    }
+                elif status == 'Active':
+                    # Order still filling, keep polling
+                    log(f"   KuCoin order {order_id} still Active, polling again...", "DEBUG")
+        
+        except Exception as e:
+            log(f"   Error polling KuCoin order: {e}", "DEBUG")
+        
+        time.sleep(poll_interval / 1000)
+    
+    # Timeout - return estimated data based on original quantity
+    log(f"   KuCoin polling timeout for order {order_id}, using fallback")
+    return {
+        'status': 'TIMEOUT',
+        'quantity': orig_qty,
+        'amount': orig_qty * fallback_price,
+        'fees': orig_qty * fallback_price * 0.001,
+        'price': fallback_price,
+        'dealSize': orig_qty,
+        'dealFunds': orig_qty * fallback_price,
+        'fee': orig_qty * fallback_price * 0.001,
+        'orderId': order_id
+    }
