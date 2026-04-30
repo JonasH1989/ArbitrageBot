@@ -1314,31 +1314,9 @@ def main():
 
                 # Execute best trade found by sweep
                 if best_trade:
-                    vol_for_mexc = round(best_trade['vol'])
-                    vol_for_kucoin = round(best_trade['vol'])
-                    trade_strategy = best_trade.get('strategy', current_strategy)
-                    coin = COIN_SYMBOL.split('-')[0]
-                    log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
-                    if best_trade['dir'] == 'K→M':
-                        success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', vol_for_kucoin, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
-                    else:
-                        success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
-                elif spread_pct_km >= spread_pct_mk:
-                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', round(vol_for_kucoin), k['ask'], m['bid'], current_strategy, spread_pct_km)
-                else:
-                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', round(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
-
-                last_trade_time = time.time()
-                trade_in_progress = False
-
-        elif state == STATE_RUNNING:
-            if profitable_spread < STOP_THRESHOLD:
-                log(f"⏹ STOPPING: spread={profitable_spread:.2f}% < STOP_THRESHOLD={STOP_THRESHOLD}%")
-                state = STATE_WAITING
-            elif not trade_in_progress:
-                trade_in_progress = True
-                # Execute best trade found by sweep
-                if best_trade:
+                    # KuCoin requires WHOLE NUMBER quantities (baseIncrement=1 for MPC-USDT)
+                    # Fractional quantities like 119.34 cause 'Order size increment invalid' error
+                    # Always round to nearest integer to ensure KuCoin compatibility
                     vol_for_mexc = round(best_trade['vol'])
                     vol_for_kucoin = round(best_trade['vol'])
                     trade_strategy = best_trade.get('strategy', current_strategy)
@@ -1353,6 +1331,34 @@ def main():
                 else:
                     success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', round(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
                 
+                last_trade_time = time.time()
+                trade_in_progress = False
+        
+        elif state == STATE_RUNNING:
+            if profitable_spread < STOP_THRESHOLD:
+                log(f"⏹ STOPPING: spread={profitable_spread:.2f}% < STOP_THRESHOLD={STOP_THRESHOLD}%")
+                state = STATE_WAITING
+            elif not trade_in_progress:
+                trade_in_progress = True
+                # Execute best trade found by sweep
+                if best_trade:
+                    # KuCoin requires WHOLE NUMBER quantities (baseIncrement=1 for MPC-USDT)
+                    # Fractional quantities like 119.34 cause 'Order size increment invalid' error
+                    # Always round to nearest integer to ensure KuCoin compatibility
+                    vol_for_mexc = round(best_trade['vol'])
+                    vol_for_kucoin = round(best_trade['vol'])
+                    trade_strategy = best_trade.get('strategy', current_strategy)
+                    coin = COIN_SYMBOL.split('-')[0]
+                    log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
+                    if best_trade['dir'] == 'K→M':
+                        success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', vol_for_kucoin, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
+                    else:
+                        success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
+                elif spread_pct_km >= spread_pct_mk:
+                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', round(vol_for_kucoin), k['ask'], m['bid'], current_strategy, spread_pct_km)
+                else:
+                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', round(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
+
                 last_trade_time = time.time()
                 trade_in_progress = False
 
