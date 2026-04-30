@@ -1103,12 +1103,16 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
             
             if data.get('code') == '200000':
                 order_data = data.get('data', {})
+                # KuCoin doesn't always return 'status' field - check isActive instead
+                # If isActive=False and dealSize > 0, order is filled
+                is_active = order_data.get('isActive', True)
                 status = order_data.get('status', '')
                 deal_size = float(order_data.get('dealSize', 0) or 0)
                 deal_funds = float(order_data.get('dealFunds', 0) or 0)
                 fee = float(order_data.get('fee', 0) or 0)
                 
-                if status == 'Done' and deal_size > 0:
+                # Order is done if: status='Done' OR isActive=False with dealSize > 0
+                if (status == 'Done' or (not is_active and deal_size > 0)) and deal_size > 0:
                     price = deal_funds / deal_size if deal_size > 0 else fallback_price
                     log(f"   Found KuCoin fill: qty={deal_size}, value=${deal_funds:.4f}, fee=${fee:.4f}")
                     return {
@@ -1122,7 +1126,7 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
                         'fee': fee,
                         'orderId': order_id
                     }
-                elif status == 'Active':
+                elif status == 'Active' or is_active:
                     # Order still filling, keep polling
                     log(f"   KuCoin order {order_id} still Active, polling again...", "DEBUG")
         
