@@ -1224,7 +1224,7 @@ def main():
                         break
 
         # Log sweep results every 30 seconds
-        if int(time.time()) % 30 == 0:
+        if int(time.time()) % 10 == 0:
             if ob_data:
                 total_mexc = sum(x['qty'] for x in ob_data['mexc_asks'][:5])
                 total_kucoin = sum(x['qty'] for x in ob_data['kucoin_bids'][:5])
@@ -1253,7 +1253,7 @@ def main():
 
         
         # Log every 30 seconds
-        if int(time.time()) % 30 == 0:
+        if int(time.time()) % 10 == 0:
             log(f"Prices: K={fmt_price(k['bid'],'kucoin')}/{fmt_price(k['ask'],'kucoin')} | M={fmt_price(m['bid'],'mexc')}/{fmt_price(m['ask'],'mexc')}")
             log(f"  M->K spread: {spread_pct_mk:.2f}% | K->M spread: {spread_pct_km:.2f}%")
         
@@ -1267,7 +1267,7 @@ def main():
         direction = "K→M" if spread_pct_km >= spread_pct_mk else "M→K"
         
         # Log periodic status every 30 seconds for monitoring
-        if int(time.time()) % 30 == 0:
+        if int(time.time()) % 10 == 0:
             log_decision("STATUS_CHECK",
                 state=state,
                 pair_enabled=str(pair_enabled),
@@ -1286,7 +1286,7 @@ def main():
         # Trade BOTH directions when profitable!
         if not pair_enabled:
             state = STATE_WAITING
-            if int(time.time()) % 30 == 0:
+            if int(time.time()) % 10 == 0:
                 log(f"INAKTIV - keine Trades")
             time.sleep(1)
             continue
