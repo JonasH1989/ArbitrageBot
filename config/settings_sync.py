@@ -150,7 +150,7 @@ def set_log_level(level: int):
     set_setting('system.log_level', level)
 
 def is_debug_enabled() -> bool:
-    """Check if debug logging is enabled"""
+    """Check if debug logging is enabled - reads fresh from config each time"""
     return get_log_level() >= 2
 
 def get_all_settings() -> Dict[str, Any]:

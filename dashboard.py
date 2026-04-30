@@ -484,6 +484,27 @@ with st.sidebar:
     new_log_level = 1 if selected_label == log_level_labels[0] else 2
     if new_log_level != current_log_level:
         set_log_level(new_log_level)
+        # Log the config change to arb log
+        try:
+            from pathlib import Path
+            log_dir = Path('/app/logs') if Path('/app/logs').exists() else Path('/home/openclaw/.openclaw/logs')
+            log_file = log_dir / 'arb_live_log.txt'
+            from datetime import datetime
+            ts = datetime.now().strftime('%H:%M:%S')
+            level_str = "Level 1 - Basic" if new_log_level == 1 else "Level 2 - Debug"
+            entry = f"[{ts}] [INFO    ] ⚙️ CONFIG: Log Level geaendert auf {level_str}\n"
+            with open(log_file, 'a') as f:
+                f.write(entry)
+            # Also notify HTTP server if running
+            try:
+                import requests
+                requests.post('http://192.168.113.14:18888/log', 
+                            json={'level': 'INFO', 'message': f'Config: Log Level geaendert auf {level_str}'},
+                            timeout=2)
+            except:
+                pass
+        except:
+            pass
         st.rerun()
     
     st.caption("Level 2 erzeugt deutlich mehr Logs (API-Details, Orderbook, etc.)")
