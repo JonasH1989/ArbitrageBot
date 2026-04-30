@@ -872,6 +872,10 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
         # USDT strategy: sell same quantity as bought
         sell_qty = ex1_data['qty_filled']
     
+    # Round to integer for KuCoin (KuCoin requires whole numbers, increment=1)
+    # Also ensure minimum of 10 MPC for KuCoin
+    sell_qty = max(10, round(sell_qty))
+    
     coin = COIN_SYMBOL.split('-')[0]
     log(f"Step 2: {exchange_limit} Limit SELL: {sell_qty:.4f} {coin} @ ${sell_price:.6f}")
     
