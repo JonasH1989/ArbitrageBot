@@ -1065,6 +1065,86 @@ def check_limit_order_fills():
         except Exception as e:
             log(f"⚠️ Error checking order {ex2_order_id}: {e}")
 
+def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 3000, fallback_price: float = 0.011) -> dict:
+    """Get KuCoin market order fill data by polling the order status.
+    
+    KuCoin market orders are async - the initial response only gives orderId.
+    We need to poll to get the actual fill data (dealSize, dealFunds).
+    
+    Args:
+        order_id: The KuCoin order ID from the initial response
+        orig_qty: Original quantity ordered (for fallback if no fill found)
+        max_wait_ms: How long to wait for fill (default 3 seconds)
+        fallback_price: Price to use if all methods fail
+    
+    Returns:
+        dict with fill data: quantity, amount, fees, status, price
+    """
+    start_time = time.time() * 1000
+    poll_interval = 200  # ms
+    
+    while (time.time() * 1000 - start_time) < max_wait_ms:
+        try:
+            # Check order status via KuCoin API
+            ts = str(int(time.time() * 1000))
+            path = f'/api/v1/orders/{order_id}'
+            sig = kucoin_sig(KUCOIN_SECRET, ts, 'GET', path)
+            
+            headers = {
+                'KC-API-KEY': KUCOIN_KEY,
+                'KC-API-SIGN': sig,
+                'KC-API-TIMESTAMP': ts,
+                'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+                'KC-API-KEY-VERSION': '2',
+            }
+            
+            resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
+            data = resp.json()
+            
+            if data.get('code') == '200000':
+                order_data = data.get('data', {})
+                status = order_data.get('status', '')
+                deal_size = float(order_data.get('dealSize', 0) or 0)
+                deal_funds = float(order_data.get('dealFunds', 0) or 0)
+                fee = float(order_data.get('fee', 0) or 0)
+                
+                if status == 'Done' and deal_size > 0:
+                    price = deal_funds / deal_size if deal_size > 0 else fallback_price
+                    log(f"   Found KuCoin fill: qty={deal_size}, value=${deal_funds:.4f}, fee=${fee:.4f}")
+                    return {
+                        'status': 'FILLED',
+                        'quantity': deal_size,
+                        'amount': deal_funds,
+                        'fees': fee,
+                        'price': price,
+                        'dealSize': deal_size,
+                        'dealFunds': deal_funds,
+                        'fee': fee,
+                        'orderId': order_id
+                    }
+                elif status == 'Active':
+                    # Order still filling, keep polling
+                    log(f"   KuCoin order {order_id} still Active, polling again...", "DEBUG")
+        
+        except Exception as e:
+            log(f"   Error polling KuCoin order: {e}", "DEBUG")
+        
+        time.sleep(poll_interval / 1000)
+    
+    # Timeout - return estimated data based on original quantity
+    log(f"   KuCoin polling timeout for order {order_id}, using fallback")
+    return {
+        'status': 'TIMEOUT',
+        'quantity': orig_qty,
+        'amount': orig_qty * fallback_price,
+        'fees': orig_qty * fallback_price * 0.001,
+        'price': fallback_price,
+        'dealSize': orig_qty,
+        'dealFunds': orig_qty * fallback_price,
+        'fee': orig_qty * fallback_price * 0.001,
+        'orderId': order_id
+    }
+
 
 def main():
     log("=== AUTO-TRADE BOT STARTED ===")
@@ -1381,82 +1461,3 @@ def main():
 if __name__ == '__main__':
     main()
 
-def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 3000, fallback_price: float = 0.011) -> dict:
-    """Get KuCoin market order fill data by polling the order status.
-    
-    KuCoin market orders are async - the initial response only gives orderId.
-    We need to poll to get the actual fill data (dealSize, dealFunds).
-    
-    Args:
-        order_id: The KuCoin order ID from the initial response
-        orig_qty: Original quantity ordered (for fallback if no fill found)
-        max_wait_ms: How long to wait for fill (default 3 seconds)
-        fallback_price: Price to use if all methods fail
-    
-    Returns:
-        dict with fill data: quantity, amount, fees, status, price
-    """
-    start_time = time.time() * 1000
-    poll_interval = 200  # ms
-    
-    while (time.time() * 1000 - start_time) < max_wait_ms:
-        try:
-            # Check order status via KuCoin API
-            ts = str(int(time.time() * 1000))
-            path = f'/api/v1/orders/{order_id}'
-            sig = kucoin_sig(KUCOIN_SECRET, ts, 'GET', path)
-            
-            headers = {
-                'KC-API-KEY': KUCOIN_KEY,
-                'KC-API-SIGN': sig,
-                'KC-API-TIMESTAMP': ts,
-                'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
-                'KC-API-KEY-VERSION': '2',
-            }
-            
-            resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
-            data = resp.json()
-            
-            if data.get('code') == '200000':
-                order_data = data.get('data', {})
-                status = order_data.get('status', '')
-                deal_size = float(order_data.get('dealSize', 0) or 0)
-                deal_funds = float(order_data.get('dealFunds', 0) or 0)
-                fee = float(order_data.get('fee', 0) or 0)
-                
-                if status == 'Done' and deal_size > 0:
-                    price = deal_funds / deal_size if deal_size > 0 else fallback_price
-                    log(f"   Found KuCoin fill: qty={deal_size}, value=${deal_funds:.4f}, fee=${fee:.4f}")
-                    return {
-                        'status': 'FILLED',
-                        'quantity': deal_size,
-                        'amount': deal_funds,
-                        'fees': fee,
-                        'price': price,
-                        'dealSize': deal_size,
-                        'dealFunds': deal_funds,
-                        'fee': fee,
-                        'orderId': order_id
-                    }
-                elif status == 'Active':
-                    # Order still filling, keep polling
-                    log(f"   KuCoin order {order_id} still Active, polling again...", "DEBUG")
-        
-        except Exception as e:
-            log(f"   Error polling KuCoin order: {e}", "DEBUG")
-        
-        time.sleep(poll_interval / 1000)
-    
-    # Timeout - return estimated data based on original quantity
-    log(f"   KuCoin polling timeout for order {order_id}, using fallback")
-    return {
-        'status': 'TIMEOUT',
-        'quantity': orig_qty,
-        'amount': orig_qty * fallback_price,
-        'fees': orig_qty * fallback_price * 0.001,
-        'price': fallback_price,
-        'dealSize': orig_qty,
-        'dealFunds': orig_qty * fallback_price,
-        'fee': orig_qty * fallback_price * 0.001,
-        'orderId': order_id
-    }
