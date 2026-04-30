@@ -15,6 +15,7 @@ import hashlib
 import hmac
 import base64
 import json as json_lib
+import math
 from datetime import datetime
 import os
 import threading
@@ -1316,9 +1317,11 @@ def main():
                 if best_trade:
                     # KuCoin requires WHOLE NUMBER quantities (baseIncrement=1 for MPC-USDT)
                     # Fractional quantities like 119.34 cause 'Order size increment invalid' error
-                    # Always round to nearest integer to ensure KuCoin compatibility
-                    vol_for_mexc = round(best_trade['vol'])
-                    vol_for_kucoin = round(best_trade['vol'])
+                    # IMPORTANT: For Market BUY orders (takes liquidity from orderbook)
+                    # -> use math.floor() to NEVER exceed available volume
+                    # For Limit SELL orders (creates new order on book) -> can use round()
+                    vol_for_mexc = math.floor(best_trade['vol'])
+                    vol_for_kucoin = math.floor(best_trade['vol'])
                     trade_strategy = best_trade.get('strategy', current_strategy)
                     coin = COIN_SYMBOL.split('-')[0]
                     log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
@@ -1327,9 +1330,9 @@ def main():
                     else:
                         success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
                 elif spread_pct_km >= spread_pct_mk:
-                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', round(vol_for_kucoin), k['ask'], m['bid'], current_strategy, spread_pct_km)
+                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', math.floor(vol_for_kucoin), k['ask'], m['bid'], current_strategy, spread_pct_km)
                 else:
-                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', round(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
+                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
                 
                 last_trade_time = time.time()
                 trade_in_progress = False
@@ -1344,9 +1347,11 @@ def main():
                 if best_trade:
                     # KuCoin requires WHOLE NUMBER quantities (baseIncrement=1 for MPC-USDT)
                     # Fractional quantities like 119.34 cause 'Order size increment invalid' error
-                    # Always round to nearest integer to ensure KuCoin compatibility
-                    vol_for_mexc = round(best_trade['vol'])
-                    vol_for_kucoin = round(best_trade['vol'])
+                    # IMPORTANT: For Market BUY orders (takes liquidity from orderbook)
+                    # -> use math.floor() to NEVER exceed available volume
+                    # For Limit SELL orders (creates new order on book) -> can use round()
+                    vol_for_mexc = math.floor(best_trade['vol'])
+                    vol_for_kucoin = math.floor(best_trade['vol'])
                     trade_strategy = best_trade.get('strategy', current_strategy)
                     coin = COIN_SYMBOL.split('-')[0]
                     log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
@@ -1355,9 +1360,9 @@ def main():
                     else:
                         success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
                 elif spread_pct_km >= spread_pct_mk:
-                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', round(vol_for_kucoin), k['ask'], m['bid'], current_strategy, spread_pct_km)
+                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', math.floor(vol_for_kucoin), k['ask'], m['bid'], current_strategy, spread_pct_km)
                 else:
-                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', round(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
+                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
 
                 last_trade_time = time.time()
                 trade_in_progress = False
