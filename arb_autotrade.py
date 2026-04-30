@@ -29,7 +29,7 @@ except ImportError:
 # Import settings_sync for config access
 sys.path.insert(0, '/app')
 try:
-    from settings_sync import get_setting, set_setting, get_pair_settings, load_config, is_debug_enabled
+    from settings_sync import get_setting, set_setting, get_pair_settings, load_config, is_debug_enabled, get_log_level
 except ImportError:
     get_setting = None
     set_setting = None
@@ -1270,6 +1270,7 @@ def main():
                 state=state,
                 pair_enabled=str(pair_enabled),
                 strategy=current_strategy,
+                log_level=f"Level {get_log_level()}",
                 spread_mk=f"{spread_pct_mk:.3f}%",
                 spread_km=f"{spread_pct_km:.3f}%",
                 best_spread=f"{profitable_spread:.3f}%",
