@@ -135,3 +135,24 @@ def remove_pair(pair: str):
     if 'trading' in config and 'pairs' in config['trading'] and pair in config['trading']['pairs']:
         del config['trading']['pairs'][pair]
         save_config(config)
+# ========================================================================
+# LOG LEVEL SETTINGS
+# ========================================================================
+# Level 1 (BASIC): Trade Events, Config Changes, Errors, Bot Start/Stop, Status Changes
+# Level 2 (DEBUG): Everything + API Requests, Orderbook Details, Price Details
+
+def get_log_level() -> int:
+    """Get current log level (1=Basic, 2=Debug)"""
+    return get_setting('system.log_level', 1)
+
+def set_log_level(level: int):
+    """Set log level (1=Basic, 2=Debug)"""
+    set_setting('system.log_level', level)
+
+def is_debug_enabled() -> bool:
+    """Check if debug logging is enabled"""
+    return get_log_level() >= 2
+
+def get_all_settings() -> Dict[str, Any]:
+    """Get all settings as a flat dict"""
+    return load_config()

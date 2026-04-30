@@ -29,11 +29,13 @@ except ImportError:
 # Import settings_sync for config access
 sys.path.insert(0, '/app')
 try:
-    from settings_sync import get_setting, set_setting, get_pair_settings, load_config
+    from settings_sync import get_setting, set_setting, get_pair_settings, load_config, is_debug_enabled
 except ImportError:
     get_setting = None
+    set_setting = None
     get_pair_settings = None
     load_config = None
+    is_debug_enabled = lambda: False
 
 # Import the harmonized trade logger
 from trade_logger import (
@@ -289,6 +291,11 @@ def log(msg, level="INFO"):
     ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
     line = f"[{ts}] [{level}] {msg}"
     print(line)
+    
+    # Check log level - DEBUG messages only logged if debug enabled
+    if level == "DEBUG" and not is_debug_enabled():
+        return  # Skip DEBUG messages if not in debug mode
+    
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         with open(LOG_FILE, 'a') as f:

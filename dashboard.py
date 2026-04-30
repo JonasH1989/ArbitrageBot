@@ -13,7 +13,7 @@ import os
 import pandas as pd
 from trade_logger import *
 import sys
-from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, get_alert_settings, set_alert_settings, get_api_keys, set_api_keys, get_all_pairs, add_pair, remove_pair
+from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, get_alert_settings, set_alert_settings, get_api_keys, set_api_keys, get_all_pairs, add_pair, remove_pair, get_log_level, set_log_level
 
 import base64
 
@@ -472,6 +472,21 @@ with st.sidebar:
             set_api_keys('mexc', api_key=mexc_key, api_secret=mexc_secret)
             st.success("Gespeichert!")
             st.rerun()
+    
+    st.divider()
+    
+    # Debug Log Level
+    st.markdown("### 🔍 Log Level")
+    current_log_level = get_log_level()
+    log_level_options = {1: "Level 1 - Basic (Trade Events, Errors, Config)", 2: "Level 2 - Debug (Alle Details)"}
+    log_level_labels = list(log_level_options.values())
+    selected_label = st.selectbox("Log Level", log_level_labels, index=current_log_level - 1, key="log_level_select")
+    new_log_level = 1 if selected_label == log_level_labels[0] else 2
+    if new_log_level != current_log_level:
+        set_log_level(new_log_level)
+        st.rerun()
+    
+    st.caption("Level 2 erzeugt deutlich mehr Logs (API-Details, Orderbook, etc.)")
     
     st.divider()
     
