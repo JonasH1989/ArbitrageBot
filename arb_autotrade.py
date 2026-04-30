@@ -1107,14 +1107,16 @@ def main():
         current_strategy = get_setting(f'trading.pairs.{TRADING_PAIR}.strategy', 'usdt')
         threshold_start = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_start', 1.0)
         threshold_stop = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_stop', 0.5)
+        current_log_level = get_log_level()
         
         # Check if any setting changed - log immediately if so
         import hashlib
-        config_hash = f"{pair_enabled}|{current_strategy}|{threshold_start}|{threshold_stop}"
+        config_hash = f"{pair_enabled}|{current_strategy}|{threshold_start}|{threshold_stop}|{current_log_level}"
         if config_hash != last_config_hash:
             log_decision("CONFIG_CHANGED",
                 pair_enabled=str(pair_enabled),
                 strategy=current_strategy,
+                log_level=f"Level {current_log_level}",
                 threshold=f"{threshold_start:.2f}%",
                 threshold_stop=f"{threshold_stop:.2f}%"
             )
