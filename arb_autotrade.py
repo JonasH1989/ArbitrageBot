@@ -977,7 +977,14 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     # STEP 4: Calculate expected profit and log trade
     # ========================================================================
     cost = ex1_data['value_usdt']
-    revenue = ex2_data['value_usdt']
+    # Revenue: use ACTUAL filled value if available, otherwise EXPECTED based on sell_price
+    actual_revenue = ex2_data['value_usdt']
+    if actual_revenue > 0:
+        revenue = actual_revenue
+    else:
+        # Limit sell not filled yet - use expected revenue
+        expected_sell_value = sell_qty * sell_price
+        revenue = expected_sell_value
     gross_profit = revenue - cost
     fee_taker = ex1_data['fees']
     fee_maker = ex2_data.get('fees', 0)
@@ -1003,11 +1010,15 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     )
     log(f"📝 Trade logged: {trade_id}")
 
+    # Determine if profit is actual (limit filled) or expected (limit pending)
+    profit_label = "Actual" if actual_revenue > 0 else "Expected"
+    profit_note = "" if actual_revenue > 0 else " (limit pending)"
+    
     log(f"=== TRADE LOGGED (pending limit fill) ===")
-    log(f"Cost: ${cost:.4f} | Revenue: ${revenue:.4f}")
+    log(f"Cost: ${cost:.4f} | Revenue: ${revenue:.4f}{profit_note}")
     log(f"Gross Profit: ${gross_profit:.4f} | Fees: ${fee_taker + fee_maker:.4f}")
     coin = COIN_SYMBOL.split('-')[0]
-    log(f"Expected Net Profit: ${net_profit:.4f} | {coin} Gain: {mpc_gain:.4f}")
+    log(f"{profit_label} Net Profit: ${net_profit:.4f} | {coin} Gain: {mpc_gain:.4f}{profit_note}")
 
     return True, trade_id
 
