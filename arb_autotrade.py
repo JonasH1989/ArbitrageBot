@@ -156,6 +156,46 @@ def start_http_log_server(port: int = 8503):
         HTTP_LOGS = []
         return jsonify({'status': 'cleared'})
 
+    @app.route('/trades/<pair>', methods=['GET'])
+    def get_trades_api(pair):
+        """Get trades from CSV for a trading pair"""
+        try:
+            limit = int(request.args.get('limit', 50))
+            trades = get_trades(pair, limit=limit)
+            return jsonify({
+                'status': 'ok',
+                'pair': pair,
+                'count': len(trades),
+                'trades': trades
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    @app.route('/trades/summary/<pair>', methods=['GET'])
+    def get_trades_summary_api(pair):
+        """Get trade summary for a pair"""
+        try:
+            summary = get_trade_summary(pair)
+            return jsonify({
+                'status': 'ok',
+                'summary': summary
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    @app.route('/trades/pending', methods=['GET'])
+    def get_pending_api():
+        """Get pending limit orders across all pairs"""
+        try:
+            pending = get_pending_limit_orders()
+            return jsonify({
+                'status': 'ok',
+                'count': len(pending),
+                'pending': pending
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
     def run_server():
         app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
