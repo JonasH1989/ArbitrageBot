@@ -890,14 +890,30 @@ else:
             
             col1, col2, col3 = st.columns(3)
         
-        # Collect balances for both exchanges
-        k_balances = {}
-        m_balances = {}
+        # Extract base and quote from pair
+        pair_parts = pair.split('-')
+        base_coin_local = pair_parts[0] if len(pair_parts) > 0 else ''
+        quote_coin_local = pair_parts[1] if len(pair_parts) > 1 else ''
         
-        if kucoin_wallet.get('ok'):
-            k_balances = kucoin_wallet['balances']
-        if mexc_wallet.get('ok'):
-            m_balances = mexc_wallet['balances']
+        kucoin_key_local = config.get('kucoin', {}).get('api_key', '')
+        kucoin_secret_local = config.get('kucoin', {}).get('api_secret', '')
+        kucoin_pass_local = config.get('kucoin', {}).get('api_passphrase', '')
+        mexc_key_local = config.get('mexc', {}).get('api_key', '')
+        mexc_secret_local = config.get('mexc', {}).get('api_secret', '')
+        
+        # Fetch wallet data
+        kucoin_wallet = {'ok': False, 'balances': {}}
+        mexc_wallet = {'ok': False, 'balances': {}}
+        
+        if kucoin_key_local and kucoin_secret_local and kucoin_pass_local:
+            kucoin_wallet = get_kucoin_balances(kucoin_key_local, kucoin_secret_local, kucoin_pass_local)
+        
+        if mexc_key_local and mexc_secret_local:
+            mexc_wallet = get_mexc_balances(mexc_key_local, mexc_secret_local)
+        
+        # Collect balances for combined view
+        k_balances = kucoin_wallet.get('balances', {})
+        m_balances = mexc_wallet.get('balances', {})
         
         # KuCoin Wallet
         with col1:
