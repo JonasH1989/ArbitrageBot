@@ -878,6 +878,36 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     ex1_data['price_expected'] = market_price_expected
     log(f"   Harmonized: qty_filled={ex1_data['qty_filled']}, value_usdt={ex1_data['value_usdt']:.4f}, fees={ex1_data['fees']:.4f}")
 
+    # ========================================================================
+    # STEP 1.5: Price Drift Check (Jonas' solution: freeze prices at sweep time)
+    # If market price drifted from expected, recalculate sell_price to preserve spread
+    # ========================================================================
+    price_diff_pct = 0.0
+    if ex1_data.get('price_actual', 0) > 0 and market_price_expected > 0:
+        price_diff_pct = abs(ex1_data['price_actual'] - market_price_expected) / market_price_expected * 100
+    
+    if price_diff_pct > 0.1:  # More than 0.1% drift
+        log(f"⚠️ PRICE DRIFT DETECTED: expected={market_price_expected:.6f}, actual={ex1_data['price_actual']:.6f}, drift={price_diff_pct:.3f}%")
+        
+        # Recalculate sell_price to preserve the ORIGINAL spread percentage
+        # spread_pct was calculated as: (sell_price - buy_price) / buy_price * 100
+        # So: sell_price = buy_price * (1 + spread_pct/100)
+        actual_buy_price = ex1_data['price_actual']
+        adjusted_sell_price = actual_buy_price * (1 + spread_pct / 100) if spread_pct > 0 else sell_price
+        
+        # Ensure adjusted price is above some minimum (at least covers buy + fees)
+        min_sell_price = actual_buy_price * 1.001  # At least 0.1% profit
+        if adjusted_sell_price < min_sell_price:
+            adjusted_sell_price = min_sell_price
+            log(f"   Adjusted to minimum sell price: {adjusted_sell_price:.6f}")
+        else:
+            log(f"   Adjusted sell price from spread: {adjusted_sell_price:.6f}")
+        
+        sell_price = adjusted_sell_price
+        log(f"   New sell_price: {sell_price:.6f} (was: {limit_price_expected:.6f})")
+    else:
+        log(f"   ✅ Price stable: expected={market_price_expected:.6f}, actual={ex1_data.get('price_actual', 0):.6f}")
+
     # CRITICAL CHECK: qty_filled must not be 0
     if ex1_data['qty_filled'] == 0:
         error_code = "QTY_ZERO"
