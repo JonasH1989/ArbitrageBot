@@ -888,28 +888,16 @@ else:
         with st.expander("💰 Wallets", expanded=False):
             st.subheader("💰 Wallets")
             
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
         
-        # Extract base and quote from pair
-        pair_parts = pair.split('-')
-        base_coin_local = pair_parts[0] if len(pair_parts) > 0 else ''
-        quote_coin_local = pair_parts[1] if len(pair_parts) > 1 else ''
+        # Collect balances for both exchanges
+        k_balances = {}
+        m_balances = {}
         
-        kucoin_key_local = config.get('kucoin', {}).get('api_key', '')
-        kucoin_secret_local = config.get('kucoin', {}).get('api_secret', '')
-        kucoin_pass_local = config.get('kucoin', {}).get('api_passphrase', '')
-        mexc_key_local = config.get('mexc', {}).get('api_key', '')
-        mexc_secret_local = config.get('mexc', {}).get('api_secret', '')
-        
-        # Fetch wallet data
-        kucoin_wallet = {'ok': False, 'balances': {}}
-        mexc_wallet = {'ok': False, 'balances': {}}
-        
-        if kucoin_key_local and kucoin_secret_local and kucoin_pass_local:
-            kucoin_wallet = get_kucoin_balances(kucoin_key_local, kucoin_secret_local, kucoin_pass_local)
-        
-        if mexc_key_local and mexc_secret_local:
-            mexc_wallet = get_mexc_balances(mexc_key_local, mexc_secret_local)
+        if kucoin_wallet.get('ok'):
+            k_balances = kucoin_wallet['balances']
+        if mexc_wallet.get('ok'):
+            m_balances = mexc_wallet['balances']
         
         # KuCoin Wallet
         with col1:
@@ -926,7 +914,7 @@ else:
             else:
                 st.caption("KuCoin API Keys nicht konfiguriert")
         
-        # MEXC Wallet
+        # MEXC Wallet  
         with col2:
             st.image("/app/static/mexc_icon.png", width=40); st.text("MEXC")
             if mexc_wallet.get('ok'):
@@ -950,6 +938,19 @@ else:
                             st.metric(" ", f"0.00 {sym}", f"Total: 0.00 {sym}")
             else:
                 st.caption("MEXC API Keys nicht konfiguriert")
+        
+        # Total Wallet (Combined)
+        with col3:
+            st.image("https://cdn-icons-png.flaticon.com/512/2333/2333570.png", width=40); st.text("GESAMT")
+            for sym in [base_coin_local, quote_coin_local]:
+                if sym:
+                    k_avail = k_balances.get(sym, {}).get('available', 0) if k_balances else 0
+                    k_total = k_balances.get(sym, {}).get('total', 0) if k_balances else 0
+                    m_avail = m_balances.get(sym, {}).get('available', 0) if m_balances else 0
+                    m_total = m_balances.get(sym, {}).get('total', 0) if m_balances else 0
+                    total_avail = k_avail + m_avail
+                    total_all = k_total + m_total
+                    st.metric(" ", f"{total_avail:.2f} {sym}", f"Total: {total_all:.2f} {sym}")
         
         # Log - Trade history
         with st.expander("📜 Log", expanded=False):
