@@ -36,7 +36,7 @@ def play_sound(sound_key, volume=0.5):
         b64 = base64.b64encode(audio_bytes).decode()
         vol_int = int(volume * 100)
         audio_html = '<audio id="alert_sound" autoplay="autoplay"><source src="data:audio/mp3;base64,' + b64 + '" type="audio/mpeg"></audio><script>document.getElementById("alert_sound").volume=' + str(vol_int) + '/100;</script>'
-        st.iframe(audio_html, height=0, width=0)
+        st.iframe(audio_html, height=0, width="0px")
     except Exception as e:
         pass
 
@@ -509,14 +509,15 @@ with st.sidebar:
     
     alert_enabled = st.checkbox("Akustischer Alert", value=alert_settings.get('enabled', True), key="alert_enabled_checkbox")
     
-    # Volume - save on change
-    volume = st.slider("🔊 Lautstaerke", 0.0, 1.0, alert_settings.get('volume', 0.3), 0.1, key="volume_slider", on_change=lambda: set_alert_settings(
-        enabled=st.session_state.alert_enabled_checkbox,
-        volume=st.session_state.volume_slider
-    ))
+    # Volume - save immediately when changed
+    current_volume = alert_settings.get('volume', 0.3)
+    new_volume = st.slider("🔊 Lautstaerke", 0.0, 1.0, current_volume, 0.1, key="volume_slider")
+    if new_volume != current_volume:
+        set_alert_settings(enabled=alert_enabled, volume=new_volume)
+        alert_settings['volume'] = new_volume
     
     # Sound playback
-    vol = volume
+    vol = alert_settings.get('volume', 0.3)
     
     # Sound selector
     sound_options = {
@@ -538,7 +539,7 @@ with st.sidebar:
                     audio_bytes = f.read()
                 b64 = base64.b64encode(audio_bytes).decode()
                 audio_html = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}" />'
-                st.iframe(audio_html, height=0, width=0)
+                st.iframe(audio_html, height=0, width="0px")
             except Exception as e:
                 st.error(f"Sound fehler: {e}")
     
