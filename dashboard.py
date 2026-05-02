@@ -36,7 +36,7 @@ def play_sound(sound_key, volume=0.5):
         b64 = base64.b64encode(audio_bytes).decode()
         vol_int = int(volume * 100)
         audio_html = '<audio id="alert_sound" autoplay="autoplay"><source src="data:audio/mp3;base64,' + b64 + '" type="audio/mpeg"></audio><script>document.getElementById("alert_sound").volume=' + str(vol_int) + '/100;</script>'
-        st.iframe(audio_html, height=0, width="0px")
+        st.iframe(audio_html, height=1)
     except Exception as e:
         pass
 
@@ -539,7 +539,7 @@ with st.sidebar:
                     audio_bytes = f.read()
                 b64 = base64.b64encode(audio_bytes).decode()
                 audio_html = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}" />'
-                st.iframe(audio_html, height=0, width="0px")
+                st.iframe(audio_html, height=1)
             except Exception as e:
                 st.error(f"Sound fehler: {e}")
     
