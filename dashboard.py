@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 import os
 import pandas as pd
+import io
 from trade_logger import *
 import sys
 from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, get_alert_settings, set_alert_settings, get_api_keys, set_api_keys, get_all_pairs, add_pair, remove_pair, get_log_level, set_log_level
@@ -509,20 +510,17 @@ with st.sidebar:
     
     alert_enabled = st.checkbox("Akustischer Alert", value=alert_settings.get('enabled', True), key="alert_enabled_checkbox")
     
-    # Volume - save immediately when changed
+    # Volume - always save on slider change
     current_volume = alert_settings.get('volume', 0.3)
-    # Use session_state to trigger save on slider change
-    if 'prev_volume' not in st.session_state:
-        st.session_state.prev_volume = current_volume
     
+    # Use unique key for slider that changes on interaction
     new_volume = st.slider("🔊 Lautstaerke", 0.0, 1.0, current_volume, 0.1, key="volume_slider")
     
-    # Save when value changes
-    if new_volume != st.session_state.prev_volume:
+    # Force save on every interaction - check if different from file value
+    if new_volume != current_volume:
         set_alert_settings(enabled=alert_enabled, volume=new_volume)
-        alert_settings['volume'] = new_volume
-        st.session_state.prev_volume = new_volume
-        st.rerun()
+        # Don't rerun - let streamlit handle the state
+        st.success(f"Lautstärke gespeichert: {int(new_volume*100)}%")
     
     # Sound playback
     vol = alert_settings.get('volume', 0.3)
@@ -537,31 +535,29 @@ with st.sidebar:
     selected_sound = st.selectbox("🔊 Sound auswaehlen", 
                                    options=list(sound_options.keys()),
                                    index=0, key="sound_select")
-    sound_key = sound_options[selected_sound]
     
-    # Initialize sound trigger
-    if 'sound_test_trigger' not in st.session_state:
-        st.session_state.sound_test_trigger = None
+    # Sound test with unique key per click
+    # Use a unique button key based on sound + timestamp counter
+    if 'sound_test_count' not in st.session_state:
+        st.session_state.sound_test_count = 0
     
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        if st.button("▶️ Sound testen", key="test_sound_btn"):
-            st.session_state.sound_test_trigger = sound_key
+    btn_key = f"test_sound_{st.session_state.sound_test_count}"
     
-    # Play sound if triggered
-    if st.session_state.sound_test_trigger == sound_key:
+    if st.button("▶️ Sound testen", key=btn_key):
         sound_file = SOUND_FILES.get(sound_key)
         if sound_file:
             try:
                 with open(sound_file, 'rb') as f:
                     audio_bytes = f.read()
                 b64 = base64.b64encode(audio_bytes).decode()
-                audio_html = f'<audio id="test_audio" autoplay><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>'
-                st.html(audio_html)
+                # Use st.audio for reliable playback
+                import io
+                st.audio(io.BytesIO(audio_bytes), format='audio/mp3')
             except Exception as e:
                 st.error(f"Sound fehler: {e}")
-        # Clear trigger after playing
-        st.session_state.sound_test_trigger = None
+        # Increment to create new button key next time
+        st.session_state.sound_test_count += 1
+        st.rerun()
     
     st.divider()
     
