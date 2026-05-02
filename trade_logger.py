@@ -85,12 +85,10 @@ def ensure_log_dir():
 
 def get_trade_csv_path(pair: str) -> Path:
     """Get CSV file path for a trading pair"""
-    # Normalize pair format: MPCUSDT -> MPC-USDT
-    normalized_pair = pair.replace("USDT", "-USDT").replace("-USDT", "USDT").upper()
-    if not normalized_pair.endswith("-USDT") and not normalized_pair.endswith("USDT"):
-        normalized_pair += "-USDT"
-    # Fix double hyphen
-    normalized_pair = normalized_pair.replace("--", "-")
+    # Normalize pair format: MPCUSDT OR MPC-USDT -> MPCUSDT (consistent)
+    normalized_pair = pair.replace("-", "").upper()
+    if not normalized_pair.endswith("USDT"):
+        normalized_pair += "USDT"
     return LOG_DIR / f"{normalized_pair}_trades.csv"
 
 
