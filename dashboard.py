@@ -536,28 +536,29 @@ with st.sidebar:
                                    options=list(sound_options.keys()),
                                    index=0, key="sound_select")
     
-    # Sound test with unique key per click
-    # Use a unique button key based on sound + timestamp counter
-    if 'sound_test_count' not in st.session_state:
-        st.session_state.sound_test_count = 0
+    # Sound test - use fixed key but handle rerun properly
+    sound_key = sound_options[selected_sound]
     
-    btn_key = f"test_sound_{st.session_state.sound_test_count}"
+    if 'sound_test_clicked' not in st.session_state:
+        st.session_state.sound_test_clicked = False
     
-    if st.button("▶️ Sound testen", key=btn_key):
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        if st.button("▶️ Sound testen", key="sound_test_btn"):
+            st.session_state.sound_test_clicked = True
+    
+    # Handle click after rerun
+    if st.session_state.sound_test_clicked:
         sound_file = SOUND_FILES.get(sound_key)
         if sound_file:
             try:
                 with open(sound_file, 'rb') as f:
                     audio_bytes = f.read()
-                b64 = base64.b64encode(audio_bytes).decode()
-                # Use st.audio for reliable playback
-                import io
-                st.audio(io.BytesIO(audio_bytes), format='audio/mp3')
+                st.audio(audio_bytes, format='audio/mp3')
             except Exception as e:
                 st.error(f"Sound fehler: {e}")
-        # Increment to create new button key next time
-        st.session_state.sound_test_count += 1
-        st.rerun()
+        # Reset
+        st.session_state.sound_test_clicked = False
     
     st.divider()
     
