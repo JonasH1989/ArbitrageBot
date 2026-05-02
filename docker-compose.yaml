@@ -30,6 +30,12 @@ services:
       - "192.168.113.14:8502:8501"
     volumes:
       - arb-config:/app/config
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8501/_stcore/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   arb-config:
