@@ -1108,8 +1108,12 @@ def check_limit_order_fills():
                 status = data.get('status', '')
                 deal_size = float(data.get('dealSize', 0) or 0)
                 deal_funds = float(data.get('dealFunds', 0) or 0)
+                is_active = data.get('isActive', True)
 
-                if status == 'Done':
+                # KuCoin bug: filled orders have status='' but isActive=False
+                is_filled = status == 'Done' or (not is_active and deal_size > 0)
+
+                if is_filled:
                     update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
                                      qty_filled=deal_size,
                                      price_avg=deal_funds/deal_size if deal_size > 0 else 0,
