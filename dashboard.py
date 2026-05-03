@@ -539,15 +539,21 @@ with st.sidebar:
     # Sound test - use fixed key but handle rerun properly
     sound_key = sound_options[selected_sound]
     
+    # Improved sound test with direct st.audio
     if 'sound_test_clicked' not in st.session_state:
         st.session_state.sound_test_clicked = False
     
-    col1, col2 = st.columns([1, 3])
+    col1, col2, col3 = st.columns([1, 1, 2])
     with col1:
         if st.button("▶️ Sound testen", key="sound_test_btn"):
             st.session_state.sound_test_clicked = True
     
-    # Handle click after rerun
+    # Test ALL sounds button
+    with col2:
+        if st.button("🔊 Alle testen", key="sound_test_all_btn"):
+            st.session_state.sound_test_all = True
+    
+    # Handle single sound test
     if st.session_state.sound_test_clicked:
         sound_file = SOUND_FILES.get(sound_key)
         if sound_file:
@@ -557,8 +563,19 @@ with st.sidebar:
                 st.audio(audio_bytes, format='audio/mp3')
             except Exception as e:
                 st.error(f"Sound fehler: {e}")
-        # Reset
         st.session_state.sound_test_clicked = False
+    
+    # Handle test all sounds
+    if st.session_state.get('sound_test_all', False):
+        for name, key in sound_options.items():
+            sf = SOUND_FILES.get(key)
+            if sf:
+                try:
+                    with open(sf, 'rb') as f:
+                        st.audio(f.read(), format='audio/mp3')
+                except:
+                    pass
+        st.session_state.sound_test_all = False
     
     st.divider()
     
@@ -1197,18 +1214,56 @@ else:
         # Show both directions for reference
         # Alert - only if threshold is met
         pair_alert = pair_data.get('alert_enabled', True)
+        
+        # Debug output for alert conditions
+        alert_debug = st.session_state.get('alert_debug', False)
+        if alert_debug:
+            st.info(f"DEBUG Alert: pair_alert={pair_alert}, alert_enabled={alert_enabled}, trade_possible_km={trade_possible_km}, trade_possible_mk={trade_possible_mk}")
+        
+        # Toggle debug mode
+        if st.button("🔍 Debug Alerts", key="alert_debug_toggle"):
+            st.session_state.alert_debug = not st.session_state.get('alert_debug', False)
+        
+        # Track last trade for trade alerts
+        if 'last_trade_count' not in st.session_state:
+            st.session_state.last_trade_count = 0
+        
+        # Get current trade count
+        try:
+            trades_resp = requests.get(f'http://localhost:8505/trades/{selected_pair}', timeout=5)
+            if trades_resp.status_code == 200:
+                trades_data = trades_resp.json()
+                current_trade_count = trades_data.get('count', 0)
+                
+                # If new trades detected, play trade alert
+                if current_trade_count > st.session_state.last_trade_count:
+                    st.session_state.last_trade_count = current_trade_count
+                    # Play kaching sound for new trade
+                    play_sound('kaching', vol)
+                    st.success("🎉 NEUER TRADE ERKANNT!")
+        except:
+            pass  # Bot may not be running
+        
         if pair_alert and alert_enabled and (trade_possible_km or trade_possible_mk):
             # Determine spread and play appropriate sound
             spread_pct = max(spread_pct_km, spread_pct_mk)
             if spread_pct >= 10:
-                play_sound('ab10', volume)
+                play_sound('ab10', vol)
+                st.warning("🚨 Spread >= 10%!")
             elif spread_pct >= 3:
-                play_sound('bis10', volume)
+                play_sound('bis10', vol)
+                st.warning("🚨 Spread 3-10%!")
             else:
-                play_sound('bis3', volume)
-            
-            st.warning("🚨 Profitabel!")
-            st.warning("🚨 Profitabel!")
+                play_sound('bis3', vol)
+                st.warning("🚨 Spread 1-3%!")
+        elif pair_alert and alert_enabled and (spread_pct_km > 0 or spread_pct_mk > 0):
+            # Positive spread but below threshold - still notify
+            spread_pct = max(spread_pct_km, spread_pct_mk)
+            st.info(f"📊 Spread positiv aber unter Threshold: {spread_pct:.2f}%")
+        else:
+            # Show current state
+            spread_pct = max(spread_pct_km, spread_pct_mk)
+            st.caption(f"Spreads: K→M {spread_pct_km:.2f}%, M→K {spread_pct_mk:.2f}% | Threshold: {threshold_start:.1f}%")
     
     else:
         st.error("Daten nicht verfuegbar")
