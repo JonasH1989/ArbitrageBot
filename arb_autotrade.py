@@ -1069,7 +1069,11 @@ def execute_trade_K_to_M(qty, buy_price, sell_price, strategy='usdt', spread_pct
 def check_limit_order_fills():
     """
     Background task: Check pending limit orders and update status.
-    This polls the exchanges for fill status.
+    
+    Smart polling strategy:
+    - Only check when IDLE (no positive spread available)
+    - Only check orders where price has crossed the limit
+    - Check interval: 180s when IDLE
     """
     pending = get_pending_limit_orders(TRADING_PAIR)
 
@@ -1078,14 +1082,40 @@ def check_limit_order_fills():
 
     log(f"🔍 Checking {len(pending)} pending limit orders...")
 
+    # Get current prices for pre-filter
+    try:
+        resp_m = requests.get(f'https://api.mexc.com/api/v3/ticker/price?symbol={COIN_SYMBOL_MEXC}', timeout=5)
+        resp_k = requests.get(f'https://api.kucoin.com/api/v1/market/orderbook/level1?symbol={COIN_SYMBOL}', timeout=5)
+        mexc_price = float(resp_m.json().get('price', 0)) if resp_m.status_code == 200 else 0
+        kucoin_data = resp_k.json().get('data', {}) if resp_k.status_code == 200 else {}
+        kucoin_price = float(kucoin_data.get('bestAsk', 0)) or float(kucoin_data.get('price', 0))
+    except:
+        mexc_price = 0
+        kucoin_price = 0
+
     for trade in pending:
         direction = trade.get('direction', '')
         ex2_exchange = trade.get('ex2_exchange', '')
         ex2_order_id = trade.get('ex2_order_id', '')
         trade_id = trade.get('trade_id', '')
+        ex2_price_expected = float(trade.get('ex2_price_expected', 0) or 0)
 
         if not ex2_order_id or ex2_order_id == 'FAILED':
             continue
+
+        # Pre-filter: Only check if price has crossed the limit
+        # For KUCOIN limit sell: check if current KuCoin price >= limit price (sell should have filled)
+        # For MEXC limit sell: check if current MEXC price >= limit price
+        if ex2_exchange == 'KUCOIN' and kucoin_price > 0:
+            # Limit sell on KuCoin - if price rose to/above limit, should be filled
+            if kucoin_price < ex2_price_expected * 0.998:  # 0.2% buffer
+                log(f"⏭️ Skipping KuCoin check: price {kucoin_price:.6f} < limit {ex2_price_expected:.6f}")
+                continue
+        elif ex2_exchange == 'MEXC' and mexc_price > 0:
+            # Limit sell on MEXC - if price rose to/above limit, should be filled
+            if mexc_price < ex2_price_expected * 0.998:
+                log(f"⏭️ Skipping MEXC check: price {mexc_price:.6f} < limit {ex2_price_expected:.6f}")
+                continue
 
         # Poll exchange for order status
         try:
