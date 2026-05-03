@@ -17,6 +17,12 @@ services:
       - PYTHONUNBUFFERED=1
       - TZ=Europe/Berlin
     command: ["python", "arb_autotrade.py"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8505/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # Dashboard
   dashboard:
