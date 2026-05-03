@@ -1100,6 +1100,7 @@ def check_limit_order_fills():
                     'KC-API-SIGN': sig,
                     'KC-API-TIMESTAMP': ts,
                     'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+                    'KC-API-KEY-VERSION': '2'
                 }
 
                 resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
@@ -1123,51 +1124,29 @@ def check_limit_order_fills():
                     update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=deal_size)
 
             elif ex2_exchange == 'MEXC':
-                # Check MEXC order status via /api/v3/myTrades (NOT /api/v3/order which returns 400 PERMISSION_DENIED)
-                # MEXC myTrades returns: id, orderId, price, qty, quoteQty, commission, commissionAsset, time, isBuyer (True=BUY/-market hit, False=SELL/limit filled)
-                # We look for: isBuyer=False (sell) + matching orderId = this limit order was filled
+                # Check MEXC order status via /api/v3/order endpoint (NOT /api/v3/myTrades)
+                # Note: /myTrades requires special permission, /order works with standard TRADE key
                 ts = str(int(time.time() * 1000))
-                ts_start = int((time.time() - 86400 * 7) * 1000)  # search last 7 days
-                params = f'symbol={COIN_SYMBOL_MEXC}&startTime={ts_start}&limit=100&timestamp={ts}'
+                params = f'symbol={COIN_SYMBOL_MEXC}&orderId={ex2_order_id}&timestamp={ts}'
                 sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
-                url = f'https://api.mexc.com/api/v3/myTrades?{params}&signature={sig}'
+                url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
                 headers_req = {'X-MEXC-APIKEY': MEXC_KEY}
 
                 resp = requests.get(url, headers=headers_req, timeout=10)
-                trades_data = resp.json() if resp.status_code == 200 else []
+                data = resp.json() if resp.status_code == 200 else {}
 
-                qty_filled = 0.0
-                amount_filled = 0.0
-                fees = 0.0
-                is_filled = False
+                status = data.get('status', '')
+                qty_filled = float(data.get('executedQty', 0) or 0)
+                amount_filled = float(data.get('cummulativeQuoteQty', 0) or 0)
 
-                if isinstance(trades_data, list):
-                    for t in trades_data:
-                        if t.get('orderId') == ex2_order_id and t.get('isBuyer') == False:
-                            # This is a SELL trade on our limit order - it was filled!
-                            qty_filled += float(t.get('qty', 0) or 0)
-                            amount_filled += float(t.get('quoteQty', 0) or 0)
-                            fees += float(t.get('commission', 0) or 0)
-                            is_filled = True
-
-                if is_filled:
+                if status == 'FILLED' and qty_filled > 0:
                     update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
                                      qty_filled=qty_filled,
                                      price_avg=amount_filled/qty_filled if qty_filled > 0 else 0,
-                                     fees=fees)
+                                     fees=float(data.get('fee', 0) or 0))
                     log(f"✅ Limit filled: {trade_id} ({qty_filled} MPC @ {amount_filled/qty_filled if qty_filled > 0 else 0:.5f})")
-                else:
-                    # Also check via order status API as fallback (may work for PARTIAL fills)
-                    params2 = f'symbol={COIN_SYMBOL_MEXC}&orderId={ex2_order_id}&timestamp={ts}'
-                    sig2 = hmac.new(MEXC_SECRET.encode('utf-8'), params2.encode('utf-8'), hashlib.sha256).hexdigest()
-                    url2 = f'https://api.mexc.com/api/v3/order?{params2}&signature={sig2}'
-                    resp2 = requests.get(url2, headers=headers_req, timeout=10)
-                    if resp2.status_code == 200:
-                        order_data = resp2.json()
-                        status2 = order_data.get('status', '')
-                        qty2 = float(order_data.get('executedQty', 0) or 0)
-                        if status2 == 'PartiallyFilled' and qty2 > 0:
-                            update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=qty2)
+                elif status == 'PARTIALLY_FILLED' and qty_filled > 0:
+                    update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=qty_filled)
 
         except Exception as e:
             log(f"⚠️ Error checking order {ex2_order_id}: {e}")
