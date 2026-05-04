@@ -908,7 +908,10 @@ else:
             
             with s2:
                 tss = pair_data.get('threshold_stop', 0.5)
-                tss_new = st.number_input("Stop Threshold in %", 0.0, max(0.1, ts_new), tss, 0.05, key=f"ptss_{pair}")
+                tss_max = max(ts_new - 0.05, 0.05)  # Stop must be at least 0.05 below start
+                # Auto-adjust if current stop is now invalid
+                tss_safe = min(tss, tss_max)
+                tss_new = st.number_input("Stop Threshold in %", 0.0, tss_max, tss_safe, 0.05, key=f"ptss_{pair}")
                 if tss_new != tss:
                     set_pair_settings(pair, threshold_stop=tss_new)
             
