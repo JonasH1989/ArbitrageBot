@@ -72,6 +72,12 @@ MEXC_SECRET = _cfg.get('mexc', {}).get('api_secret', '')
 
 MEXC_MIN_USDT = 1.0
 
+# Fee rates (REAL fees from exchanges, NOT estimates!)
+MEXC_FEE_TAKER = 0.0005   # 0.05% taker fee
+MEXC_FEE_MAKER = -0.0001   # -0.01% maker rebate (negative = we get paid)
+KUCOIN_FEE_TAKER = 0.001   # 0.1% taker fee
+KUCOIN_FEE_MAKER = 0.001   # 0.1% maker fee
+
 # ==============================================================================
 # Trading Pair Configuration - Change COIN for different coins!
 # ==============================================================================
@@ -645,14 +651,16 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                             qty = float(trade.get('qty', 0))
                             price = float(trade.get('price', 0))
                             quote_qty = float(trade.get('quoteQty', 0))
+                            # Use REAL fee from exchange API, not an estimate!
+                            fee = float(trade.get('fee', 0) or 0)
 
                             if qty > 0:
-                                log(f"   Found MEXC trade (private API): qty={qty}, price={price}, value=${quote_qty:.4f}")
+                                log(f"   Found MEXC trade (private API): qty={qty}, price={price}, value=${quote_qty:.4f}, fee=${fee:.6f}")
                                 return {
                                     'status': 'Filled',
                                     'quantity': str(qty),
                                     'amount': str(quote_qty),
-                                    'fees': str(quote_qty * 0.001),
+                                    'fees': fee,  # REAL fee from API, not estimated!
                                     'price': str(price),
                                     'executedQty': str(qty),
                                     'cummulativeQuoteQty': str(quote_qty)
@@ -682,12 +690,14 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                 qty = float(order_data.get('executedQty', 0))
                 quote = float(order_data.get('cummulativeQuoteQty', 0))
                 price = float(order_data.get('price', 0)) or fallback_price
-                log(f"   Found MEXC order (order status API): qty={qty}, value=${quote:.4f}")
+                # MEXC order API doesn't return fee - use configured rate as estimate
+                fee_estimate = quote * MEXC_FEE_TAKER
+                log(f"   Found MEXC order (order status API): qty={qty}, value=${quote:.4f}, fee=${fee_estimate:.6f} (est)")
                 return {
                     'status': 'Filled',
                     'quantity': str(qty),
                     'amount': str(quote),
-                    'fees': str(quote * 0.001),
+                    'fees': fee_estimate,  # Estimated - order API has no fee field
                     'price': str(price),
                     'executedQty': str(qty),
                     'cummulativeQuoteQty': str(quote)
@@ -712,14 +722,16 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                     qty = float(trade.get('qty', 0))
                     price = float(trade.get('price', 0))
                     quote_qty = float(trade.get('quoteQty', 0))
+                    # Public API doesn't return fee - use estimate
+                    fee_estimate = quote_qty * MEXC_FEE_TAKER
 
                     if qty > 0:
-                        log(f"   PUBLIC API fallback used: qty={qty}, price={price}")
+                        log(f"   PUBLIC API fallback used: qty={qty}, price={price}, fee=${fee_estimate:.6f} (est)")
                         return {
                             'status': 'Filled',
                             'quantity': str(qty),
                             'amount': str(quote_qty),
-                            'fees': str(quote_qty * 0.001),
+                            'fees': fee_estimate,  # Estimated - public API has no fee field
                             'price': str(price),
                             'executedQty': str(qty),
                             'cummulativeQuoteQty': str(quote_qty)
@@ -731,11 +743,12 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
     # FINAL FALLBACK: Use estimated data
     # ========================================================================
     log(f"   All APIs failed - using estimated data")
+    fee_est = orig_qty * fallback_price * MEXC_FEE_TAKER
     return {
         'status': 'Filled',
         'quantity': str(orig_qty),
         'amount': str(orig_qty * fallback_price),
-        'fees': str(orig_qty * fallback_price * 0.001),
+        'fees': fee_est,  # ESTIMATED - all APIs failed, this is a fallback!
         'price': str(fallback_price),
         'executedQty': str(orig_qty),
         'cummulativeQuoteQty': str(orig_qty * fallback_price)
@@ -1147,7 +1160,7 @@ def check_limit_order_fills():
                 if is_filled:
                     update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
                                      qty_filled=deal_size,
-                                     price_avg=deal_funds/deal_size if deal_size > 0 else 0,
+                                     price_actual=deal_funds/deal_size if deal_size > 0 else 0,
                                      fees=float(data.get('fee', 0) or 0))
                     log(f"✅ Limit filled: {trade_id}")
                 elif status == 'Active' and deal_size > 0:
@@ -1172,7 +1185,7 @@ def check_limit_order_fills():
                 if status == 'FILLED' and qty_filled > 0:
                     update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
                                      qty_filled=qty_filled,
-                                     price_avg=amount_filled/qty_filled if qty_filled > 0 else 0,
+                                     price_actual=amount_filled/qty_filled if qty_filled > 0 else 0,
                                      fees=float(data.get('fee', 0) or 0))
                     log(f"✅ Limit filled: {trade_id} ({qty_filled} MPC @ {amount_filled/qty_filled if qty_filled > 0 else 0:.5f})")
                 elif status == 'PARTIALLY_FILLED' and qty_filled > 0:
@@ -1257,13 +1270,81 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
         'status': 'TIMEOUT',
         'quantity': orig_qty,
         'amount': orig_qty * fallback_price,
-        'fees': orig_qty * fallback_price * 0.001,
+        'fees': orig_qty * fallback_price * KUCOIN_FEE_TAKER,  # ESTIMATED - timeout fallback
         'price': fallback_price,
         'dealSize': orig_qty,
         'dealFunds': orig_qty * fallback_price,
-        'fee': orig_qty * fallback_price * 0.001,
+        'fee': orig_qty * fallback_price * KUCOIN_FEE_TAKER,  # ESTIMATED - timeout fallback
         'orderId': order_id
     }
+
+
+def calculate_best_trade(ob_data, min_trade_qty, threshold_start, stop_threshold, strategy):
+    """Extract best trade from orderbook using sweep algorithm. Used for both initial scan and fresh spread checks."""
+    best_trade = None
+    
+    if not ob_data:
+        return None
+    
+    # Direction M→K: Buy MEXC (sweep asks), Sell KuCoin (fix bids)
+    for k_bid in ob_data.get('kucoin_bids', [])[:5]:
+        cum_vol_mexc = 0
+        for m_ask in ob_data.get('mexc_asks', [])[:5]:
+            spread = k_bid['price'] - m_ask['price']
+            spread_pct = (spread / m_ask['price']) * 100 if m_ask['price'] > 0 else 0
+            cum_vol_mexc += m_ask['qty']
+
+            if spread_pct < stop_threshold:
+                break
+
+            if spread_pct >= threshold_start and cum_vol_mexc >= min_trade_qty and k_bid['qty'] >= min_trade_qty:
+                expected_profit_usdt = (k_bid['price'] - m_ask['price']) * min(cum_vol_mexc, k_bid['qty'])
+                expected_profit_mpc = expected_profit_usdt / m_ask['price'] if m_ask['price'] > 0 else 0
+                profit = expected_profit_mpc if strategy == 'coins' else expected_profit_usdt
+
+                if best_trade is None or profit > (best_trade.get('profit_mpc' if strategy == 'coins' else 'profit_usdt', 0)):
+                    best_trade = {
+                        'dir': 'M→K',
+                        'buy': m_ask['price'],
+                        'sell': k_bid['price'],
+                        'pct': spread_pct,
+                        'vol': min(cum_vol_mexc, k_bid['qty']),
+                        'profit_usdt': expected_profit_usdt,
+                        'profit_mpc': expected_profit_mpc,
+                        'strategy': strategy
+                    }
+                break
+
+    # Direction K→M: Buy KuCoin (sweep asks), Sell MEXC (fix bids)
+    for m_bid in ob_data.get('mexc_bids', [])[:5]:
+        cum_vol_kucoin = 0
+        for k_ask in ob_data.get('kucoin_asks', [])[:5]:
+            spread = m_bid['price'] - k_ask['price']
+            spread_pct = (spread / k_ask['price']) * 100 if k_ask['price'] > 0 else 0
+            cum_vol_kucoin += k_ask['qty']
+
+            if spread_pct < stop_threshold:
+                break
+
+            if spread_pct >= threshold_start and cum_vol_kucoin >= min_trade_qty and m_bid['qty'] >= min_trade_qty:
+                expected_profit_usdt = (m_bid['price'] - k_ask['price']) * min(cum_vol_kucoin, m_bid['qty'])
+                expected_profit_mpc = expected_profit_usdt / k_ask['price'] if k_ask['price'] > 0 else 0
+                profit = expected_profit_mpc if strategy == 'coins' else expected_profit_usdt
+
+                if best_trade is None or profit > (best_trade.get('profit_mpc' if strategy == 'coins' else 'profit_usdt', 0)):
+                    best_trade = {
+                        'dir': 'K→M',
+                        'buy': k_ask['price'],
+                        'sell': m_bid['price'],
+                        'pct': spread_pct,
+                        'vol': min(cum_vol_kucoin, m_bid['qty']),
+                        'profit_usdt': expected_profit_usdt,
+                        'profit_mpc': expected_profit_mpc,
+                        'strategy': strategy
+                    }
+                break
+    
+    return best_trade
 
 
 def main():
@@ -1546,35 +1627,50 @@ def main():
                 last_trade_time = time.time()
                 trade_in_progress = False
         
-        elif state == STATE_RUNNING:
-            if profitable_spread < STOP_THRESHOLD:
-                log(f"⏹ STOPPING: spread={profitable_spread:.2f}% < STOP_THRESHOLD={STOP_THRESHOLD}%")
+        # Re-check spread before EACH trade in RUNNING state (critical bug fix!)
+        # Only STOP_THRESHOLD matters for follow-up trades, NOT START_THRESHOLD!
+        if state == STATE_RUNNING and not trade_in_progress:
+            # Fresh spread check using latest prices
+            fresh_spread_km = m['bid'] - k['ask']
+            fresh_spread_pct_km = (fresh_spread_km / k['ask']) * 100 if k['ask'] > 0 else 0
+            fresh_spread_mk = k['bid'] - m['ask']
+            fresh_spread_pct_mk = (fresh_spread_mk / m['ask']) * 100 if m['ask'] > 0 else 0
+            fresh_profitable_spread = max(fresh_spread_pct_km, fresh_spread_pct_mk)
+            
+            # STOP if spread below stop threshold (ONLY check that matters for follow-up trades!)
+            if fresh_profitable_spread < STOP_THRESHOLD:
+                log(f"⏹ STOPPING: fresh spread={fresh_profitable_spread:.3f}% < STOP_THRESHOLD={STOP_THRESHOLD}%")
                 state = STATE_WAITING
-            elif not trade_in_progress:
-                trade_in_progress = True
-                # Execute best trade found by sweep
-                if best_trade:
-                    # KuCoin requires WHOLE NUMBER quantities (baseIncrement=1 for MPC-USDT)
-                    # Fractional quantities like 119.34 cause 'Order size increment invalid' error
-                    # IMPORTANT: For Market BUY orders (takes liquidity from orderbook)
-                    # -> use math.floor() to NEVER exceed available volume
-                    # For Limit SELL orders (creates new order on book) -> can use round()
-                    vol_for_mexc = math.floor(best_trade['vol'])
-                    vol_for_kucoin = math.floor(best_trade['vol'])
-                    trade_strategy = best_trade.get('strategy', current_strategy)
-                    coin = COIN_SYMBOL.split('-')[0]
-                    log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
-                    if best_trade['dir'] == 'K→M':
-                        success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', vol_for_kucoin, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
-                    else:
-                        success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
-                elif spread_pct_km >= spread_pct_mk:
-                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', math.floor(vol_for_kucoin), k['ask'], m['bid'], current_strategy, spread_pct_km)
-                else:
-                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
-
-                last_trade_time = time.time()
                 trade_in_progress = False
+                continue
+            
+            # Fresh orderbook for next trade
+            ob_data = get_orderbook_levels()
+            if ob_data:
+                # Recalculate best trade with fresh data
+                best_trade = calculate_best_trade(ob_data, min_trade_qty, threshold_start, STOP_THRESHOLD, current_strategy)
+            else:
+                best_trade = None
+            
+            # Execute next trade
+            trade_in_progress = True
+            if best_trade:
+                vol_for_mexc = math.floor(best_trade['vol'])
+                vol_for_kucoin = math.floor(best_trade['vol'])
+                trade_strategy = best_trade.get('strategy', current_strategy)
+                coin = COIN_SYMBOL.split('-')[0]
+                log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
+                if best_trade['dir'] == 'K→M':
+                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', vol_for_kucoin, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
+                else:
+                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
+            elif spread_pct_km >= spread_pct_mk:
+                success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', math.floor(vol_for_kucoin), k['ask'], m['bid'], current_strategy, spread_pct_km)
+            else:
+                success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
+            
+            last_trade_time = time.time()
+            trade_in_progress = False
 
         time.sleep(1)  # Check every second
 
