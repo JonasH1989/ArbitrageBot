@@ -1629,46 +1629,61 @@ def main():
                 trade_in_progress = False
         
         # Re-check spread before EACH trade in RUNNING state (critical bug fix!)
-        # Only STOP_THRESHOLD matters for follow-up trades, NOT START_THRESHOLD!
+        # Re-check spread before EACH trade in RUNNING state
+        # IMPORTANT: Use FRESH orderbook data (not stale get_prices data)!
         if state == STATE_RUNNING and not trade_in_progress:
-            # Fresh spread check using latest prices
-            fresh_spread_km = m['bid'] - k['ask']
-            fresh_spread_pct_km = (fresh_spread_km / k['ask']) * 100 if k['ask'] > 0 else 0
-            fresh_spread_mk = k['bid'] - m['ask']
-            fresh_spread_pct_mk = (fresh_spread_mk / m['ask']) * 100 if m['ask'] > 0 else 0
-            fresh_profitable_spread = max(fresh_spread_pct_km, fresh_spread_pct_mk)
+            # Get FRESH orderbook data for spread check (not stale prices from get_prices)
+            ob_data = get_orderbook_levels()
+            if not ob_data:
+                # No fresh data - pause and retry next cycle
+                time.sleep(1)
+                continue
             
-            # STOP if spread below stop threshold (ONLY check that matters for follow-up trades!)
+            # Calculate fresh spread from orderbook data
+            best_k_bid = ob_data['kucoin_bids'][0]['price'] if ob_data.get('kucoin_bids') else 0
+            best_m_ask = ob_data['mexc_asks'][0]['price'] if ob_data.get('mexc_asks') else 0
+            best_m_bid = ob_data['mexc_bids'][0]['price'] if ob_data.get('mexc_bids') else 0
+            best_k_ask = ob_data['kucoin_asks'][0]['price'] if ob_data.get('kucoin_asks') else 0
+            
+            fresh_spread_pct_mk = ((best_k_bid - best_m_ask) / best_m_ask * 100) if best_m_ask > 0 else 0
+            fresh_spread_pct_km = ((best_m_bid - best_k_ask) / best_k_ask * 100) if best_k_ask > 0 else 0
+            fresh_profitable_spread = max(fresh_spread_pct_mk, fresh_spread_pct_km)
+            
+            # STOP if spread below stop threshold
             if fresh_profitable_spread < threshold_stop:
                 log(f"⏹ STOPPING: fresh spread={fresh_profitable_spread:.3f}% < STOP_THRESHOLD={threshold_stop}%")
                 state = STATE_WAITING
                 trade_in_progress = False
                 continue
             
-            # Fresh orderbook for next trade
-            ob_data = get_orderbook_levels()
-            if ob_data:
-                # Recalculate best trade with fresh data
-                best_trade = calculate_best_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, current_strategy)
-            else:
-                best_trade = None
+            # START check: spread must still be >= threshold_start (not just > stop)
+            # This prevents rapid-fire trades when spread is collapsing toward zero
+            if fresh_profitable_spread < threshold_start:
+                log(f"⏸ PAUSING: fresh spread={fresh_profitable_spread:.3f}% < START_THRESHOLD={threshold_start}% (but > stop)")
+                state = STATE_WAITING
+                trade_in_progress = False
+                continue
             
-            # Execute next trade
+            # Recalculate best trade with fresh orderbook data
+            best_trade = calculate_best_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, current_strategy)
+            
+            if not best_trade:
+                log(f"No tradeable spread found (spread below thresholds or insufficient volume)")
+                state = STATE_WAITING
+                trade_in_progress = False
+                continue
+            
+            # Execute trade
             trade_in_progress = True
-            if best_trade:
-                vol_for_mexc = math.floor(best_trade['vol'])
-                vol_for_kucoin = math.floor(best_trade['vol'])
-                trade_strategy = best_trade.get('strategy', current_strategy)
-                coin = COIN_SYMBOL.split('-')[0]
-                log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
-                if best_trade['dir'] == 'K→M':
-                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', vol_for_kucoin, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
-                else:
-                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
-            elif spread_pct_km >= spread_pct_mk:
-                success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', math.floor(vol_for_kucoin), k['ask'], m['bid'], current_strategy, spread_pct_km)
+            vol_for_mexc = math.floor(best_trade['vol'])
+            vol_for_kucoin = math.floor(best_trade['vol'])
+            trade_strategy = best_trade.get('strategy', current_strategy)
+            coin = COIN_SYMBOL.split('-')[0]
+            log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
+            if best_trade['dir'] == 'K→M':
+                success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', vol_for_kucoin, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
             else:
-                success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
+                success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
             
             last_trade_time = time.time()
             trade_in_progress = False
