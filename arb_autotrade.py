@@ -1363,7 +1363,8 @@ def main():
             cfg = yaml.safe_load(f)
         pair_cfg = cfg.get('trading', {}).get('pairs', {}).get(TRADING_PAIR, {})
         START_THRESHOLD = pair_cfg.get('threshold_start', 1.0)
-        STOP_THRESHOLD = pair_cfg.get('threshold_stop', 0.5)
+        # NOTE: STOP_THRESHOLD constant is deprecated - thresholds are read dynamically in the loop
+        STOP_THRESHOLD = pair_cfg.get('threshold_stop', 0.5)  # DEPRECATED, use threshold_stop variable
         log(f"Thresholds geladen: start={START_THRESHOLD}%, stop={STOP_THRESHOLD}%")
     except Exception as e:
         log(f"Konnte thresholds nicht aus config laden: {e}, verwende defaults")
@@ -1458,7 +1459,7 @@ def main():
                     cum_vol_mexc += m_ask['qty']  # Add cumulative volume
 
                     # STOP_THRESHOLD check - spread too low, no deeper level will help
-                    if spread_pct < STOP_THRESHOLD:
+                    if spread_pct < threshold_stop:
                         break
 
                     # START_THRESHOLD check - spread is interesting
@@ -1493,7 +1494,7 @@ def main():
                     cum_vol_kucoin += k_ask['qty']  # Add cumulative volume
 
                     # STOP_THRESHOLD check
-                    if spread_pct < STOP_THRESHOLD:
+                    if spread_pct < threshold_stop:
                         break
 
                     # START_THRESHOLD check
@@ -1638,8 +1639,8 @@ def main():
             fresh_profitable_spread = max(fresh_spread_pct_km, fresh_spread_pct_mk)
             
             # STOP if spread below stop threshold (ONLY check that matters for follow-up trades!)
-            if fresh_profitable_spread < STOP_THRESHOLD:
-                log(f"⏹ STOPPING: fresh spread={fresh_profitable_spread:.3f}% < STOP_THRESHOLD={STOP_THRESHOLD}%")
+            if fresh_profitable_spread < threshold_stop:
+                log(f"⏹ STOPPING: fresh spread={fresh_profitable_spread:.3f}% < STOP_THRESHOLD={threshold_stop}%")
                 state = STATE_WAITING
                 trade_in_progress = False
                 continue
@@ -1648,7 +1649,7 @@ def main():
             ob_data = get_orderbook_levels()
             if ob_data:
                 # Recalculate best trade with fresh data
-                best_trade = calculate_best_trade(ob_data, min_trade_qty, threshold_start, STOP_THRESHOLD, current_strategy)
+                best_trade = calculate_best_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, current_strategy)
             else:
                 best_trade = None
             
