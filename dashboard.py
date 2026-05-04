@@ -903,16 +903,16 @@ else:
             with s1:
                 tss = pair_data.get('threshold_stop', 0.5)
                 ts = pair_data.get('threshold_start', 1.0)
-                ts_min = max(tss + 0.05, 0.05)  # Start must be at least 0.05 above stop
-                ts_safe = max(ts, ts_min)  # Auto-adjust if current start is now invalid
+                ts_min = tss  # Start must be >= Stop
+                ts_safe = max(ts, ts_min)
                 ts_new = st.number_input("Start Threshold in %", ts_min, 50.0, ts_safe, 0.05, key=f"pts_{pair}")
                 if ts_new != ts:
                     set_pair_settings(pair, threshold_start=ts_new)
             
             with s2:
                 tss = pair_data.get('threshold_stop', 0.5)
-                tss_max = max(ts_new - 0.05, 0.05)  # Stop must be at least 0.05 below start
-                # Auto-adjust if current stop is now invalid
+                tss_max = ts_new  # Stop must be <= Start
+                
                 tss_safe = min(tss, tss_max)
                 tss_new = st.number_input("Stop Threshold in %", 0.0, tss_max, tss_safe, 0.05, key=f"ptss_{pair}")
                 if tss_new != tss:
