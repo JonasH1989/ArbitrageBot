@@ -901,8 +901,11 @@ else:
             s1, s2, s3, s4 = st.columns([1, 1, 1, 1])
             
             with s1:
+                tss = pair_data.get('threshold_stop', 0.5)
                 ts = pair_data.get('threshold_start', 1.0)
-                ts_new = st.number_input("Start Threshold in %", 0.0, 50.0, ts, 0.05, key=f"pts_{pair}")
+                ts_min = max(tss + 0.05, 0.05)  # Start must be at least 0.05 above stop
+                ts_safe = max(ts, ts_min)  # Auto-adjust if current start is now invalid
+                ts_new = st.number_input("Start Threshold in %", ts_min, 50.0, ts_safe, 0.05, key=f"pts_{pair}")
                 if ts_new != ts:
                     set_pair_settings(pair, threshold_start=ts_new)
             
