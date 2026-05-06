@@ -1037,9 +1037,10 @@ else:
         
         # Log - Trade history
         with st.expander("📜 Log", expanded=False):
-            trades = get_trades('MPC-USDT', limit=50)
+            trades = get_trades('MPC-USDT', limit=100)
             
             if trades:
+                # Prepare trade data
                 rows = []
                 for t in reversed(trades):
                     try:
@@ -1053,112 +1054,207 @@ else:
                         
                         ts = t.get('internal_ts', '')
                         try:
-                            time_str = datetime.fromisoformat(ts).strftime('%H:%M:%S')
+                            dt = datetime.fromisoformat(ts)
+                            date_str = dt.strftime('%d.%m')
+                            time_str = dt.strftime('%H:%M:%S')
                         except:
+                            date_str = ts[:10] if len(ts) > 10 else 'N/A'
                             time_str = ts[-8:] if len(ts) > 8 else ts
                         
                         rows.append({
+                            'date': date_str,
                             'time': time_str,
-                            'trade_id': t.get('trade_id', '')[-8:],
+                            'trade_id': t.get('trade_id', ''),
+                            'trade_id_short': t.get('trade_id', '')[-6:],
                             'direction': 'K→M' if 'K->M' in direction else 'M→K',
                             'strategy': t.get('strategy', current_strategy),
+                            'spread': float(t.get('spread_pct', 0) or 0),
+                            'ex1_exchange': t.get('ex1_exchange', ''),
+                            'ex1_order_id': t.get('ex1_order_id', ''),
+                            'ex1_qty': float(t.get('ex1_qty_filled', 0) or 0),
+                            'ex1_price': float(t.get('ex1_price_avg', t.get('ex1_price_actual', 0)) or 0),
+                            'ex1_value': ex1_val,
+                            'ex1_fees': float(t.get('ex1_fees', 0) or 0),
+                            'ex2_exchange': t.get('ex2_exchange', ''),
+                            'ex2_order_id': t.get('ex2_order_id', ''),
+                            'ex2_qty': float(t.get('ex2_qty_filled', 0) or 0),
+                            'ex2_price': float(t.get('ex2_price_avg', t.get('ex2_price_actual', 0)) or 0),
+                            'ex2_value': ex2_val,
+                            'ex2_fees': float(t.get('ex2_fees', 0) or 0),
                             'gross': gross,
                             'fees': fees,
                             'net': net,
                             'status': status,
-                            'full_data': t
+                            'profit_mpc': float(t.get('profit_mpc_expected', 0) or 0),
+                            'profit_usdt': float(t.get('profit_usdt_expected', 0) or 0),
                         })
                     except:
                         pass
                 
                 if rows:
-                    # Scrollable table
+                    # Summary stats
+                    total_trades = len(rows)
+                    filled_trades = len([r for r in rows if r['status'] == 'FILLED'])
+                    winning_trades = len([r for r in rows if r['net'] > 0])
+                    total_profit = sum(r['net'] for r in rows)
+                    
+                    st.markdown("#### 📊 Trade Übersicht")
+                    col1, col2, col3, col4 = st.columns(4)
+                    col1.metric("Trades", total_trades)
+                    col2.metric("Gefüllt", filled_trades)
+                    col3.metric("Gewinn", f"{winning_trades}/{total_trades-winning_trades}")
+                    col4.metric("Netto", f"${total_profit:.4f}")
+                    
+                    # Clean table
                     st.markdown("""
                     <style>
-                        .trade-table-scroll{max-height:300px;overflow-y:auto;border:1px solid #333;border-radius:4px;}
-                        .trade-table{width:100%;border-collapse:collapse;font-size:12px;}
-                        .trade-table th{position:sticky;top:0;background:#1a1a1a;color:#aaa;text-align:left;padding:6px 8px;border-bottom:1px solid #333;}
-                        .trade-table td{padding:6px 8px;border-bottom:1px solid #222;color:white;}
-                        .trade-table tr:hover{background:#222;}
+                        .log-table{width:100%;border-collapse:collapse;font-size:12px;}
+                        .log-table th{background:#262730;color:#aaa;text-align:left;padding:8px 10px;border-bottom:2px solid #444;}
+                        .log-table td{padding:8px 10px;border-bottom:1px solid #222;color:#eee;}
+                        .log-table tr:hover{background:#1e1e2a;}
+                        .log-table .pos{color:#4ade80;}
+                        .log-table .neg{color:#f87171;}
                     </style>
                     """, unsafe_allow_html=True)
                     
-                    table_html = '<div class="trade-table-scroll"><table class="trade-table"><thead><tr>'
-                    table_html += '<th>Zeit</th><th>ID</th><th>Dir</th><th>Strat</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Fees</th><th style="text-align:right;">Netto</th><th>Status</th><th></th>'
+                    table_html = '<table class="log-table"><thead><tr>'
+                    table_html += '<th>Datum</th><th>Zeit</th><th>ID</th><th>Dir</th><th>Spread</th>'
+                    table_html += '<th>Ex1</th><th>Qty</th><th>→</th><th>Ex2</th><th>Qty</th>'
+                    table_html += '<th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th>'
                     table_html += '</tr></thead><tbody>'
                     
-                    for i, r in enumerate(rows):
-                        gc = '#00ff00' if r['gross'] > 0 else '#ff4444'
-                        nc = '#00ff00' if r['net'] > 0 else '#ff4444'
+                    for r in rows:
+                        gc = 'pos' if r['gross'] > 0 else 'neg'
+                        nc = 'pos' if r['net'] > 0 else 'neg'
                         se = {'FILLED': '✅', 'PARTIAL': '⚠️', 'WATCHING': '⏳', 'CANCELLED': '❌', 'FAILED': '🔴'}.get(r['status'], '❓')
                         
                         table_html += f"<tr>"
+                        table_html += f"<td>{r['date']}</td>"
                         table_html += f"<td>{r['time']}</td>"
-                        table_html += f"<td style='font-family:monospace;'>{r['trade_id']}</td>"
+                        table_html += f"<td style='font-family:monospace;'>{r['trade_id_short']}</td>"
                         table_html += f"<td>{r['direction']}</td>"
-                        table_html += f"<td>{r['strategy']}</td>"
-                        table_html += f"<td style='text-align:right;color:{gc};'>${r['gross']:.4f}</td>"
-                        table_html += f"<td style='text-align:right;'>${r['fees']:.4f}</td>"
-                        table_html += f"<td style='text-align:right;color:{nc};font-weight:bold;'>${r['net']:.4f}</td>"
-                        table_html += f"<td>{se} {r['status']}</td>"
-                        table_html += f"<td><button onclick=\"document.getElementById('td{i}').style.display=document.getElementById('td{i}').style.display==='none'?'block':'none'\" style='background:#444;color:white;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;'>Details</button></td>" 
+                        table_html += f"<td>{r['spread']:.2f}%</td>"
+                        table_html += f"<td>{r['ex1_exchange']}</td>"
+                        table_html += f"<td>{r['ex1_qty']:.1f}</td>"
+                        table_html += f"<td>→</td>"
+                        table_html += f"<td>{r['ex2_exchange']}</td>"
+                        table_html += f"<td>{r['ex2_qty']:.1f}</td>"
+                        table_html += f"<td style='text-align:right;' class='{gc}'>${r['gross']:.4f}</td>"
+                        table_html += f"<td style='text-align:right;font-weight:bold;' class='{nc}'>${r['net']:.4f}</td>"
+                        table_html += f"<td>{se}</td>"
                         table_html += f"</tr>"
-                        table_html += f"<tr><td colspan='9' style='padding:0;display:none;' id='td{i}'>"
-                        table_html += f"<div style='background:#111;padding:12px;margin:2px 0;border-radius:3px;'>"
-                        table_html += f"<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:11px;'>"
-                        table_html += f"<div><span style='color:#888;'>Ex1:</span> {r['full_data'].get('ex1_exchange','N/A')}</div>"
-                        table_html += f"<div><span style='color:#888;'>Order1:</span> <code>{r['full_data'].get('ex1_order_id','N/A')}</code></div>"
-                        table_html += f"<div><span style='color:#888;'>Qty:</span> {float(r['full_data'].get('ex1_qty_filled',0) or 0):.4f}</div>"
-                        table_html += f"<div><span style='color:#888;'>Buy Price:</span> ${float(r['full_data'].get('ex1_price_avg',0) or 0):.4f}</div>"
-                        table_html += f"<div><span style='color:#888;'>Value:</span> ${float(r['full_data'].get('ex1_value_usdt',0) or 0):.4f}</div>"
-                        table_html += f"<div><span style='color:#888;'>Fees1:</span> ${float(r['full_data'].get('ex1_fees',0) or 0):.4f}</div>"
-                        table_html += f"<div><span style='color:#888;'>Ex2:</span> {r['full_data'].get('ex2_exchange','N/A')}</div>"
-                        table_html += f"<div><span style='color:#888;'>Order2:</span> <code>{r['full_data'].get('ex2_order_id','N/A')}</code></div>"
-                        table_html += f"<div><span style='color:#888;'>Sell Price:</span> ${float(r['full_data'].get('ex2_price_avg',0) or 0):.4f}</div>"
-                        table_html += f"</div></div></td></tr>"
                     
-                    table_html += '</tbody></table></div>'
+                    table_html += '</tbody></table>'
                     st.markdown(table_html, unsafe_allow_html=True)
                     
-                    # CSV Export Button
-                    if rows:
-                        st.markdown("---")
-                        csv_data = []
-                        for r in rows:
-                            fd = r['full_data']
-                            csv_data.append({
-                                'Zeit': r['time'],
-                                'Trade_ID': r['trade_id'],
-                                'Richtung': r['direction'],
-                                'Strategie': r['strategy'],
-                                'Spread_%': float(fd.get('spread_pct', 0) or 0),
-                                'Ex1_Exchange': fd.get('ex1_exchange', ''),
-                                'Ex1_Order_ID': fd.get('ex1_order_id', ''),
-                                'Ex1_Qty': float(fd.get('ex1_qty_filled', 0) or 0),
-                                'Ex1_Price': float(fd.get('ex1_price_avg', fd.get('ex1_price_actual', 0)) or 0),
-                                'Ex1_Value_USDT': float(fd.get('ex1_value_usdt', 0) or 0),
-                                'Ex1_Fees': float(fd.get('ex1_fees', 0) or 0),
-                                'Ex2_Exchange': fd.get('ex2_exchange', ''),
-                                'Ex2_Order_ID': fd.get('ex2_order_id', ''),
-                                'Ex2_Qty': float(fd.get('ex2_qty_filled', 0) or 0),
-                                'Ex2_Price': float(fd.get('ex2_price_avg', fd.get('ex2_price_actual', 0)) or 0),
-                                'Ex2_Value_USDT': float(fd.get('ex2_value_usdt', 0) or 0),
-                                'Ex2_Fees': float(fd.get('ex2_fees', 0) or 0),
-                                'Limit_Watch_Status': fd.get('limit_watch_status', ''),
-                                'Profit_MPC_Expected': float(fd.get('profit_mpc_expected', 0) or 0),
-                                'Profit_USDT_Expected': float(fd.get('profit_usdt_expected', 0) or 0),
-                            })
-                        
-                        import pandas as pd
-                        df = pd.DataFrame(csv_data)
-                        csv_bytes = df.to_csv(index=False).encode('utf-8')
-                        st.download_button(
-                            "📥 CSV Export",
-                            data=csv_bytes,
-                            file_name="MPC_trades.csv",
-                            mime="text/csv",
-                            key="csv_export"
-                        )
+                    # Detailed view button
+                    st.markdown("---")
+                    import json
+                    import pandas as pd
+                    
+                    trades_json = json.dumps(rows)
+                    
+                    popup_html = f"""
+                    <script>
+                    function openDetailedView() {{
+                        var data = {trades_json};
+                        var html = `<!DOCTYPE html>
+<html><head><title>Trade Details</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box;}}
+body{{font-family:system-ui,sans-serif;background:#0f0f14;color:#eee;padding:20px;}}
+h1{{color:#fff;margin-bottom:20px;}}
+.filters{{margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;}}
+.filters select,.filters input{{padding:8px;background:#1a1a24;border:1px solid #333;border-radius:6px;color:#fff;font-size:13px;}}
+table{{width:100%;border-collapse:collapse;font-size:12px;background:#1a1a24;border-radius:8px;overflow:hidden;}}
+th{{background:#262730;color:#aaa;text-align:left;padding:12px;border-bottom:2px solid #444;}}
+td{{padding:10px;border-bottom:1px solid #222;}}
+tr:hover{{background:#252535;}}
+.pos{{color:#4ade80;}}
+.neg{{color:#f87171;}}
+.detail-grid{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:10px 0;}}
+.detail-item{{background:#222;padding:10px;border-radius:6px;}}
+.detail-label{{color:#888;font-size:11px;margin-bottom:4px;}}
+.detail-value{{color:#fff;}}
+code{{background:#333;padding:2px 6px;border-radius:3px;}}
+</style></head><body>
+<h1>📊 Trade Details - MPC-USDT</h1>
+<div class="filters">
+<select id="statusFilter"><option value="">Alle Status</option><option value="FILLED">FILLED</option><option value="PARTIAL">PARTIAL</option><option value="WATCHING">WATCHING</option></select>
+<select id="dirFilter"><option value="">Alle Richtungen</option><option value="M→K">M→K</option><option value="K→M">K→M</option></select>
+<input type="text" id="searchInput" placeholder="Trade ID suchen...">
+</div>
+<div id="count" style="margin-bottom:15px;color:#888;"></div>
+<table><thead><tr><th>Datum</th><th>Zeit</th><th>Trade ID</th><th>Dir</th><th>Spread</th><th>Ex1</th><th>Ex1 Qty</th><th>Ex2</th><th>Ex2 Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
+<tbody id="tradeBody"></tbody></table>
+<script>
+var trades = {trades_json};
+function filterTable(){{
+var sf=document.getElementById('statusFilter').value;
+var df=document.getElementById('dirFilter').value;
+var search=document.getElementById('searchInput').value.toLowerCase();
+var filtered=trades.filter(function(t){{
+if(sf&&t.status!==sf)return false;
+if(df&&t.direction!==df)return false;
+if(search&&!t.trade_id.toLowerCase().includes(search))return false;
+return true;
+}});
+document.getElementById('count').textContent=filtered.length+' von '+trades.length+' Trades';
+var html='';
+filtered.forEach(function(r){{
+var gc=r.gross>0?'pos':'neg';
+var nc=r.net>0?'pos':'neg';
+html+='<tr onclick="toggleDetail(\''+r.trade_id+'\')" style="cursor:pointer;">';
+html+='<td>'+r.date+'</td><td>'+r.time+'</td><td style="font-family:monospace;">'+r.trade_id+'</td>';
+html+='<td>'+r.direction+'</td><td>'+r.spread.toFixed(2)+'%</td>';
+html+='<td>'+r.ex1_exchange+'</td><td>'+r.ex1_qty.toFixed(2)+'</td>';
+html+='<td>'+r.ex2_exchange+'</td><td>'+r.ex2_qty.toFixed(2)+'</td>';
+html+='<td style="text-align:right;" class="'+gc+'">$'+r.gross.toFixed(4)+'</td>';
+html+='<td style="text-align:right;font-weight:bold;" class="'+nc+'">$'+r.net.toFixed(4)+'</td>';
+html+='<td>'+r.status+'</td></tr>';
+html+='<tr id="d-'+r.trade_id+'" style="display:none;"><td colspan="12">';
+html+='<div class=detail-grid>';
+html+='<div class=detail-item><div class=detail-label>Ex1 Order ID</div><div class=detail-value><code>'+r.ex1_order_id+'</code></div></div>';
+html+='<div class=detail-item><div class=detail-label>Ex1 Price</div><div class=detail-value>$'+r.ex1_price.toFixed(6)+'</div></div>';
+html+='<div class=detail-item><div class=detail-label>Ex1 Value</div><div class=detail-value>$'+r.ex1_value.toFixed(4)+'</div></div>';
+html+='<div class=detail-item><div class=detail-label>Ex1 Fees</div><div class=detail-value>$'+r.ex1_fees.toFixed(4)+'</div></div>';
+html+='<div class=detail-item><div class=detail-label>Ex2 Order ID</div><div class=detail-value><code>'+r.ex2_order_id+'</code></div></div>';
+html+='<div class=detail-item><div class=detail-label>Ex2 Price</div><div class=detail-value>$'+r.ex2_price.toFixed(6)+'</div></div>';
+html+='<div class=detail-item><div class=detail-label>Ex2 Value</div><div class=detail-value>$'+r.ex2_value.toFixed(4)+'</div></div>';
+html+='<div class=detail-item><div class=detail-label>Ex2 Fees</div><div class=detail-value>$'+r.ex2_fees.toFixed(4)+'</div></div>';
+html+='<div class=detail-item><div class=detail-label>Profit MPC</div><div class=detail-value>'+r.profit_mpc.toFixed(4)+'</div></div>';
+html+='<div class=detail-item><div class=detail-label>Profit USDT</div><div class=detail-value>$'+r.profit_usdt.toFixed(4)+'</div></div>';
+html+='<div class=detail-item><div class=detail-label>Strategie</div><div class=detail-value>'+r.strategy+'</div></div>';
+html+='</div></td></tr>';
+}});
+document.getElementById('tradeBody').innerHTML=html;
+}}
+function toggleDetail(id){{var el=document.getElementById('d-'+id);if(el)el.style.display=el.style.display==='none'?'table-row':'none';}}
+document.getElementById('statusFilter').onchange=filterTable;
+document.getElementById('dirFilter').onchange=filterTable;
+document.getElementById('searchInput').onkeyup=filterTable;
+filterTable();
+<\/script>
+</body></html>`;
+                        var blob = new Blob([html], {type: 'text/html'});
+                        var url = URL.createObjectURL(blob);
+                        var w = window.open(url, '_blank', 'width=1400,height=800');
+                        if (w) w.focus();
+                        URL.revokeObjectURL(url);
+                    }}
+                    </script>
+                    <button onclick="openDetailedView()" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;">🔍 Detaillierte Ansicht öffnen</button>
+                    """
+                    st.markdown(popup_html, unsafe_allow_html=True)
+                    
+                    # CSV Export
+                    df = pd.DataFrame(rows)
+                    csv_cols = ['date', 'time', 'trade_id', 'direction', 'strategy', 'spread',
+                               'ex1_exchange', 'ex1_order_id', 'ex1_qty', 'ex1_price', 'ex1_value', 'ex1_fees',
+                               'ex2_exchange', 'ex2_order_id', 'ex2_qty', 'ex2_price', 'ex2_value', 'ex2_fees',
+                               'gross', 'fees', 'net', 'profit_mpc', 'profit_usdt', 'status']
+                    csv_bytes = df[csv_cols].to_csv(index=False).encode('utf-8')
+                    st.download_button("📥 CSV Export", data=csv_bytes, file_name=f"MPC_trades_{datetime.now().strftime('%Y%m%d_%H%M')}.csv", mime="text/csv")
                 else:
                     st.info("Keine Trades")
             else:
