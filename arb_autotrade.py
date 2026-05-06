@@ -658,6 +658,7 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                                 log(f"   Found MEXC trade (private API): qty={qty}, price={price}, value=${quote_qty:.4f}, fee=${fee:.6f}")
                                 return {
                                     'status': 'Filled',
+                                    'orderId': order_id,  # Preserve original order ID
                                     'quantity': str(qty),
                                     'amount': str(quote_qty),
                                     'fees': fee,  # REAL fee from API, not estimated!
@@ -695,6 +696,7 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                 log(f"   Found MEXC order (order status API): qty={qty}, value=${quote:.4f}, fee=${fee_estimate:.6f} (est)")
                 return {
                     'status': 'Filled',
+                    'orderId': order_id,  # Preserve original order ID
                     'quantity': str(qty),
                     'amount': str(quote),
                     'fees': fee_estimate,  # Estimated - order API has no fee field
@@ -729,6 +731,7 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                         log(f"   PUBLIC API fallback used: qty={qty}, price={price}, fee=${fee_estimate:.6f} (est)")
                         return {
                             'status': 'Filled',
+                            'orderId': f'MEXC_{transact_time}',  # Timestamp-based ID
                             'quantity': str(qty),
                             'amount': str(quote_qty),
                             'fees': fee_estimate,  # Estimated - public API has no fee field
@@ -746,6 +749,7 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
     fee_est = orig_qty * fallback_price * MEXC_FEE_TAKER
     return {
         'status': 'Filled',
+        'orderId': f'MEXC_{transact_time}',  # Timestamp-based ID
         'quantity': str(orig_qty),
         'amount': str(orig_qty * fallback_price),
         'fees': fee_est,  # ESTIMATED - all APIs failed, this is a fallback!
@@ -876,6 +880,10 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
         log(f"   Polling MEXC trades API for fill...")
         filled_response = poll_mexc_market_order(order_id1, orig_qty1, transact_time1, max_wait_ms=2000, fallback_price=market_price_expected)
         result1 = filled_response  # Use the filled response
+        
+        # Ensure orderId is set for MEXC market orders (use timestamp-based ID if not present)
+        if 'orderId' not in result1 or not result1.get('orderId'):
+            result1['orderId'] = f"MEXC_{transact_time1}"  # Fallback timestamp-based ID
         log(f"   After polling: status={filled_response.get('status')}, quantity={filled_response.get('quantity')}, amount={filled_response.get('amount')}")
     
     # KuCoin market orders are async - poll for fill data
@@ -1156,19 +1164,48 @@ def check_limit_order_fills():
 
                 # KuCoin bug: filled orders have status='' but isActive=False
                 is_filled = status == 'Done' or (not is_active and deal_size > 0)
-
                 if is_filled:
+                    # KUCOIN PARTIAL FILLS FIX:
+                    # Fetch ALL fills for this order to aggregate partial fills
+                    fills_path = f'/api/v1/fills?orderId={ex2_order_id}'
+                    fills_sig = kucoin_sig(KUCOIN_SECRET, ts, 'GET', fills_path)
+                    fills_headers = {
+                        'KC-API-KEY': KUCOIN_KEY,
+                        'KC-API-SIGN': fills_sig,
+                        'KC-API-TIMESTAMP': ts,
+                        'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+                        'KC-API-KEY-VERSION': '2'
+                    }
+                    resp_fills = requests.get(f'https://api.kucoin.com{fills_path}', headers=fills_headers, timeout=10)
+                    fills_data = resp_fills.json().get('data', []) if resp_fills.status_code == 200 else []
+                    
+                    # Aggregate all partial fills
+                    total_qty = 0.0
+                    total_cost = 0.0
+                    total_fees = 0.0
+                    for fill in fills_data:
+                        qty = float(fill.get('size', 0) or 0)
+                        price = float(fill.get('price', 0) or 0)
+                        fee = float(fill.get('fee', 0) or 0)
+                        total_qty += qty
+                        total_cost += qty * price
+                        total_fees += fee
+                    
+                    fill_count = len(fills_data)
+                    if fill_count > 1:
+                        log(f"   INFO: {trade_id}: aggregated {fill_count} partial fills => {total_qty} MPC")
+                    
                     update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
-                                     qty_filled=deal_size,
-                                     price_actual=deal_funds/deal_size if deal_size > 0 else 0,
-                                     fees=float(data.get('fee', 0) or 0))
-                    log(f"✅ Limit filled: {trade_id}")
+                                     qty_filled=total_qty,
+                                     price_actual=total_cost/total_qty if total_qty > 0 else 0,
+                                     fees=total_fees)
+                    log(f"LIMIT FILLED: {trade_id}")
                 elif status == 'Active' and deal_size > 0:
                     update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=deal_size)
 
             elif ex2_exchange == 'MEXC':
-                # Check MEXC order status via /api/v3/order endpoint (NOT /api/v3/myTrades)
-                # Note: /myTrades requires special permission, /order works with standard TRADE key
+                # Check MEXC order status via /api/v3/order endpoint
+                # MEXC's executedQty is CUMULATIVE - no aggregation needed
                 ts = str(int(time.time() * 1000))
                 params = f'symbol={COIN_SYMBOL_MEXC}&orderId={ex2_order_id}&timestamp={ts}'
                 sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
@@ -1187,7 +1224,7 @@ def check_limit_order_fills():
                                      qty_filled=qty_filled,
                                      price_actual=amount_filled/qty_filled if qty_filled > 0 else 0,
                                      fees=float(data.get('fee', 0) or 0))
-                    log(f"✅ Limit filled: {trade_id} ({qty_filled} MPC @ {amount_filled/qty_filled if qty_filled > 0 else 0:.5f})")
+                    log(f"LIMIT FILLED: {trade_id}")
                 elif status == 'PARTIALLY_FILLED' and qty_filled > 0:
                     update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=qty_filled)
 
