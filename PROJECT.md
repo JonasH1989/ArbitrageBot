@@ -179,3 +179,16 @@ tail -f /home/openclaw/.openclaw/logs/arb_autotrade.log
 ---
 
 *Stand: 2026-04-23*
+---
+
+## ⚠️ WICHTIG: KuCoin Teil-Fills Bug (gefixt in Commit 47d2902)
+
+KuCoin Limit Orders können MEHRERE Teil-Fills haben:
+- **API Problem:** `/api/v1/orders/{id}` gibt nur `dealSize` = letzten Fill zurück
+- **Lösung:** `/api/v1/fills?orderId=X` abrufen und alle Fills summieren
+
+**Betroffene Funktion:** `check_limit_order_fills()` in `arb_autotrade.py`
+
+**MEXC hat das Problem NICHT:** `executedQty` ist bereits kumulativ.
+
+**Deployment:** Nach `git pull origin main` → Bot neu starten!
