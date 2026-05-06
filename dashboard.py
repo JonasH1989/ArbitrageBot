@@ -1119,6 +1119,46 @@ else:
                     
                     table_html += '</tbody></table></div>'
                     st.markdown(table_html, unsafe_allow_html=True)
+                    
+                    # CSV Export Button
+                    if rows:
+                        st.markdown("---")
+                        csv_data = []
+                        for r in rows:
+                            fd = r['full_data']
+                            csv_data.append({
+                                'Zeit': r['time'],
+                                'Trade_ID': r['trade_id'],
+                                'Richtung': r['direction'],
+                                'Strategie': r['strategy'],
+                                'Spread_%': float(fd.get('spread_pct', 0) or 0),
+                                'Ex1_Exchange': fd.get('ex1_exchange', ''),
+                                'Ex1_Order_ID': fd.get('ex1_order_id', ''),
+                                'Ex1_Qty': float(fd.get('ex1_qty_filled', 0) or 0),
+                                'Ex1_Price': float(fd.get('ex1_price_avg', fd.get('ex1_price_actual', 0)) or 0),
+                                'Ex1_Value_USDT': float(fd.get('ex1_value_usdt', 0) or 0),
+                                'Ex1_Fees': float(fd.get('ex1_fees', 0) or 0),
+                                'Ex2_Exchange': fd.get('ex2_exchange', ''),
+                                'Ex2_Order_ID': fd.get('ex2_order_id', ''),
+                                'Ex2_Qty': float(fd.get('ex2_qty_filled', 0) or 0),
+                                'Ex2_Price': float(fd.get('ex2_price_avg', fd.get('ex2_price_actual', 0)) or 0),
+                                'Ex2_Value_USDT': float(fd.get('ex2_value_usdt', 0) or 0),
+                                'Ex2_Fees': float(fd.get('ex2_fees', 0) or 0),
+                                'Limit_Watch_Status': fd.get('limit_watch_status', ''),
+                                'Profit_MPC_Expected': float(fd.get('profit_mpc_expected', 0) or 0),
+                                'Profit_USDT_Expected': float(fd.get('profit_usdt_expected', 0) or 0),
+                            })
+                        
+                        import pandas as pd
+                        df = pd.DataFrame(csv_data)
+                        csv_bytes = df.to_csv(index=False).encode('utf-8')
+                        st.download_button(
+                            "📥 CSV Export",
+                            data=csv_bytes,
+                            file_name="MPC_trades.csv",
+                            mime="text/csv",
+                            key="csv_export"
+                        )
                 else:
                     st.info("Keine Trades")
             else:
