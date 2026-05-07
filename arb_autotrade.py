@@ -807,7 +807,34 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     can_trade, balance_error = check_balances_for_trade(dir_str, qty, buy_price, sell_price)
     if not can_trade:
         log(f"❌ BALANCE CHECK FAILED: {balance_error}")
-        return False, None
+        # CRITICAL: Do NOT execute trade if balance check fails!
+        # Log failed trade attempt and return False to prevent execution
+        ex1_data = {"exchange": exchange_market.upper(), "order_id": "FAILED", "type": "market",
+                    "side": "buy", "qty_ordered": qty, "qty_filled": 0,
+                    "price_expected": market_price_expected, "price_actual": 0,
+                    "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "BALANCE_CHECK_FAILED",
+                    "raw_response": {}}
+        ex2_data = {"exchange": exchange_limit.upper(), "order_id": "FAILED", "type": "limit",
+                    "side": "sell", "qty_ordered": 0, "qty_filled": 0,
+                    "price_expected": limit_price_expected, "price_actual": 0,
+                    "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "NOT_PLACED",
+                    "raw_response": {}}
+        trade_id = log_trade(
+            pair=TRADING_PAIR,
+            internal_ts=internal_ts,
+            direction=dir_str,
+            ex1_data=ex1_data,
+            ex2_data=ex2_data,
+            limit_watch_status="ERROR",
+            strategy=strategy.upper(),
+            spread_pct=spread_pct,
+            market_price_expected=market_price_expected,
+            limit_price_expected=limit_price_expected,
+            error_code="BALANCE_CHECK_FAILED",
+            error_message=balance_error
+        )
+        log(f"📝 Trade blocked by balance check: {trade_id}")
+        return False, trade_id
     log(f"✅ Balance check passed")
 
     # ========================================================================
