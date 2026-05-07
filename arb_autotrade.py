@@ -1691,8 +1691,39 @@ def main():
             last_spread_ok = current_spread_ok
 
         # State machine logic
+        # IMPORTANT: Check balance BEFORE setting trade_in_progress=True
+        # This prevents the flag from being set when we can't actually trade
         if state == STATE_WAITING:
             if profitable_spread >= threshold_start and not trade_in_progress:
+                
+                # Pre-flight balance check BEFORE entering trade
+                # Determine direction and simulate balance check
+                if best_trade:
+                    dir_check = best_trade['dir']  # e.g. 'M→K' or 'K→M'
+                elif spread_pct_km >= spread_pct_mk:
+                    dir_check = 'K→M'
+                else:
+                    dir_check = 'M→K'
+                
+                # Estimate quantities
+                if best_trade:
+                    check_qty = math.floor(best_trade['vol'])
+                    check_buy = best_trade['buy']
+                    check_sell = best_trade['sell']
+                else:
+                    check_qty = min(vol_for_mexc, vol_for_kucoin)
+                    check_buy = m['ask'] if dir_check == 'M→K' else k['ask']
+                    check_sell = k['bid'] if dir_check == 'M→K' else m['bid']
+                
+                # Pre-check: can we actually trade?
+                can_trade, balance_error = check_balances_for_trade(dir_check, check_qty, check_buy, check_sell)
+                if not can_trade:
+                    # CANNOT trade - do NOT set trade_in_progress, stay in WAITING
+                    if int(time.time()) % 5 == 0:  # Log every 5s to avoid spam
+                        log(f"⛔ TRIGGER SKIPPED: {balance_error}", "BALANCE")
+                    return  # ← EXIT early, do NOT enter trade
+                
+                # Balance OK - proceed with trade
                 log(f"🚀 TRIGGER: spread={profitable_spread:.2f}% >= threshold={threshold_start}%", "DECISION")
                 state = STATE_RUNNING
                 trade_in_progress = True
@@ -1718,18 +1749,16 @@ def main():
                 else:
                     success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
                 
-                # CRITICAL: Only complete trade if SUCCESS=True
-                # If balance check or other error caused success=False, keep trade_in_progress=True
-                # This prevents rapid-fire retry attempts when balance is insufficient
+                # Only complete trade if SUCCESS=True
                 if success:
                     last_trade_time = time.time()
                     trade_in_progress = False
-                    state = STATE_WAITING  # Return to WAITING after successful trade
+                    state = STATE_WAITING
                 else:
-                    log(f"⚠️ Trade execution failed (balance check or error). Staying in WAITING.")
+                    log(f"⚠️ Trade execution failed (API error). Resetting.")
                     last_trade_time = time.time()
-                    trade_in_progress = False  # Reset to allow next spread trigger
-                    state = STATE_WAITING  # Explicitly return to WAITING
+                    trade_in_progress = False
+                    state = STATE_WAITING
         
         # Re-check spread before EACH trade in RUNNING state (critical bug fix!)
         # Re-check spread before EACH trade in RUNNING state
@@ -1777,6 +1806,16 @@ def main():
                 continue
             
             # Execute trade
+            # Pre-flight balance check before setting trade_in_progress
+            dir_check = best_trade['dir']
+            check_qty = math.floor(best_trade['vol'])
+            can_trade, balance_error = check_balances_for_trade(dir_check, check_qty, best_trade['buy'], best_trade['sell'])
+            if not can_trade:
+                log(f"⛔ TRADE BLOCKED: {balance_error}")
+                trade_in_progress = False
+                state = STATE_WAITING
+                continue
+            
             trade_in_progress = True
             vol_for_mexc = math.floor(best_trade['vol'])
             vol_for_kucoin = math.floor(best_trade['vol'])
@@ -1788,13 +1827,13 @@ def main():
             else:
                 success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
             
-            # CRITICAL: Only complete trade if SUCCESS=True
+            # Only complete trade if SUCCESS=True
             if success:
                 last_trade_time = time.time()
                 trade_in_progress = False
                 state = STATE_WAITING
             else:
-                log(f"⚠️ Trade execution failed (balance check or error). Staying in WAITING.")
+                log(f"⚠️ Trade execution failed (API error). Resetting.")
                 last_trade_time = time.time()
                 trade_in_progress = False
                 state = STATE_WAITING
