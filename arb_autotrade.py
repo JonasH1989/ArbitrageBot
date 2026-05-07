@@ -1189,7 +1189,16 @@ def check_limit_order_fills():
                         'KC-API-KEY-VERSION': '2'
                     }
                     resp_fills = requests.get(f'https://api.kucoin.com{fills_path}', headers=fills_headers, timeout=10)
-                    fills_data = resp_fills.json().get('data', []) if resp_fills.status_code == 200 else []
+                    try:
+                        fills_raw = resp_fills.json()
+                        if not isinstance(fills_raw, dict):
+                            log(f"⚠️ KuCoin fills: non-dict response for {ex2_order_id}, type={type(fills_raw)}")
+                            fills_data = []
+                        else:
+                            fills_data = fills_raw.get('data', []) if resp_fills.status_code == 200 else []
+                    except Exception as e:
+                        log(f"⚠️ KuCoin fills JSON parse error for {ex2_order_id}: {e}")
+                        fills_data = []
                     
                     # Aggregate all partial fills
                     total_qty = 0.0
@@ -1225,7 +1234,15 @@ def check_limit_order_fills():
                 headers_req = {'X-MEXC-APIKEY': MEXC_KEY}
 
                 resp = requests.get(url, headers=headers_req, timeout=10)
-                data = resp.json() if resp.status_code == 200 else {}
+                try:
+                    raw = resp.json()
+                    if not isinstance(raw, dict):
+                        log(f"⚠️ MEXC order check: non-dict response type={type(raw)}, order_id={ex2_order_id}")
+                        continue
+                    data = raw
+                except Exception as e:
+                    log(f"⚠️ MEXC JSON parse error for order {ex2_order_id}: {e}")
+                    continue
 
                 status = data.get('status', '')
                 qty_filled = float(data.get('executedQty', 0) or 0)
