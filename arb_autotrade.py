@@ -1155,7 +1155,19 @@ def check_limit_order_fills():
                 }
 
                 resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
-                data = resp.json().get('data', {})
+                try:
+                    raw = resp.json()
+                    if not isinstance(raw, dict):
+                        log(f"⚠️ KuCoin order check: non-dict response type={type(raw)}, order_id={ex2_order_id}")
+                        continue
+                    data = raw.get('data', {})
+                except Exception as e:
+                    log(f"⚠️ KuCoin JSON parse error for order {ex2_order_id}: {e}")
+                    continue
+
+                if not isinstance(data, dict):
+                    log(f"⚠️ KuCoin order {ex2_order_id}: data field is {type(data)}, skipping")
+                    continue
 
                 status = data.get('status', '')
                 deal_size = float(data.get('dealSize', 0) or 0)
