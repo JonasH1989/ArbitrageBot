@@ -1718,8 +1718,18 @@ def main():
                 else:
                     success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
                 
-                last_trade_time = time.time()
-                trade_in_progress = False
+                # CRITICAL: Only complete trade if SUCCESS=True
+                # If balance check or other error caused success=False, keep trade_in_progress=True
+                # This prevents rapid-fire retry attempts when balance is insufficient
+                if success:
+                    last_trade_time = time.time()
+                    trade_in_progress = False
+                    state = STATE_WAITING  # Return to WAITING after successful trade
+                else:
+                    log(f"⚠️ Trade execution failed (balance check or error). Staying in WAITING.")
+                    last_trade_time = time.time()
+                    trade_in_progress = False  # Reset to allow next spread trigger
+                    state = STATE_WAITING  # Explicitly return to WAITING
         
         # Re-check spread before EACH trade in RUNNING state (critical bug fix!)
         # Re-check spread before EACH trade in RUNNING state
@@ -1778,8 +1788,16 @@ def main():
             else:
                 success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
             
-            last_trade_time = time.time()
-            trade_in_progress = False
+            # CRITICAL: Only complete trade if SUCCESS=True
+            if success:
+                last_trade_time = time.time()
+                trade_in_progress = False
+                state = STATE_WAITING
+            else:
+                log(f"⚠️ Trade execution failed (balance check or error). Staying in WAITING.")
+                last_trade_time = time.time()
+                trade_in_progress = False
+                state = STATE_WAITING
 
         time.sleep(1)  # Check every second
 
