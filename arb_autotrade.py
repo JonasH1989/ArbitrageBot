@@ -89,7 +89,69 @@ KUCOIN_MIN_QTY = 85           # Minimum quantity per order (will be adjusted per
 MEXC_PRICE_PRECISION = 5
 KUCOIN_PRICE_PRECISION = 6
 
-TRADING_PAIR = COIN_SYMBOL
+# Hourly wallet snapshot tracking
+_last_snapshot_hour = None
+
+def take_wallet_snapshot():
+    """Take hourly snapshot of wallet balances on both exchanges."""
+    global _last_snapshot_hour
+    now = datetime.now()
+    current_hour = now.hour
+    
+    # Only take snapshot once per hour
+    if current_hour == _last_snapshot_hour:
+        return
+    
+    try:
+        # Get balances from both exchanges
+        mexc_bal = get_mexc_balances()
+        kucoin_bal = get_kucoin_balances()
+        
+        coin_sym = COIN_SYMBOL.split('-')[0]
+        
+        # Extract values
+        mexc_usdt = mexc_bal.get('USDT', 0)
+        mexc_coins = mexc_bal.get(coin_sym, 0)
+        kucoin_usdt = kucoin_bal.get('USDT', 0)
+        kucoin_coins = kucoin_bal.get(coin_sym, 0)
+        
+        total_usdt = mexc_usdt + kucoin_usdt
+        total_coins = mexc_coins + kucoin_coins
+        
+        # Get current prices for USDT valuation
+        try:
+            resp_m = requests.get(f'https://api.mexc.com/api/v3/depth?symbol={COIN_SYMBOL_MEXC}&limit=1', timeout=5)
+            mexc_price = float(resp_m.json().get('asks', [[0]])[0][0]) if 'asks' in resp_m.json() else 0
+        except:
+            mexc_price = 0
+        
+        coin_value_usdt = total_coins * mexc_price if mexc_price else 0
+        total_value_usdt = total_usdt + coin_value_usdt
+        
+        # CSV line: timestamp,total_coins,total_usdt,total_value_usdt,mexc_coins,kucoin_coins,mexc_usdt,kucoin_usdt,coin_price
+        ts = now.strftime('%Y-%m-%d %H:%M:%S')
+        csv_line = f"{ts},{total_coins:.6f},{total_usdt:.6f},{total_value_usdt:.6f},{mexc_coins:.6f},{kucoin_coins:.6f},{mexc_usdt:.6f},{kucoin_usdt:.6f},{mexc_price:.6f}\n"
+        
+        # Ensure logs directory exists
+        os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs'), exist_ok=True)
+        csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', 'wallet_snapshots.csv')
+        
+        # Write header if file doesn't exist
+        if not os.path.exists(csv_path):
+            with open(csv_path, 'w') as f:
+                f.write("timestamp,total_coins,total_usdt,total_value_usdt,mexc_coins,kucoin_coins,mexc_usdt,kucoin_usdt,coin_price\n")
+        
+        # Append snapshot
+        with open(csv_path, 'a') as f:
+            f.write(csv_line)
+        
+        _last_snapshot_hour = current_hour
+        log(f"📸 Wallet Snapshot [{ts}]: {coin_sym}={total_coins:,.0f} (${coin_value_usdt:.2f}) | USDT={total_usdt:.2f} | Total=${total_value_usdt:.2f}")
+        
+    except Exception as e:
+        log(f"❌ Error taking wallet snapshot: {e}")
+
+
 
 # ==============================================================================
 # HTTP Logging Server (for real-time monitoring)
@@ -1838,6 +1900,9 @@ def main():
                 trade_in_progress = False
                 state = STATE_WAITING
 
+        # Check for hourly wallet snapshot
+        take_wallet_snapshot()
+        
         time.sleep(1)  # Check every second
 
 if __name__ == '__main__':
