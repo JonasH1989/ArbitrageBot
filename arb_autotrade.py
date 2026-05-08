@@ -89,6 +89,8 @@ KUCOIN_MIN_QTY = 85           # Minimum quantity per order (will be adjusted per
 MEXC_PRICE_PRECISION = 5
 KUCOIN_PRICE_PRECISION = 6
 
+TRADING_PAIR = COIN_SYMBOL
+
 # Hourly wallet snapshot tracking
 _last_snapshot_hour = None
 
