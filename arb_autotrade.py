@@ -1305,12 +1305,9 @@ def check_limit_order_fills():
                                      price_actual=total_cost/total_qty if total_qty > 0 else 0,
                                      fees=total_fees)
                     log(f"LIMIT FILLED: {trade_id} ({total_qty} MPC @ {total_cost/total_qty if total_qty > 0 else 0:.5f})")
-                elif not is_active and total_qty == 0:
-                    # Order exists but isInactive with 0 fills = cancelled
-                    update_limit_watch(trade_id, TRADING_PAIR, 'CANCELLED')
-                    log(f"LIMIT CANCELLED: {trade_id} (order {ex2_order_id[:16]}...)")
                 elif total_qty > 0 and is_active:
                     update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=total_qty)
+                # else: order still pending (isActive=True, no fills yet) - do nothing, will be checked again next poll
 
             elif ex2_exchange == 'MEXC':
                 # Check MEXC order status via /api/v3/order endpoint
