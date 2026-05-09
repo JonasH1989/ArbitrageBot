@@ -1274,7 +1274,16 @@ def check_limit_order_fills():
                     try:
                         fills_raw = resp_fills.json()
                         if isinstance(fills_raw, dict) and resp_fills.status_code == 200:
-                            fills_data = fills_raw.get('data', []) or []
+                            # KuCoin fills API returns data as dict with 'items' list inside
+                            data_field = fills_raw.get('data', {})
+                            if isinstance(data_field, dict):
+                                fills_data = data_field.get('items', []) or []
+                            elif isinstance(data_field, list):
+                                fills_data = data_field
+                            else:
+                                fills_data = []
+                        else:
+                            fills_data = []
                     except:
                         fills_data = []
                 except:
