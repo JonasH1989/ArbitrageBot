@@ -1215,21 +1215,8 @@ def check_limit_order_fills():
         if not ex2_order_id or ex2_order_id == 'FAILED':
             continue
 
-        # Pre-filter: Only check if price has crossed the limit
-        # For KUCOIN limit sell: check if current KuCoin price >= limit price (sell should have filled)
-        # For MEXC limit sell: check if current MEXC price >= limit price
-        if ex2_exchange == 'KUCOIN' and kucoin_price > 0:
-            # Limit sell on KuCoin - if price rose to/above limit, should be filled
-            if kucoin_price < ex2_price_expected * 0.998:  # 0.2% buffer
-                log(f"⏭️ Skipping KuCoin check: price {kucoin_price:.6f} < limit {ex2_price_expected:.6f}")
-                continue
-        elif ex2_exchange == 'MEXC' and mexc_price > 0:
-            # Limit sell on MEXC - if price rose to/above limit, should be filled
-            if mexc_price < ex2_price_expected * 0.998:
-                log(f"⏭️ Skipping MEXC check: price {mexc_price:.6f} < limit {ex2_price_expected:.6f}")
-                continue
-
-        # Poll exchange for order status
+        # Poll exchange for order status - ALWAYS check, no pre-filter skip
+        # (limit orders may have filled hours ago regardless of current price)
         try:
             if ex2_exchange == 'KUCOIN':
                 # Check KuCoin order status
@@ -1257,19 +1244,23 @@ def check_limit_order_fills():
                     continue
 
                 if not isinstance(data, dict):
-                    log(f"⚠️ KuCoin order {ex2_order_id}: data field is {type(data)}, skipping")
-                    continue
+                    # "order does not exist" or other non-dict response = order was cancelled/never filled
+                    log(f"⚠️ KuCoin order {ex2_order_id}: API returns {type(data).__name__}, falling back to fills API")
+                    data = {'isActive': True, 'dealSize': 0}  # Treat as active/pending until fills API confirms
 
                 status = data.get('status', '')
                 deal_size = float(data.get('dealSize', 0) or 0)
-                deal_funds = float(data.get('dealFunds', 0) or 0)
                 is_active = data.get('isActive', True)
 
-                # KuCoin bug: filled orders have status='' but isActive=False
-                is_filled = status == 'Done' or (not is_active and deal_size > 0)
-                if is_filled:
-                    # KUCOIN PARTIAL FILLS FIX:
-                    # Fetch ALL fills for this order to aggregate partial fills
+                # KuCoin filled orders: status='Done' OR isActive=False with dealSize > 0
+                # Also check fills API for any fill data
+                fills_data = []
+                total_qty = deal_size
+                total_cost = float(data.get('dealFunds', 0) or 0)
+                total_fees = 0.0
+
+                # Always try fills API to get accurate fill data (handles partial fills, non-dict responses)
+                try:
                     fills_path = f'/api/v1/fills?orderId={ex2_order_id}'
                     fills_sig = kucoin_sig(KUCOIN_SECRET, ts, 'GET', fills_path)
                     fills_headers = {
@@ -1282,16 +1273,16 @@ def check_limit_order_fills():
                     resp_fills = requests.get(f'https://api.kucoin.com{fills_path}', headers=fills_headers, timeout=10)
                     try:
                         fills_raw = resp_fills.json()
-                        if not isinstance(fills_raw, dict):
-                            log(f"⚠️ KuCoin fills: non-dict response for {ex2_order_id}, type={type(fills_raw)}")
-                            fills_data = []
-                        else:
-                            fills_data = fills_raw.get('data', []) if resp_fills.status_code == 200 else []
-                    except Exception as e:
-                        log(f"⚠️ KuCoin fills JSON parse error for {ex2_order_id}: {e}")
+                        if isinstance(fills_raw, dict) and resp_fills.status_code == 200:
+                            fills_data = fills_raw.get('data', []) or []
+                    except:
                         fills_data = []
-                    
-                    # Aggregate all partial fills
+                except:
+                    fills_data = []
+
+
+                # Aggregate fills if any found
+                if fills_data:
                     total_qty = 0.0
                     total_cost = 0.0
                     total_fees = 0.0
@@ -1302,18 +1293,24 @@ def check_limit_order_fills():
                         total_qty += qty
                         total_cost += qty * price
                         total_fees += fee
-                    
                     fill_count = len(fills_data)
                     if fill_count > 1:
                         log(f"   INFO: {trade_id}: aggregated {fill_count} partial fills => {total_qty} MPC")
-                    
+
+
+                is_filled = status == 'Done' or (not is_active and total_qty > 0) or (len(fills_data) > 0)
+                if is_filled and total_qty > 0:
                     update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
                                      qty_filled=total_qty,
                                      price_actual=total_cost/total_qty if total_qty > 0 else 0,
                                      fees=total_fees)
-                    log(f"LIMIT FILLED: {trade_id}")
-                elif status == 'Active' and deal_size > 0:
-                    update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=deal_size)
+                    log(f"LIMIT FILLED: {trade_id} ({total_qty} MPC @ {total_cost/total_qty if total_qty > 0 else 0:.5f})")
+                elif not is_active and total_qty == 0:
+                    # Order exists but isInactive with 0 fills = cancelled
+                    update_limit_watch(trade_id, TRADING_PAIR, 'CANCELLED')
+                    log(f"LIMIT CANCELLED: {trade_id} (order {ex2_order_id[:16]}...)")
+                elif total_qty > 0 and is_active:
+                    update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=total_qty)
 
             elif ex2_exchange == 'MEXC':
                 # Check MEXC order status via /api/v3/order endpoint
