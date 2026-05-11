@@ -911,7 +911,7 @@ else:
                             show_df.columns = ['Datum', 'MPC Bestand', 'MPC Δ', 'USDT', 'Wert Δ']
                             show_df['MPC Δ'] = show_df['MPC Δ'].apply(lambda x: f"{x:+,.0f}" if x != 0 else "—")
                             show_df['Wert Δ'] = show_df['Wert Δ'].apply(lambda x: f"{x:+,.2f}" if x != 0 else "—")
-                            st.dataframe(show_df.tail(14), use_container_width=True)
+                            st.dataframe(show_df.tail(14), width="stretch")
                 else:
                     st.info("Keine Wallet Snapshots verfügbar. Der Bot macht stündliche Snapshots.")
                     st.caption("Diese werden in logs/wallet_snapshots.csv gespeichert.")
