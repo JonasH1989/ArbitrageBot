@@ -785,137 +785,132 @@ else:
         
         # Übersicht - Expanded by default (for charts later)
         with st.expander("📊 Übersicht", expanded=True):
-                    # =========================================================================
-        # PORTFOLIO RAPPORT - Daily/Overall Performance
-        # =========================================================================
-        
-        # Load wallet snapshots from CSV
-        snapshot_path = '/app/logs/wallet_snapshots.csv'
-        if not os.path.exists(snapshot_path):
-            snapshot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', 'wallet_snapshots.csv')
-        
-        snapshots_df = None
-        if os.path.exists(snapshot_path):
+            # =========================================================================
+            # PORTFOLIO RAPPORT - Daily/Overall Performance
+            # =========================================================================
+            
+            # Load wallet snapshots from CSV
+            snapshot_path = '/app/logs/wallet_snapshots.csv'
+            if not os.path.exists(snapshot_path):
+                snapshot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', 'wallet_snapshots.csv')
+            
+            snapshots_df = None
+            if os.path.exists(snapshot_path):
+                try:
+                    snapshots_df = pd.read_csv(snapshot_path)
+                    snapshots_df['timestamp'] = pd.to_datetime(snapshots_df['timestamp'])
+                    snapshots_df = snapshots_df.sort_values('timestamp')
+                except Exception as e:
+                    st.caption(f"Snapshot CSV Fehler: {e}")
+            
+            # Get current prices for fair comparison
             try:
-                snapshots_df = pd.read_csv(snapshot_path)
-                snapshots_df['timestamp'] = pd.to_datetime(snapshots_df['timestamp'])
-                snapshots_df = snapshots_df.sort_values('timestamp')
-            except Exception as e:
-                st.caption(f"Snapshot CSV Fehler: {e}")
-        
-        # Get current prices for fair comparison
-        try:
-            mexc_resp = requests.get("https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=1", timeout=5)
-            current_mpc_price = float(mexc_resp.json().get('asks', [[0]])[0][0]) if 'asks' in mexc_resp.json() else 0.01427
-        except:
-            current_mpc_price = 0.01427  # fallback
-        
-        # Expander for Portfolio Rapport
-        with st.expander("💼 Portfolio Rapport", expanded=True):
-            if snapshots_df is not None and len(snapshots_df) > 0:
-                # Get first and last snapshot for comparison
-                first_row = snapshots_df.iloc[0]
-                last_row = snapshots_df.iloc[-1]
-                
-                # 24h comparison (or last snapshot vs first of yesterday)
-                snapshots_24h = snapshots_df[snapshots_df['timestamp'] >= (datetime.now() - pd.Timedelta(hours=24))]
-                
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.markdown("### 📈 Gesamt (Start → Heute)")
-                    mpc_start = first_row['total_coins']
-                    mpc_now = last_row['total_coins']
-                    mpc_delta = mpc_now - mpc_start
-                    usdt_start = first_row['total_usdt']
-                    usdt_now = last_row['total_usdt']
-                    usdt_delta = usdt_now - usdt_start
+                mexc_resp = requests.get("https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=1", timeout=5)
+                current_mpc_price = float(mexc_resp.json().get('asks', [[0]])[0][0]) if 'asks' in mexc_resp.json() else 0.01427
+            except:
+                current_mpc_price = 0.01427  # fallback
+            
+            # Portfolio Rapport
+            with st.expander("💼 Portfolio Rapport", expanded=True):
+                if snapshots_df is not None and len(snapshots_df) > 0:
+                    first_row = snapshots_df.iloc[0]
+                    last_row = snapshots_df.iloc[-1]
                     
-                    # Fair value calculation (use current price for both)
-                    value_start = (mpc_start * current_mpc_price) + usdt_start
-                    value_now = (mpc_now * current_mpc_price) + usdt_now
-                    value_delta = value_now - value_start
+                    snapshots_24h = snapshots_df[snapshots_df['timestamp'] >= (datetime.now() - pd.Timedelta(hours=24))]
                     
-                    st.metric("MPC", f"{mpc_now:,.0f}", f"{mpc_delta:+,.0f}")
-                    st.metric("USDT", f"${usdt_now:,.2f}", f"{usdt_delta:+,.2f}")
-                    st.metric("Gesamt", f"${value_now:,.2f}", f"{value_delta:+,.2f}")
-                
-                with col2:
-                    st.markdown("### 🕐 24-Stunden")
-                    if len(snapshots_24h) > 1:
-                        first_24h = snapshots_24h.iloc[0]
-                        last_24h = snapshots_24h.iloc[-1]
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.markdown("### 📈 Gesamt (Start → Heute)")
+                        mpc_start = first_row['total_coins']
+                        mpc_now = last_row['total_coins']
+                        mpc_delta = mpc_now - mpc_start
+                        usdt_start = first_row['total_usdt']
+                        usdt_now = last_row['total_usdt']
+                        usdt_delta = usdt_now - usdt_start
                         
-                        mpc_24h_start = first_24h['total_coins']
-                        mpc_24h_end = last_24h['total_coins']
-                        mpc_24h_delta = mpc_24h_end - mpc_24h_start
+                        value_start = (mpc_start * current_mpc_price) + usdt_start
+                        value_now = (mpc_now * current_mpc_price) + usdt_now
+                        value_delta = value_now - value_start
                         
-                        usdt_24h_start = first_24h['total_usdt']
-                        usdt_24h_end = last_24h['total_usdt']
-                        usdt_24h_delta = usdt_24h_end - usdt_24h_start
-                        
-                        val_24h_start = (mpc_24h_start * current_mpc_price) + usdt_24h_start
-                        val_24h_end = (mpc_24h_end * current_mpc_price) + usdt_24h_end
-                        val_24h_delta = val_24h_end - val_24h_start
-                        
-                        st.metric("MPC", f"{mpc_24h_end:,.0f}", f"{mpc_24h_delta:+,.0f}")
-                        st.metric("USDT", f"${usdt_24h_end:,.2f}", f"{usdt_24h_delta:+,.2f}")
-                        st.metric("Gesamt", f"${val_24h_end:,.2f}", f"{val_24h_delta:+,.2f}")
-                    else:
-                        st.caption("Nicht genug Snapshots für 24h")
-                
-                with col3:
-                    st.markdown("### 📊 Trade Stats")
-                    # Get trade counts from bot API
-                    try:
-                        resp = requests.get('http://localhost:8505/trades/summary/MPC-USDT', timeout=5)
-                        if resp.status_code == 200:
-                            data = resp.json()
-                            st.metric("Trades gesamt", data.get('total_trades', 0))
-                            st.metric("Trades offen", data.get('pending_limit_orders', 0))
-                            st.metric("Win Rate", f"{data.get('win_rate', '0%')}")
+                        st.metric("MPC", f"{mpc_now:,.0f}", f"{mpc_delta:+,.0f}")
+                        st.metric("USDT", f"${usdt_now:,.2f}", f"{usdt_delta:+,.2f}")
+                        st.metric("Gesamt", f"${value_now:,.2f}", f"{value_delta:+,.2f}")
+                    
+                    with col2:
+                        st.markdown("### 🕐 24-Stunden")
+                        if len(snapshots_24h) > 1:
+                            first_24h = snapshots_24h.iloc[0]
+                            last_24h = snapshots_24h.iloc[-1]
+                            
+                            mpc_24h_start = first_24h['total_coins']
+                            mpc_24h_end = last_24h['total_coins']
+                            mpc_24h_delta = mpc_24h_end - mpc_24h_start
+                            
+                            usdt_24h_start = first_24h['total_usdt']
+                            usdt_24h_end = last_24h['total_usdt']
+                            usdt_24h_delta = usdt_24h_end - usdt_24h_start
+                            
+                            val_24h_start = (mpc_24h_start * current_mpc_price) + usdt_24h_start
+                            val_24h_end = (mpc_24h_end * current_mpc_price) + usdt_24h_end
+                            val_24h_delta = val_24h_end - val_24h_start
+                            
+                            st.metric("MPC", f"{mpc_24h_end:,.0f}", f"{mpc_24h_delta:+,.0f}")
+                            st.metric("USDT", f"${usdt_24h_end:,.2f}", f"{usdt_24h_delta:+,.2f}")
+                            st.metric("Gesamt", f"${val_24h_end:,.2f}", f"{val_24h_delta:+,.2f}")
                         else:
+                            st.caption("Nicht genug Snapshots für 24h")
+                    
+                    with col3:
+                        st.markdown("### 📊 Trade Stats")
+                        try:
+                            resp = requests.get('http://localhost:8505/trades/summary/MPC-USDT', timeout=5)
+                            if resp.status_code == 200:
+                                data = resp.json()
+                                st.metric("Trades gesamt", data.get('total_trades', 0))
+                                st.metric("Trades offen", data.get('pending_limit_orders', 0))
+                                st.metric("Win Rate", f"{data.get('win_rate', '0%')}")
+                            else:
+                                st.metric("Trades gesamt", "N/A")
+                                st.metric("Trades offen", "N/A")
+                                st.metric("Win Rate", "N/A")
+                        except:
                             st.metric("Trades gesamt", "N/A")
                             st.metric("Trades offen", "N/A")
                             st.metric("Win Rate", "N/A")
-                    except:
-                        st.metric("Trades gesamt", "N/A")
-                        st.metric("Trades offen", "N/A")
-                        st.metric("Win Rate", "N/A")
-                
-                # Chart: Cumulative MPC over time
-                st.markdown("### 📈 MPC Akkumulation")
-                
-                # Create chart data - resample to daily for cleaner view
-                snapshots_df['date'] = snapshots_df['timestamp'].dt.date
-                daily_df = snapshots_df.groupby('date').agg({
-                    'total_coins': 'last',
-                    'total_usdt': 'last',
-                    'total_value_usdt': 'last'
-                }).reset_index()
-                
-                if len(daily_df) > 0:
-                    # Add delta column
-                    daily_df['mpc_delta'] = daily_df['total_coins'].diff().fillna(0)
-                    daily_df['value_delta'] = daily_df['total_value_usdt'].diff().fillna(0)
-                    daily_df['cumulative_mpc_gain'] = daily_df['total_coins'] - daily_df['total_coins'].iloc[0]
                     
-                    # Simple line chart
-                    chart_data = daily_df[['date', 'cumulative_mpc_gain']].copy()
-                    chart_data.columns = ['Datum', 'MPC Gewinn']
+                    st.markdown("### 📈 MPC Akkumulation")
                     
-                    st.line_chart(chart_data.set_index('Datum'))
+                    snapshots_df['date'] = snapshots_df['timestamp'].dt.date
+                    daily_df = snapshots_df.groupby('date').agg({
+                        'total_coins': 'last',
+                        'total_usdt': 'last',
+                        'total_value_usdt': 'last'
+                    }).reset_index()
                     
-                    # Show daily gains table
-                    with st.expander("📅 Tägliche Changes", expanded=False):
-                        show_df = daily_df[['date', 'total_coins', 'mpc_delta', 'total_usdt', 'value_delta']].copy()
-                        show_df.columns = ['Datum', 'MPC Bestand', 'MPC Δ', 'USDT', 'Wert Δ']
-                        show_df['MPC Δ'] = show_df['MPC Δ'].apply(lambda x: f"{x:+,.0f}" if x != 0 else "—")
-                        show_df['Wert Δ'] = show_df['Wert Δ'].apply(lambda x: f"{x:+,.2f}" if x != 0 else "—")
-                        st.dataframe(show_df.tail(14), use_container_width=True)
-            else:
-                st.info("Keine Wallet Snapshots verfügbar. Der Bot macht stündliche Snapshots.")
-                st.caption("Diese werden in logs/wallet_snapshots.csv gespeichert.")
+                    if len(daily_df) > 0:
+                        daily_df['mpc_delta'] = daily_df['total_coins'].diff().fillna(0)
+                        daily_df['value_delta'] = daily_df['total_value_usdt'].diff().fillna(0)
+                        daily_df['cumulative_mpc_gain'] = daily_df['total_coins'] - daily_df['total_coins'].iloc[0]
+                        
+                        chart_data = daily_df[['date', 'cumulative_mpc_gain']].copy()
+                        chart_data.columns = ['Datum', 'MPC Gewinn']
+                        
+                        st.line_chart(chart_data.set_index('Datum'))
+                        
+                        with st.expander("📅 Tägliche Changes", expanded=False):
+                            show_df = daily_df[['date', 'total_coins', 'mpc_delta', 'total_usdt', 'value_delta']].copy()
+                            show_df.columns = ['Datum', 'MPC Bestand', 'MPC Δ', 'USDT', 'Wert Δ']
+                            show_df['MPC Δ'] = show_df['MPC Δ'].apply(lambda x: f"{x:+,.0f}" if x != 0 else "—")
+                            show_df['Wert Δ'] = show_df['Wert Δ'].apply(lambda x: f"{x:+,.2f}" if x != 0 else "—")
+                            st.dataframe(show_df.tail(14), use_container_width=True)
+                else:
+                    st.info("Keine Wallet Snapshots verfügbar. Der Bot macht stündliche Snapshots.")
+                    st.caption("Diese werden in logs/wallet_snapshots.csv gespeichert.")
+            
+            # =========================================================================
+            # END PORTFOLIO RAPPORT
+            # =========================================================================
         
         # Orderbook detailed view
         with st.expander("📋 Orderbook", expanded=False):
