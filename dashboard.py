@@ -800,6 +800,14 @@ else:
                     snapshots_df = pd.read_csv(snapshot_path)
                     snapshots_df['timestamp'] = pd.to_datetime(snapshots_df['timestamp'])
                     snapshots_df = snapshots_df.sort_values('timestamp')
+                    
+                    # Handle old CSV format (total_coins) vs new (total_mpc)
+                    if 'total_coins' in snapshots_df.columns and 'total_mpc' not in snapshots_df.columns:
+                        snapshots_df = snapshots_df.rename(columns={
+                            'total_coins': 'total_mpc',
+                            'total_usdt': 'total_usdt',
+                            'total_value_usdt': 'total_value_usdt'
+                        })
                 except Exception as e:
                     st.caption(f"Snapshot CSV Fehler: {e}")
             
