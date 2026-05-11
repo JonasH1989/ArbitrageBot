@@ -822,8 +822,8 @@ else:
                     
                     with col1:
                         st.markdown("### 📈 Gesamt (Start → Heute)")
-                        mpc_start = first_row['total_coins']
-                        mpc_now = last_row['total_coins']
+                        mpc_start = first_row['total_mpc']
+                        mpc_now = last_row['total_mpc']
                         mpc_delta = mpc_now - mpc_start
                         usdt_start = first_row['total_usdt']
                         usdt_now = last_row['total_usdt']
@@ -843,8 +843,8 @@ else:
                             first_24h = snapshots_24h.iloc[0]
                             last_24h = snapshots_24h.iloc[-1]
                             
-                            mpc_24h_start = first_24h['total_coins']
-                            mpc_24h_end = last_24h['total_coins']
+                            mpc_24h_start = first_24h['total_mpc']
+                            mpc_24h_end = last_24h['total_mpc']
                             mpc_24h_delta = mpc_24h_end - mpc_24h_start
                             
                             usdt_24h_start = first_24h['total_usdt']
@@ -883,7 +883,7 @@ else:
                     
                     snapshots_df['date'] = snapshots_df['timestamp'].dt.date
                     daily_df = snapshots_df.groupby('date').agg({
-                        'total_coins': 'last',
+                        'total_mpc': 'last',
                         'total_usdt': 'last',
                         'total_value_usdt': 'last'
                     }).reset_index()
@@ -891,7 +891,7 @@ else:
                     if len(daily_df) > 0:
                         daily_df['mpc_delta'] = daily_df['total_coins'].diff().fillna(0)
                         daily_df['value_delta'] = daily_df['total_value_usdt'].diff().fillna(0)
-                        daily_df['cumulative_mpc_gain'] = daily_df['total_coins'] - daily_df['total_coins'].iloc[0]
+                        daily_df['cumulative_mpc_gain'] = daily_df['total_mpc'] - daily_df['total_mpc'].iloc[0]
                         
                         chart_data = daily_df[['date', 'cumulative_mpc_gain']].copy()
                         chart_data.columns = ['Datum', 'MPC Gewinn']
