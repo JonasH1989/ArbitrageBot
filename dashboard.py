@@ -802,7 +802,7 @@ else:
                     snapshots_df = snapshots_df.sort_values('timestamp')
                     
                     # Handle old CSV format (total_coins) vs new (total_mpc)
-                    if 'total_mpc' in snapshots_df.columns and 'total_mpc' not in snapshots_df.columns:
+                    if 'total_coins' in snapshots_df.columns and 'total_mpc' not in snapshots_df.columns:
                         snapshots_df = snapshots_df.rename(columns={
                             'total_mpc': 'total_mpc',
                             'total_usdt': 'total_usdt',
