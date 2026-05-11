@@ -95,7 +95,14 @@ TRADING_PAIR = COIN_SYMBOL
 _last_snapshot_hour = None
 
 def take_wallet_snapshot():
-    """Take hourly snapshot of wallet balances on both exchanges."""
+    """Take hourly snapshot of ALL wallet balances on both exchanges.
+    
+    Captures per exchange and combined:
+    - MPC: free, locked, total
+    - USDT: free, locked, total
+    - Current MPC price
+    - All other coin holdings
+    """
     global _last_snapshot_hour
     now = datetime.now()
     current_hour = now.hour
@@ -105,50 +112,93 @@ def take_wallet_snapshot():
         return
     
     try:
-        # Get balances from both exchanges
+        # Get ALL balances from both exchanges (new detailed format)
         mexc_bal = get_mexc_balances()
         kucoin_bal = get_kucoin_balances()
         
         coin_sym = COIN_SYMBOL.split('-')[0]
         
-        # Extract values
-        mexc_usdt = mexc_bal.get('USDT', 0)
-        mexc_coins = mexc_bal.get(coin_sym, 0)
-        kucoin_usdt = kucoin_bal.get('USDT', 0)
-        kucoin_coins = kucoin_bal.get(coin_sym, 0)
+        # Extract MPC and USDT specifically (now returns dict with free/locked/total)
+        mexc_mpc_data = mexc_bal.get(coin_sym, {'free': 0, 'locked': 0, 'total': 0})
+        mexc_usdt_data = mexc_bal.get('USDT', {'free': 0, 'locked': 0, 'total': 0})
+        kucoin_mpc_data = kucoin_bal.get(coin_sym, {'free': 0, 'locked': 0, 'total': 0})
+        kucoin_usdt_data = kucoin_bal.get('USDT', {'free': 0, 'locked': 0, 'total': 0})
         
+        mexc_mpc = mexc_mpc_data['total']
+        mexc_usdt = mexc_usdt_data['total']
+        kucoin_mpc = kucoin_mpc_data['total']
+        kucoin_usdt = kucoin_usdt_data['total']
+        
+        total_mpc = mexc_mpc + kucoin_mpc
         total_usdt = mexc_usdt + kucoin_usdt
-        total_coins = mexc_coins + kucoin_coins
         
-        # Get current prices for USDT valuation
+        # Get current MPC price for valuation
         try:
             resp_m = requests.get(f'https://api.mexc.com/api/v3/depth?symbol={COIN_SYMBOL_MEXC}&limit=1', timeout=5)
-            mexc_price = float(resp_m.json().get('asks', [[0]])[0][0]) if 'asks' in resp_m.json() else 0
+            mpc_price = float(resp_m.json().get('asks', [[0]])[0][0]) if 'asks' in resp_m.json() else 0
         except:
-            mexc_price = 0
+            mpc_price = 0
         
-        coin_value_usdt = total_coins * mexc_price if mexc_price else 0
-        total_value_usdt = total_usdt + coin_value_usdt
-        
-        # CSV line: timestamp,total_coins,total_usdt,total_value_usdt,mexc_coins,kucoin_coins,mexc_usdt,kucoin_usdt,coin_price
-        ts = now.strftime('%Y-%m-%d %H:%M:%S')
-        csv_line = f"{ts},{total_coins:.6f},{total_usdt:.6f},{total_value_usdt:.6f},{mexc_coins:.6f},{kucoin_coins:.6f},{mexc_usdt:.6f},{kucoin_usdt:.6f},{mexc_price:.6f}\n"
+        mpc_value_usdt = total_mpc * mpc_price if mpc_price else 0
+        total_value_usdt = total_usdt + mpc_value_usdt
         
         # Ensure logs directory exists
-        os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs'), exist_ok=True)
-        csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', 'wallet_snapshots.csv')
+        logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+        os.makedirs(logs_dir, exist_ok=True)
+        csv_path = os.path.join(logs_dir, 'wallet_snapshots.csv')
+        json_path = os.path.join(logs_dir, 'wallet_snapshots_detail.json')
         
-        # Write header if file doesn't exist
+        ts = now.strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Write header if file doesn't exist (new detailed format)
         if not os.path.exists(csv_path):
+            header = "timestamp,mpc_price,mexc_mpc_free,mexc_mpc_locked,mexc_mpc_total,mexc_usdt_free,mexc_usdt_locked,mexc_usdt_total,kucoin_mpc_free,kucoin_mpc_locked,kucoin_mpc_total,kucoin_usdt_free,kucoin_usdt_locked,kucoin_usdt_total,total_mpc,total_usdt,total_value_usdt\n"
             with open(csv_path, 'w') as f:
-                f.write("timestamp,total_coins,total_usdt,total_value_usdt,mexc_coins,kucoin_coins,mexc_usdt,kucoin_usdt,coin_price\n")
+                f.write(header)
         
-        # Append snapshot
+        # CSV line with all details
+        csv_line = f"{ts},{mpc_price},{mexc_mpc_data['free']},{mexc_mpc_data['locked']},{mexc_mpc_data['total']},{mexc_usdt_data['free']},{mexc_usdt_data['locked']},{mexc_usdt_data['total']},{kucoin_mpc_data['free']},{kucoin_mpc_data['locked']},{kucoin_mpc_data['total']},{kucoin_usdt_data['free']},{kucoin_usdt_data['locked']},{kucoin_usdt_data['total']},{total_mpc},{total_usdt},{total_value_usdt}\n"
+        
+        # Append CSV
         with open(csv_path, 'a') as f:
             f.write(csv_line)
         
         _last_snapshot_hour = current_hour
-        log(f"📸 Wallet Snapshot [{ts}]: {coin_sym}={total_coins:,.0f} (${coin_value_usdt:.2f}) | USDT={total_usdt:.2f} | Total=${total_value_usdt:.2f}")
+        log(f"📸 Wallet Snapshot [{ts}]: {coin_sym}={total_mpc:,.0f} (${mpc_value_usdt:.2f}) | USDT={total_usdt:.2f} | Total=${total_value_usdt:.2f}")
+        
+        # Also save detailed JSON for complete history (with all coins)
+        snapshot = {
+            'timestamp': ts,
+            'mpc_price': mpc_price,
+            'mexc': {
+                'MPC': mexc_mpc_data,
+                'USDT': mexc_usdt_data,
+                'all_coins': {k: v for k, v in mexc_bal.items() if k not in [coin_sym, 'USDT']}
+            },
+            'kucoin': {
+                'MPC': kucoin_mpc_data,
+                'USDT': kucoin_usdt_data,
+                'all_coins': {k: v for k, v in kucoin_bal.items() if k not in [coin_sym, 'USDT']}
+            },
+            'totals': {
+                'MPC': total_mpc,
+                'USDT': total_usdt,
+                'MPC_value_usdt': mpc_value_usdt,
+                'total_value_usdt': total_value_usdt
+            }
+        }
+        
+        try:
+            if os.path.exists(json_path):
+                with open(json_path, 'r') as f:
+                    all_snapshots = json.load(f)
+            else:
+                all_snapshots = []
+            all_snapshots.append(snapshot)
+            with open(json_path, 'w') as f:
+                json.dump(all_snapshots, f, indent=2)
+        except Exception as e:
+            log(f"⚠️ Could not save detailed snapshot: {e}")
         
     except Exception as e:
         log(f"❌ Error taking wallet snapshot: {e}")
@@ -277,7 +327,7 @@ def start_http_log_server(port: int = 8503):
 
 # Balance check functions
 def get_mexc_balances() -> dict:
-    """Get MEXC account balances (USDT and COIN)"""
+    """Get ALL MEXC account balances with free and locked amounts."""
     try:
         ts = str(int(time.time() * 1000))
         params = f'timestamp={ts}'
@@ -287,20 +337,24 @@ def get_mexc_balances() -> dict:
         resp = requests.get(url, headers=headers, timeout=10)
         data = resp.json()
 
-        balances = {'USDT': 0.0, COIN_SYMBOL.split('-')[0]: 0.0}
+        balances = {}
         if 'balances' in data:
             for b in data['balances']:
-                if b['asset'] == 'USDT':
-                    balances['USDT'] = float(b.get('free', 0)) + float(b.get('locked', 0))
-                elif b['asset'] == COIN_SYMBOL.split('-')[0]:
-                    balances[COIN_SYMBOL.split('-')[0]] = float(b.get('free', 0)) + float(b.get('locked', 0))
+                asset = b['asset']
+                free = float(b.get('free', 0))
+                locked = float(b.get('locked', 0))
+                total = free + locked
+                if total > 0:
+                    balances[asset] = {'free': free, 'locked': locked, 'total': total}
         return balances
     except Exception as e:
-        log(f"❌ Error getting MEXC balances: {e}")
+        log(f"Error getting MEXC balances: {e}")
+        return {}
+
         return {'USDT': 0.0, COIN_SYMBOL.split('-')[0]: 0.0}
 
 def get_kucoin_balances() -> dict:
-    """Get KuCoin account balances (USDT and COIN)"""
+    """Get ALL KuCoin account balances with free and locked amounts."""
     try:
         ts = str(int(time.time() * 1000))
         path = '/api/v1/accounts'
@@ -317,36 +371,23 @@ def get_kucoin_balances() -> dict:
         resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
         data = resp.json()
 
-        log(f"DEBUG KuCoin accounts response: code={data.get('code')}, data count={len(data.get('data', []))}")
-
-        coin_symbol = COIN_SYMBOL.split('-')[0]
-        balances = {'USDT': 0.0, coin_symbol: 0.0}
-
+        balances = {}
         if data.get('code') == '200000' and 'data' in data:
             for acc in data['data']:
                 currency = acc.get('currency', '')
                 acc_type = acc.get('type', '')
                 available = float(acc.get('available', 0))
                 total = float(acc.get('balance', 0))
-
-                # Debug logging for each account
-                if currency in ['USDT', coin_symbol]:
-                    log(f"DEBUG KuCoin account: {currency} | available={available} | total={total} | type={acc_type}")
-
-                # ONLY use TRADE accounts for balance check (ignore main, margin, etc.)
-                if acc_type == 'trade':
-                    if currency == 'USDT':
-                        balances['USDT'] = total  # Use total (available + locked) for full balance
-                    elif currency == coin_symbol:
-                        balances[coin_symbol] = total  # Use total (available + locked) for full balance
+                locked = total - available
+                if acc_type == 'trade' and total > 0:
+                    balances[currency] = {'free': available, 'locked': locked, 'total': total}
         else:
-            log(f"❌ KuCoin API error: {data}")
+            log(f"KuCoin API error: {data}")
 
-        log(f"DEBUG Final balances: {balances}")
         return balances
     except Exception as e:
-        log(f"❌ Error getting KuCoin balances: {e}")
-        return {'USDT': 0.0, COIN_SYMBOL.split('-')[0]: 0.0}
+        log(f"Error getting KuCoin balances: {e}")
+        return {}
 
 def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_price: float) -> tuple:
     """Check if we have sufficient balances for a trade.
@@ -358,11 +399,11 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
     if direction in ['M->K', 'M→K']:
         # Buying on MEXC, selling on KuCoin
         usdt_needed = qty * buy_price * 1.002  # +0.2% for fees
-        coin_available_kucoin = get_kucoin_balances().get(coin, 0)
+        coin_available_kucoin = get_kucoin_balances().get(coin, {}).get('total', 0)
 
         if usdt_needed > 0.01:  # Need some USDT on MEXC
             mexc_bal = get_mexc_balances()
-            if mexc_bal.get('USDT', 0) < usdt_needed:
+            if mexc_bal.get('USDT', {}).get('total', 0) < usdt_needed:
                 return False, f"Insufficient USDT on MEXC: need ${usdt_needed:.2f}, have ${mexc_bal.get('USDT', 0):.2f}"
 
         if coin_available_kucoin < qty:
@@ -371,11 +412,11 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
     elif direction in ['K->M', 'K→M']:
         # Buying on KuCoin, selling on MEXC
         usdt_needed = qty * buy_price * 1.002  # +0.2% for fees
-        coin_available_mexc = get_mexc_balances().get(coin, 0)
+        coin_available_mexc = get_mexc_balances().get(coin, {}).get('total', 0)
 
         if usdt_needed > 0.01:
             kucoin_bal = get_kucoin_balances()
-            if kucoin_bal.get('USDT', 0) < usdt_needed:
+            if kucoin_bal.get('USDT', {}).get('total', 0) < usdt_needed:
                 return False, f"Insufficient USDT on KuCoin: need ${usdt_needed:.2f}, have ${kucoin_bal.get('USDT', 0):.2f}"
 
         if coin_available_mexc < qty:
