@@ -802,9 +802,9 @@ else:
                     snapshots_df = snapshots_df.sort_values('timestamp')
                     
                     # Handle old CSV format (total_coins) vs new (total_mpc)
-                    if 'total_coins' in snapshots_df.columns and 'total_mpc' not in snapshots_df.columns:
+                    if 'total_mpc' in snapshots_df.columns and 'total_mpc' not in snapshots_df.columns:
                         snapshots_df = snapshots_df.rename(columns={
-                            'total_coins': 'total_mpc',
+                            'total_mpc': 'total_mpc',
                             'total_usdt': 'total_usdt',
                             'total_value_usdt': 'total_value_usdt'
                         })
@@ -907,7 +907,7 @@ else:
                         st.line_chart(chart_data.set_index('Datum'))
                         
                         with st.expander("📅 Tägliche Changes", expanded=False):
-                            show_df = daily_df[['date', 'total_coins', 'mpc_delta', 'total_usdt', 'value_delta']].copy()
+                            show_df = daily_df[['date', 'total_mpc', 'mpc_delta', 'total_usdt', 'value_delta']].copy()
                             show_df.columns = ['Datum', 'MPC Bestand', 'MPC Δ', 'USDT', 'Wert Δ']
                             show_df['MPC Δ'] = show_df['MPC Δ'].apply(lambda x: f"{x:+,.0f}" if x != 0 else "—")
                             show_df['Wert Δ'] = show_df['Wert Δ'].apply(lambda x: f"{x:+,.2f}" if x != 0 else "—")
