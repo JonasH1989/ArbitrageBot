@@ -22,10 +22,35 @@ else:
     SETTINGS_FILE = self_dir / "config.yaml"
 
 def load_config() -> Dict[str, Any]:
-    """Load config from YAML file"""
+    """Load config from YAML file with better error reporting"""
     if SETTINGS_FILE.exists():
-        with open(SETTINGS_FILE, 'r') as f:
-            return yaml.safe_load(f) or {}
+        try:
+            with open(SETTINGS_FILE, 'r') as f:
+                config = yaml.safe_load(f)
+                if config is None:
+                    return {}
+                return config
+        except yaml.YAMLError as e:
+            # Provide helpful error message with file path and line info
+            error_msg = f"YAML Error in {SETTINGS_FILE}: {e}"
+            if hasattr(e, 'problem_mark') and e.problem_mark:
+                error_msg += f"\n  Line {e.problem_mark.line + 1}, Column {e.problem_mark.column + 1}"
+            if hasattr(e, 'context') and e.context:
+                error_msg += f"\n  Context: {e.context}"
+            # Try to read raw content for debugging
+            try:
+                with open(SETTINGS_FILE, 'r') as f:
+                    lines = f.readlines()
+                    if hasattr(e, 'problem_mark') and e.problem_mark and e.problem_mark.line < len(lines):
+                        error_msg += f"\n  Problem line: {lines[e.problem_mark.line].rstrip()}"
+                        if e.problem_mark.line > 0:
+                            error_msg += f"\n  Previous line: {lines[e.problem_mark.line - 1].rstrip()}"
+            except:
+                pass
+            # Print to stderr for visibility in Docker logs
+            import sys
+            print(error_msg, file=sys.stderr)
+            return {}
     return {}
 
 def save_config(config: Dict[str, Any]):
@@ -135,6 +160,7 @@ def remove_pair(pair: str):
     if 'trading' in config and 'pairs' in config['trading'] and pair in config['trading']['pairs']:
         del config['trading']['pairs'][pair]
         save_config(config)
+
 # ========================================================================
 # LOG LEVEL SETTINGS
 # ========================================================================
