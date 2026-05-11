@@ -291,9 +291,9 @@ def get_mexc_balances() -> dict:
         if 'balances' in data:
             for b in data['balances']:
                 if b['asset'] == 'USDT':
-                    balances['USDT'] = float(b.get('free', 0))
+                    balances['USDT'] = float(b.get('free', 0)) + float(b.get('locked', 0))
                 elif b['asset'] == COIN_SYMBOL.split('-')[0]:
-                    balances[COIN_SYMBOL.split('-')[0]] = float(b.get('free', 0))
+                    balances[COIN_SYMBOL.split('-')[0]] = float(b.get('free', 0)) + float(b.get('locked', 0))
         return balances
     except Exception as e:
         log(f"❌ Error getting MEXC balances: {e}")
@@ -336,9 +336,9 @@ def get_kucoin_balances() -> dict:
                 # ONLY use TRADE accounts for balance check (ignore main, margin, etc.)
                 if acc_type == 'trade':
                     if currency == 'USDT':
-                        balances['USDT'] = available  # Use TRADE account balance directly
+                        balances['USDT'] = total  # Use total (available + locked) for full balance
                     elif currency == coin_symbol:
-                        balances[coin_symbol] = available  # Use TRADE account balance directly
+                        balances[coin_symbol] = total  # Use total (available + locked) for full balance
         else:
             log(f"❌ KuCoin API error: {data}")
 
