@@ -897,7 +897,7 @@ else:
                     }).reset_index()
                     
                     if len(daily_df) > 0:
-                        daily_df['mpc_delta'] = daily_df['total_coins'].diff().fillna(0)
+                        daily_df['mpc_delta'] = daily_df['total_mpc'].diff().fillna(0)
                         daily_df['value_delta'] = daily_df['total_value_usdt'].diff().fillna(0)
                         daily_df['cumulative_mpc_gain'] = daily_df['total_mpc'] - daily_df['total_mpc'].iloc[0]
                         
