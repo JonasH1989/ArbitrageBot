@@ -1276,7 +1276,22 @@ else:
                         
                         ex1_order = r.get('ex1_order_id', '')
                         market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
-                        ex1_display = f"<strong>{market_side}</strong><br><span style='font-size:10px;'>{ex1_order}</span>" if ex1_order else f"{market_side}<br><span style='font-size:10px;'>-</span>"
+                        # Add fill trade IDs for multi-level display in Market Side column
+                        ex1_display = f"<strong>{market_side}</strong>"
+                        if is_multi and r.get('raw_ex1_response'):
+                            try:
+                                import json
+                                resp = json.loads(r['raw_ex1_response'])
+                                fills_data = resp.get('data', resp.get('fills', resp.get('data', {}).get('fillList', [])))
+                                if not isinstance(fills_data, list):
+                                    fills_data = [fills_data] if fills_data else []
+                                for f in fills_data:
+                                    f_id = f.get('tradeId') or f.get('orderId') or ''
+                                    if f_id:
+                                        ex1_display += f"<br><span style='font-size:10px;'>{f_id}</span>"
+                            except:
+                                pass
+                        ex1_display += f"<br><span style='font-size:10px;'>{ex1_order}</span>" if ex1_order else ex1_display + f"<br><span style='font-size:10px;'>-</span>"
                         # Market Side + Order ID
                         table_html += f"<td>{ex1_display}</td>"
                         
