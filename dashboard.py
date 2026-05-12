@@ -1199,10 +1199,8 @@ else:
                             time_str = ts[-8:] if len(ts) > 8 else ts
                         
                         rows.append({
-                            'date': date_str,
-                            'time': time_str,
+                            'datetime': f"{date_str} {time_str}",
                             'trade_id': t.get('trade_id', ''),
-                            'trade_id_short': t.get('trade_id', '')[-6:],
                             'direction': 'K→M' if 'K->M' in direction else 'M→K',
                             'strategy': t.get('strategy', current_strategy),
                             'spread': float(t.get('spread_pct', 0) or 0),
