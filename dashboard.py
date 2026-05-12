@@ -1302,8 +1302,13 @@ else:
                                 if fills_data and isinstance(fills_data, list):
                                     fills_html = f"<strong>Σ {market_qty:.1f} @ ${avg_price:.{prec}f}</strong>"
                                     for f in fills_data:
-                                        f_qty = f.get('filledSize', f.get('qty', f.get('size', 0)))
-                                        f_price = f.get('price', 0)
+                                        f_qty = f.get('filledSize') or f.get('dealSize') or f.get('quantity') or f.get('size')
+                                        f_id = f.get('tradeId') or f.get('orderId') or f.get('tradeId') or ''
+                                        f_id_str = f' {f_id}' if f_id else ''
+                                        f_qty = float(f.get('filledSize') or f.get('dealSize') or f.get('quantity') or f.get('size') or 0)
+                                        f_price = float(f.get('price') or 0)
+                                        if f_qty > 0 and f_price > 0:
+                                            fills_html += f"<br><span style='font-size:10px;'>{f_qty:.1f} @ ${f_price:.{prec}f}{f_id_str}</span>"
                                         if f_qty and f_price:
                                             fills_html += f"<br><span style='font-size:10px;'>{float(f_qty):.1f} @ ${float(f_price):.{prec}f}</span>"
                             except:
