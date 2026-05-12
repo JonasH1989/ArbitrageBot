@@ -1272,8 +1272,10 @@ else:
                         table_html += f"<td><div style='text-align:left;'>{r['datetime']}<br><span style='font-family:monospace;font-size:10px;'>{r['trade_id']}</span></div></td>"
                         table_html += f"<td>{r['spread']:.2f}%</td>"
                         market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
-                        table_html += f"<td>{market_side}</td>"
-                        table_html += f"<td>${r['ex1_price']:.4f}</td>"
+                        ex = r['ex1_exchange']
+                        prec = 5 if 'MEXC' in ex else 6
+                        qty_price = f"{r['market_qty']:.1f} @ ${r['fill_price']:.{prec}f}"
+                        table_html += f"<td>{market_side}<br><span style='font-size:10px;'>{qty_price}</span></td>"
                         table_html += f"<td>{r['ex1_qty']:.1f}</td>"
                         table_html += f"<td>→</td>"
                         table_html += f"<td>{r['ex2_exchange']}</td>"
