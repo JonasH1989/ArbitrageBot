@@ -703,3 +703,18 @@ def get_trade_summary_extended(pair: str) -> Dict:
         "avg_spread_pct": round(avg_spread, 3),
         "pending_limit_orders": open_trades,
     }
+
+def format_trade_table(trade_data):
+    """Format completed trade as ASCII table"""
+    return f"""
+╔════════════════════════════════════════════════════════════════╗
+║  Trade Summary                                           ║
+╠════════════════════════════════════════════════════════════════╣
+║  Trade ID:     {trade_data.get('trade_id', 'N/A'):<35} ║
+║  Direction:   {trade_data.get('direction', 'N/A'):<35} ║
+║  ───────────────────────────────────────────────────────  ║
+║  Step 1:     {trade_data.get('step1_ex', 'N/A'):<8} {trade_data.get('step1_type', 'N/A'):<10} {trade_data.get('step1_qty', 0):>8.2f} MPC ║
+║  Step 2:     {trade_data.get('step2_ex', 'N/A'):<8} {trade_data.get('step2_type', 'N/A'):<10} @ {trade_data.get('step2_price', 0):>8.5f}    ║
+╠════════════════════════════════════════════════════════════════╣
+║  Profit:     ${trade_data.get('profit_usdt', 0):>8.4f} USDT   │ MPC Gain:  {trade_data.get('profit_mpc', 0):>8.2f} MPC ║
+╚════════════════════════════════════════════════════════════════╝"""
