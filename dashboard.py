@@ -1346,7 +1346,7 @@ else:
                         
                         # Determine limit side status and display - with safety for missing keys
                         ls_status = r.get('limit_watch_status', '') or ''
-                        ls_order_id = str(r.get('ex2_order_id', '')) or ''
+                        ls_order_id = r.get('ex2_order_id', '')
                         ls_exchange = r.get('ex2_exchange', '') or ''
                         
                         # Debug actual values
