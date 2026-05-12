@@ -1259,7 +1259,7 @@ else:
                     """, unsafe_allow_html=True)
                     
                     table_html = '<table class="log-table"><thead><tr>'
-                    table_html += '<th>Datum<br>Trade ID</th><th>Spread<br><span style="font-size:9px;">Strat</span></th><th>Qty @ Fill<br></th><th>Market Side<br><span style="font-size:9px;">Exchange Trade ID</span></th>'
+                    table_html += '<th>Datum<br>Trade ID</th><th>Spread<br><span style="font-size:9px;">Strategy</span></th><th>Qty @ Fill<br></th><th>Market Side<br><span style="font-size:9px;">Exchange Trade ID</span></th>'
                     table_html += '<th>Limit Side<br><span style="font-size:9px;">Qty @ Limit</span></th><th>Ex2</th><th>Qty</th>'
                     table_html += '<th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th>'
                     table_html += '</tr></thead><tbody>'
@@ -1277,9 +1277,11 @@ else:
                         ex1_order = r.get('ex1_order_id', '')
                         market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
                         ex1_display = f"<strong>{market_side}</strong><br><span style='font-size:10px;'>{ex1_order}</span>" if ex1_order else f"{market_side}<br><span style='font-size:10px;'>-</span>"
-                        table_html += f"<td>{ex1_display}</td>"
-                        
                         # Qty @ Fill Price
+                        table_html += f"<td>{qty_fill}</td>"
+                        
+                        # Market Side + Order ID
+                        table_html += f"<td>{ex1_display}</td>"
                         prec = 5 if 'MEXC' in r['ex1_exchange'] else 6
                         qty_fill = f"<strong>{r['market_qty']:.1f} @ ${r['fill_price']:.{prec}f}</strong>"
                         table_html += f"<td>{qty_fill}</td>"
@@ -1356,7 +1358,7 @@ code{{background:#333;padding:2px 6px;border-radius:3px;}}
 <input type="text" id="searchInput" placeholder="Trade ID suchen...">
 </div>
 <div id="count" style="margin-bottom:15px;color:#888;"></div>
-<table><thead><tr><th>Datum<br>Trade ID</th><th>Spread<br><span style="font-size:9px;">Strat</span></th><th>Qty @ Fill<br></th><th>Market Side<br><span style="font-size:9px;">Exchange Trade ID</span></th><th>Market Qty</th><th>Fill Price</th><th>Limit Side<br><span style="font-size:9px;">Qty @ Limit</span></th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
+<table><thead><tr><th>Datum<br>Trade ID</th><th>Spread<br><span style="font-size:9px;">Strategy</span></th><th>Qty @ Fill<br></th><th>Market Side<br><span style="font-size:9px;">Exchange Trade ID</span></th><th>Market Qty</th><th>Fill Price</th><th>Limit Side<br><span style="font-size:9px;">Qty @ Limit</span></th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
 <tbody id="tradeBody"></tbody></table>
 <script>
 var trades = {trades_json};
