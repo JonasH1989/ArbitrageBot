@@ -1259,8 +1259,8 @@ else:
                     """, unsafe_allow_html=True)
                     
                     table_html = '<table class="log-table"><thead><tr>'
-                    table_html += '<th>Datum<br>Trade ID</th><th>Spread</th><th>Market Side<br><span style="font-size:9px;">Qty @ Fill</span></th>'
-                    table_html += '<th>Ex1</th><th>Qty</th><th>Limit Side<br><span style="font-size:9px;">Qty @ Limit</span></th><th>Ex2</th><th>Qty</th>'
+                    table_html += '<th>Datum<br>Trade ID</th><th>Spread</th><th>Qty @ Fill<br></th><th>Market Side<br><span style="font-size:9px;">Order ID</span></th>'
+                    table_html += '<th>Limit Side<br><span style="font-size:9px;">Qty @ Limit</span></th><th>Ex2</th><th>Qty</th>'
                     table_html += '<th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th>'
                     table_html += '</tr></thead><tbody>'
                     
@@ -1272,12 +1272,16 @@ else:
                         table_html += f"<tr>"
                         table_html += f"<td><div style='text-align:left;'>{r['datetime']}<br><span style='font-family:monospace;font-size:10px;'>{r['trade_id']}</span></div></td>"
                         table_html += f"<td>{r['spread']:.2f}%</td>"
+                        # Market Side + Order ID
                         market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
-                        ex = r['ex1_exchange']
-                        prec = 5 if 'MEXC' in ex else 6
-                        qty_price = f"{r['market_qty']:.1f} @ ${r['fill_price']:.{prec}f}"
-                        table_html += f"<td>{market_side}<br><span style='font-size:10px;'>{qty_price}</span></td>"
-                        table_html += f"<td>{r['ex1_qty']:.1f}</td>"
+                        ex1_order = r.get('ex1_order_id', '')
+                        ex1_display = f"{market_side}<br><span style='font-size:10px;'>{ex1_order}</span>" if ex1_order else f"{market_side}<br><span style='font-size:10px;'>-</span>"
+                        table_html += f"<td>{ex1_display}</td>"
+                        
+                        # Qty @ Fill Price
+                        prec = 5 if 'MEXC' in r['ex1_exchange'] else 6
+                        qty_fill = f"{r['market_qty']:.1f} @ ${r['fill_price']:.{prec}f}"
+                        table_html += f"<td>{qty_fill}</td>"
                         # Determine limit side status and display
                         ls_status = r.get('limit_watch_status', '')
                         ls_order_id = r.get('ex2_order_id', '')
@@ -1351,7 +1355,7 @@ code{{background:#333;padding:2px 6px;border-radius:3px;}}
 <input type="text" id="searchInput" placeholder="Trade ID suchen...">
 </div>
 <div id="count" style="margin-bottom:15px;color:#888;"></div>
-<table><thead><tr><th>Datum<br>Trade ID</th><th>Spread</th><th>Market Side<br><span style="font-size:9px;">Qty @ Fill</span></th><th>Market Qty</th><th>Fill Price</th><th>Limit Side<br><span style="font-size:9px;">Qty @ Limit</span></th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
+<table><thead><tr><th>Datum<br>Trade ID</th><th>Spread</th><th>Qty @ Fill<br></th><th>Market Side<br><span style="font-size:9px;">Order ID</span></th><th>Market Qty</th><th>Fill Price</th><th>Limit Side<br><span style="font-size:9px;">Qty @ Limit</span></th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
 <tbody id="tradeBody"></tbody></table>
 <script>
 var trades = {trades_json};
