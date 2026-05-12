@@ -1277,6 +1277,10 @@ else:
                         ex1_order = r.get('ex1_order_id', '')
                         market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
                         # Add fill trade IDs for multi-level display in Market Side column
+                        # Check for multi-level fills first
+                        avg_price = r.get('ex1_price_avg', r.get('fill_price', 0))
+                        fill_price = r.get('fill_price', 0)
+                        is_multi = abs(avg_price - fill_price) > 0.0001 if avg_price and fill_price else False
                         ex1_display = f"<strong>{market_side}</strong>"
                         if is_multi and r.get('raw_ex1_response'):
                             try:
@@ -1292,7 +1296,11 @@ else:
                             except:
                                 pass
                         ex1_display += f"<br><span style='font-size:10px;'>{ex1_order}</span>" if ex1_order else ex1_display + f"<br><span style='font-size:10px;'>-</span>"
-                        # Market Side + Order ID
+                        # Market Side + Order ID - check for multi-level first
+                        avg_price = r.get('ex1_price_avg', r.get('fill_price', 0))
+                        fill_price = r.get('fill_price', 0)
+                        is_multi = abs(avg_price - fill_price) > 0.0001 if avg_price and fill_price else False
+                        
                         table_html += f"<td>{ex1_display}</td>"
                         
                         # Qty @ Fill - check for multi-level fills from raw_ex1_response
