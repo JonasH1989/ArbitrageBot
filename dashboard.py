@@ -1270,17 +1270,18 @@ else:
                         se = {'FILLED': '✅', 'PARTIAL': '⚠️', 'WATCHING': '⏳', 'CANCELLED': '❌', 'FAILED': '🔴'}.get(r['status'], '❓')
                         
                         table_html += f"<tr>"
-                        table_html += f"<td><div style='text-align:left;'>{r['datetime']}<br><span style='font-family:monospace;font-size:10px;'>{r['trade_id']}</span></div></td>"
-                        table_html += f"<td>{r['spread']:.2f}%<br><span style='font-size:10px;'>{r['strategy']}</span></td>"
+                        table_html += f"<td><div style='text-align:left;'><strong>{r['datetime']}</strong><br><span style='font-family:monospace;font-size:10px;'>{r['trade_id']}</span></div></td>"
+                        table_html += f"<td><strong>{r['spread']:.2f}%</strong><br><span style='font-size:10px;'>{r['strategy']}</span></td>"
                         # Market Side + Order ID
-                        market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
+                        
                         ex1_order = r.get('ex1_order_id', '')
-                        ex1_display = f"{market_side}<br><span style='font-size:10px;'>{ex1_order}</span>" if ex1_order else f"{market_side}<br><span style='font-size:10px;'>-</span>"
+                        market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
+                        ex1_display = f"<strong>{market_side}</strong><br><span style='font-size:10px;'>{ex1_order}</span>" if ex1_order else f"{market_side}<br><span style='font-size:10px;'>-</span>"
                         table_html += f"<td>{ex1_display}</td>"
                         
                         # Qty @ Fill Price
                         prec = 5 if 'MEXC' in r['ex1_exchange'] else 6
-                        qty_fill = f"{r['market_qty']:.1f} @ ${r['fill_price']:.{prec}f}"
+                        qty_fill = f"<strong>{r['market_qty']:.1f} @ ${r['fill_price']:.{prec}f}</strong>"
                         table_html += f"<td>{qty_fill}</td>"
                         # Determine limit side status and display
                         ls_status = r.get('limit_watch_status', '')
@@ -1288,22 +1289,22 @@ else:
                         
                         # Fall 5: Order missing
                         if not ls_order_id or ls_order_id in ['', '0', 'N/A']:
-                            ls_display = "⚠️ Order fehlt!"
+                            ls_display = "<strong>⚠️ Order fehlt!</strong>"
                         # Fall 3: PARTIAL - multiple fills
                         elif ls_status == 'PARTIAL':
                             # Show multiple fills if available
-                            ls_display = f"PARTIAL<br><span style='font-size:10px;'>{r['ex2_qty']:.1f} @ ${r['ex2_price']:.5f}</span>"
+                            ls_display = f"<strong>PARTIAL</strong><br><span style='font-size:10px;'>{r['ex2_qty']:.1f} @ ${r['ex2_price']:.5f}</span>"
                         # Fall 2: WATCHING - editable
                         elif ls_status == 'WATCHING':
                             prec = 5 if 'KUCOIN' in r['ex2_exchange'] else 5
-                            ls_display = f"WATCHING<br><span style='font-size:10px;'>{r['ex2_qty']:.1f} @ ${r['ex2_price']:.5f}</span><br><span style='color:#00e676;cursor:pointer;'>[EDIT]</span>"
+                            ls_display = f"<strong>WATCHING</strong><br><span style='font-size:10px;'>{r['ex2_qty']:.1f} @ ${r['ex2_price']:.5f}</span><br><span style='color:#00e676;cursor:pointer;'>[EDIT]</span>"
                         # Fall 1: FILLED
                         elif ls_status == 'FILLED':
                             prec = 5 if 'KUCOIN' in r['ex2_exchange'] else 5
-                            ls_display = f"{r['ex2_qty']:.1f} @ ${r['ex2_price']:.{prec}f}"
+                            ls_display = f"<strong>{r['ex2_qty']:.1f} @ ${r['ex2_price']:.{prec}f}</strong>"
                         # Fall 4: Error/Cancelled
                         else:
-                            ls_display = f"⚠️ {ls_status}"
+                            ls_display = f"<strong>⚠️ {ls_status}"
                         
                         table_html += f"<td>{ls_display}</td>"
                         table_html += f"<td style='text-align:right;' class='{gc}'>${r['gross']:.4f}</td>"
