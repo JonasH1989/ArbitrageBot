@@ -1253,7 +1253,7 @@ else:
                     """, unsafe_allow_html=True)
                     
                     table_html = '<table class="log-table"><thead><tr>'
-                    table_html += '<th>Datum</th><th>Zeit</th><th>ID</th><th>Dir</th><th>Spread</th>'
+                    table_html += '<th>Datum</th><th>Trade ID</th><th>Market Side</th><th>Spread</th>'
                     table_html += '<th>Ex1</th><th>Qty</th><th>→</th><th>Ex2</th><th>Qty</th>'
                     table_html += '<th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th>'
                     table_html += '</tr></thead><tbody>'
@@ -1266,7 +1266,7 @@ else:
                         table_html += f"<tr>"
                         table_html += f"<td>{r['datetime']}</td>"
                         table_html += f"<td style='font-family:monospace;'>{r['trade_id']}</td>"
-                        table_html += f"<td>{r['direction']}</td>"
+                        table_html += f"<td>{f"{r['ex1_exchange']} {'Buy' if 'M' in r['direction'] else 'Sell'}"}</td>"
                         table_html += f"<td>{r['spread']:.2f}%</td>"
                         table_html += f"<td>{r['ex1_exchange']}</td>"
                         table_html += f"<td>{r['ex1_qty']:.1f}</td>"
@@ -1319,7 +1319,7 @@ code{{background:#333;padding:2px 6px;border-radius:3px;}}
 <input type="text" id="searchInput" placeholder="Trade ID suchen...">
 </div>
 <div id="count" style="margin-bottom:15px;color:#888;"></div>
-<table><thead><tr><th>Datum</th><th>Zeit</th><th>Trade ID</th><th>Dir</th><th>Spread</th><th>Ex1</th><th>Ex1 Qty</th><th>Ex2</th><th>Ex2 Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
+<table><thead><tr><th>Datum</th><th>Trade ID</th><th>Market Side</th><th>Spread</th><th>Ex1</th><th>Ex1 Qty</th><th>Ex2</th><th>Ex2 Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
 <tbody id="tradeBody"></tbody></table>
 <script>
 var trades = {trades_json};
