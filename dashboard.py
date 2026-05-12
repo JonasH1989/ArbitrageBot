@@ -1384,7 +1384,7 @@ filterTable();
                     
                     # CSV Export
                     df = pd.DataFrame(rows)
-                    csv_cols = ['date', 'time', 'trade_id', 'direction', 'strategy', 'spread',
+                    csv_cols = ['datetime', 'trade_id', 'direction', 'strategy', 'spread',
                                'ex1_exchange', 'ex1_order_id', 'ex1_qty', 'ex1_price', 'ex1_value', 'ex1_fees',
                                'ex2_exchange', 'ex2_order_id', 'ex2_qty', 'ex2_price', 'ex2_value', 'ex2_fees',
                                'gross', 'fees', 'net', 'profit_mpc', 'profit_usdt', 'status']
