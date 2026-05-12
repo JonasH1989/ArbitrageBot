@@ -1266,7 +1266,8 @@ else:
                         table_html += f"<tr>"
                         table_html += f"<td>{r['datetime']}</td>"
                         table_html += f"<td style='font-family:monospace;'>{r['trade_id']}</td>"
-                        table_html += f"<td>{f"{r['ex1_exchange']} {'Buy' if 'M' in r['direction'] else 'Sell'}"}</td>"
+                        market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
+                        table_html += f"<td>{market_side}</td>"
                         table_html += f"<td>{r['spread']:.2f}%</td>"
                         table_html += f"<td>{r['ex1_exchange']}</td>"
                         table_html += f"<td>{r['ex1_qty']:.1f}</td>"
