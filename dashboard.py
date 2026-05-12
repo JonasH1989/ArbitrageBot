@@ -1202,6 +1202,8 @@ else:
                             'datetime': f"{date_str} {time_str}",
                             'trade_id': t.get('trade_id', ''),
                             'market_side': t.get('ex1_exchange', '') + (' Buy' if 'M' in direction else ' Sell'),
+                            'market_qty': float(t.get('ex1_qty_filled', 0) or 0),
+                            'fill_price': float(t.get('ex1_price_avg', t.get('ex1_price_actual', 0)) or 0),
                             'direction': 'K→M' if 'K->M' in direction else 'M→K',
                             'strategy': t.get('strategy', current_strategy),
                             'spread': float(t.get('spread_pct', 0) or 0),
