@@ -1260,7 +1260,7 @@ else:
                     
                     table_html = '<table class="log-table"><thead><tr>'
                     table_html += '<th>Datum<br>Trade ID</th><th>Spread</th><th>Market Side<br><span style="font-size:9px;">Qty @ Fill</span></th>'
-                    table_html += '<th>Ex1</th><th>Qty</th><th>→</th><th>Ex2</th><th>Qty</th>'
+                    table_html += '<th>Ex1</th><th>Qty</th><th>Limit Side<br><span style="font-size:9px;">Qty @ Limit</span></th><th>Ex2</th><th>Qty</th>'
                     table_html += '<th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th>'
                     table_html += '</tr></thead><tbody>'
                     
@@ -1278,9 +1278,30 @@ else:
                         qty_price = f"{r['market_qty']:.1f} @ ${r['fill_price']:.{prec}f}"
                         table_html += f"<td>{market_side}<br><span style='font-size:10px;'>{qty_price}</span></td>"
                         table_html += f"<td>{r['ex1_qty']:.1f}</td>"
-                        table_html += f"<td>→</td>"
-                        table_html += f"<td>{r['ex2_exchange']}</td>"
-                        table_html += f"<td>{r['ex2_qty']:.1f}</td>"
+                        # Determine limit side status and display
+                        ls_status = r.get('limit_watch_status', '')
+                        ls_order_id = r.get('ex2_order_id', '')
+                        
+                        # Fall 5: Order missing
+                        if not ls_order_id or ls_order_id in ['', '0', 'N/A']:
+                            ls_display = "⚠️ Order fehlt!"
+                        # Fall 3: PARTIAL - multiple fills
+                        elif ls_status == 'PARTIAL':
+                            # Show multiple fills if available
+                            ls_display = f"PARTIAL<br><span style='font-size:10px;'>{r['ex2_qty']:.1f} @ ${r['ex2_price']:.5f}</span>"
+                        # Fall 2: WATCHING - editable
+                        elif ls_status == 'WATCHING':
+                            prec = 5 if 'KUCOIN' in r['ex2_exchange'] else 5
+                            ls_display = f"WATCHING<br><span style='font-size:10px;'>{r['ex2_qty']:.1f} @ ${r['ex2_price']:.5f}</span><br><span style='color:#00e676;cursor:pointer;'>[EDIT]</span>"
+                        # Fall 1: FILLED
+                        elif ls_status == 'FILLED':
+                            prec = 5 if 'KUCOIN' in r['ex2_exchange'] else 5
+                            ls_display = f"{r['ex2_qty']:.1f} @ ${r['ex2_price']:.{prec}f}"
+                        # Fall 4: Error/Cancelled
+                        else:
+                            ls_display = f"⚠️ {ls_status}"
+                        
+                        table_html += f"<td>{ls_display}</td>"
                         table_html += f"<td style='text-align:right;' class='{gc}'>${r['gross']:.4f}</td>"
                         table_html += f"<td style='text-align:right;font-weight:bold;' class='{nc}'>${r['net']:.4f}</td>"
                         table_html += f"<td>{se}</td>"
@@ -1330,7 +1351,7 @@ code{{background:#333;padding:2px 6px;border-radius:3px;}}
 <input type="text" id="searchInput" placeholder="Trade ID suchen...">
 </div>
 <div id="count" style="margin-bottom:15px;color:#888;"></div>
-<table><thead><tr><th>Datum<br>Trade ID</th><th>Spread</th><th>Market Side<br><span style="font-size:9px;">Qty @ Fill</span></th><th>Market Qty</th><th>Fill Price</th><th>→</th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
+<table><thead><tr><th>Datum<br>Trade ID</th><th>Spread</th><th>Market Side<br><span style="font-size:9px;">Qty @ Fill</span></th><th>Market Qty</th><th>Fill Price</th><th>Limit Side<br><span style="font-size:9px;">Qty @ Limit</span></th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
 <tbody id="tradeBody"></tbody></table>
 <script>
 var trades = {trades_json};
