@@ -1335,9 +1335,6 @@ else:
                                 pass
                         
                         table_html += f"<td>{fills_html}</td>"
-                        # DEBUG
-                        import sys
-                        sys.stderr.write(f"DEBUG CSV: ex2_order_id={r.get('ex2_order_id')}, limit_watch_status={r.get('limit_watch_status')}\n")
                         
                         # Determine limit side status and display
                         ls_status = r.get('limit_watch_status', '')
