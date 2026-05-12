@@ -1264,7 +1264,7 @@ else:
                         se = {'FILLED': '✅', 'PARTIAL': '⚠️', 'WATCHING': '⏳', 'CANCELLED': '❌', 'FAILED': '🔴'}.get(r['status'], '❓')
                         
                         table_html += f"<tr>"
-                        table_html += f"<td>{r['date']}</td>"
+                        table_html += f"<td>{r['datetime']}</td>"
                         table_html += f"<td>{r['time']}</td>"
                         table_html += f"<td style='font-family:monospace;'>{r['trade_id_short']}</td>"
                         table_html += f"<td>{r['direction']}</td>"
