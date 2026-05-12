@@ -1265,7 +1265,7 @@ else:
                         
                         table_html += f"<tr>"
                         table_html += f"<td>{r['datetime']}</td>"
-                        table_html += f"<td>{r['time']}</td>"
+                        table_html += f"<td>{r['datetime']}</td>"
                         table_html += f"<td style='font-family:monospace;'>{r['trade_id_short']}</td>"
                         table_html += f"<td>{r['direction']}</td>"
                         table_html += f"<td>{r['spread']:.2f}%</td>"
