@@ -404,7 +404,7 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
         if usdt_needed > 0.01:  # Need some USDT on MEXC
             mexc_bal = get_mexc_balances()
             if mexc_bal.get('USDT', {}).get('total', 0) < usdt_needed:
-                return False, f"Insufficient USDT on MEXC: need ${usdt_needed:.2f}, have ${mexc_bal.get('USDT', 0):.2f}"
+                return False, f"Insufficient USDT on MEXC: need ${usdt_needed:.2f}, have ${mexc_bal.get('USDT', {}).get('total', 0):.2f}"
 
         if coin_available_kucoin < qty:
             return False, f"Insufficient {coin} on KuCoin: need {qty:.2f}, have {coin_available_kucoin:.2f}"
@@ -417,7 +417,7 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
         if usdt_needed > 0.01:
             kucoin_bal = get_kucoin_balances()
             if kucoin_bal.get('USDT', {}).get('total', 0) < usdt_needed:
-                return False, f"Insufficient USDT on KuCoin: need ${usdt_needed:.2f}, have ${kucoin_bal.get('USDT', 0):.2f}"
+                return False, f"Insufficient USDT on KuCoin: need ${usdt_needed:.2f}, have ${kucoin_bal.get('USDT', {}).get('total', 0):.2f}"
 
         if coin_available_mexc < qty:
             return False, f"Insufficient {coin} on MEXC: need {qty:.2f}, have {coin_available_mexc:.2f}"
@@ -1781,7 +1781,7 @@ def main():
             )
 
         # Trade BOTH directions when profitable!
-        if not pair_enabled:
+        if not pair_enabled or not is_active():
             state = STATE_WAITING
             if int(time.time()) % 10 == 0:
                 log(f"INAKTIV - keine Trades")
