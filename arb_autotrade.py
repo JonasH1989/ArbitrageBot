@@ -318,6 +318,16 @@ def start_http_log_server(port: int = 8503):
 
     def run_server():
         app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+        @app.route('/api/files', methods=['GET'])
+        def list_files():
+            import os
+            log_dir = str(LOG_DIR)
+            if os.path.exists(log_dir):
+                files = os.listdir(log_dir)
+            else:
+                files = []
+            return jsonify({'log_dir': log_dir, 'files': files})
+
 
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
