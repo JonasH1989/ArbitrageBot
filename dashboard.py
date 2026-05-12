@@ -1192,10 +1192,10 @@ else:
                         ts = t.get('internal_ts', '')
                         try:
                             dt = datetime.fromisoformat(ts)
-                            date_str = dt.strftime('%d.%m')
+                            date_str = dt.strftime('%d.%m.%Y')
                             time_str = dt.strftime('%H:%M:%S')
                         except:
-                            date_str = ts[:10] if len(ts) > 10 else 'N/A'
+                            date_str = ts[:10] if len(ts) > 10 else ts[:6] + '.' + ts[:2] if len(ts) >= 6 else 'N/A'
                             time_str = ts[-8:] if len(ts) > 8 else ts
                         
                         rows.append({
@@ -1264,7 +1264,6 @@ else:
                         se = {'FILLED': '✅', 'PARTIAL': '⚠️', 'WATCHING': '⏳', 'CANCELLED': '❌', 'FAILED': '🔴'}.get(r['status'], '❓')
                         
                         table_html += f"<tr>"
-                        table_html += f"<td>{r['datetime']}</td>"
                         table_html += f"<td>{r['datetime']}</td>"
                         table_html += f"<td style='font-family:monospace;'>{r['trade_id']}</td>"
                         table_html += f"<td>{r['direction']}</td>"
