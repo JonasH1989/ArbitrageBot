@@ -1277,14 +1277,13 @@ else:
                         ex1_order = r.get('ex1_order_id', '')
                         market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
                         ex1_display = f"<strong>{market_side}</strong><br><span style='font-size:10px;'>{ex1_order}</span>" if ex1_order else f"{market_side}<br><span style='font-size:10px;'>-</span>"
-                        # Qty @ Fill Price
+                        # Qty @ Fill Price (define first)
+                        prec = 5 if 'MEXC' in r['ex1_exchange'] else 6
+                        qty_fill = f"<strong>{r['market_qty']:.1f} @ ${r['fill_price']:.{prec}f}</strong>"
                         table_html += f"<td>{qty_fill}</td>"
                         
                         # Market Side + Order ID
                         table_html += f"<td>{ex1_display}</td>"
-                        prec = 5 if 'MEXC' in r['ex1_exchange'] else 6
-                        qty_fill = f"<strong>{r['market_qty']:.1f} @ ${r['fill_price']:.{prec}f}</strong>"
-                        table_html += f"<td>{qty_fill}</td>"
                         # Determine limit side status and display
                         ls_status = r.get('limit_watch_status', '')
                         ls_order_id = r.get('ex2_order_id', '')
