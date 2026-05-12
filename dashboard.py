@@ -12,6 +12,7 @@ from pathlib import Path
 import os
 import pandas as pd
 import io
+import io
 from trade_logger import *
 import sys
 from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, get_alert_settings, set_alert_settings, get_api_keys, set_api_keys, get_all_pairs, add_pair, remove_pair, get_log_level, set_log_level
@@ -1480,6 +1481,11 @@ filterTable();
                                'ex2_exchange', 'ex2_order_id', 'ex2_qty', 'ex2_price', 'ex2_value', 'ex2_fees',
                                'gross', 'fees', 'net', 'profit_mpc', 'profit_usdt', 'status']
                     csv_bytes = df[csv_cols].to_csv(index=False).encode('utf-8')
+                    st.download_button("📥 Excel", 
+    data=(lambda: pd.read_csv(io.BytesIO(csv_bytes)).to_excel(io.BytesIO(), index=False) or io.BytesIO().getvalue())(),
+    file_name=f"MPC_trades_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
                     st.download_button("📥 CSV Export", data=csv_bytes, file_name=f"MPC_trades_{datetime.now().strftime('%Y%m%d_%H%M')}.csv", mime="text/csv")
                 else:
                     st.info("Keine Trades")
