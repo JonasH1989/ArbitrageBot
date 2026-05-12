@@ -1170,6 +1170,10 @@ else:
                     st.metric(" ", f"{total_avail:.2f} {sym}", f"Total: {total_all:.2f} {sym}")
         
         # Log - Trade history
+        # DEBUG: Print trade loading info
+        import sys
+        sys.stderr.write(f"LOG SECTION: Loading trades\n")
+        
         with st.expander("📜 Log", expanded=False):
             trades = get_trades('MPC-USDT', limit=100)
             
