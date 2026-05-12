@@ -1280,10 +1280,36 @@ else:
                         # Market Side + Order ID
                         table_html += f"<td>{ex1_display}</td>"
                         
-                        # Qty @ Fill Price (define first)
+                        # Qty @ Fill - check for multi-level fills from raw_ex1_response
                         prec = 5 if 'MEXC' in r['ex1_exchange'] else 6
-                        qty_fill = f"<strong>{r['market_qty']:.1f} @ ${r['fill_price']:.{prec}f}</strong>"
-                        table_html += f"<td>{qty_fill}</td>"
+                        market_qty = r.get('market_qty', 0)
+                        fill_price = r.get('fill_price', 0)
+                        avg_price = r.get('ex1_price_avg', fill_price)
+                        
+                        # Check if multi-level fill (avg != fill indicates multiple levels)
+                        is_multi = abs(avg_price - fill_price) > 0.0001 if avg_price and fill_price else False
+                        
+                        # Try to get individual fills from raw response
+                        fills_html = f"<strong>{market_qty:.1f} @ ${avg_price:.{prec}f}</strong>"
+                        
+                        if is_multi and r.get('raw_ex1_response'):
+                            try:
+                                import json
+                                resp = json.loads(r['raw_ex1_response'])
+                                # Parse fills from exchange response
+                                # This structure varies by exchange - typically a list of fills
+                                fills_data = resp.get('data', resp.get('fills', []))
+                                if fills_data and isinstance(fills_data, list):
+                                    fills_html = f"<strong>Σ {market_qty:.1f} @ ${avg_price:.{prec}f}</strong>"
+                                    for f in fills_data:
+                                        f_qty = f.get('filledSize', f.get('qty', f.get('size', 0)))
+                                        f_price = f.get('price', 0)
+                                        if f_qty and f_price:
+                                            fills_html += f"<br><span style='font-size:10px;'>{float(f_qty):.1f} @ ${float(f_price):.{prec}f}</span>"
+                            except:
+                                pass
+                        
+                        table_html += f"<td>{fills_html}</td>"
                         # Determine limit side status and display
                         ls_status = r.get('limit_watch_status', '')
                         ls_order_id = r.get('ex2_order_id', '')
