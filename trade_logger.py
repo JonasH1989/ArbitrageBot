@@ -38,6 +38,7 @@ UNIFIED_COLUMNS = [
     "ex1_qty_filled",        # Quantity filled
     "ex1_price_expected",    # Expected price when trade was initiated (pK or pM)
     "ex1_price_actual",      # Actual execution price
+    "ex1_price_avg",       # Average fill price (for multi-level fills)
     "ex1_value_usdt",        # Total value in USDT
     "ex1_fees",              # Fees paid in USDT
     "ex1_create_ts",         # Exchange timestamp (ms)
@@ -51,7 +52,8 @@ UNIFIED_COLUMNS = [
     "ex2_qty_ordered",       # Quantity ordered
     "ex2_qty_filled",        # Quantity filled (0 = pending)
     "ex2_price_expected",    # Expected price when trade was initiated
-    "ex2_price_actual",      # Actual fill price (0 if not filled)
+    "ex2_price_actual",      #
+    "ex2_price_avg",       # Actual fill price (0 if not filled)
     "ex2_value_usdt",        # Total value in USDT (0 if not filled)
     "ex2_fees",              # Fees paid in USDT
     "ex2_create_ts",         # Exchange timestamp (ms)
@@ -76,6 +78,34 @@ UNIFIED_COLUMNS = [
     "raw_ex2_response",      # Full JSON response from Exchange 2
     "updated_at",            # Last update timestamp (ISO format)
 ]
+
+# =============================================================================
+# MULTI-LEVEL FILL DOCUMENTATION (2026-05-12)
+# =============================================================================
+#
+# When a market order fills across multiple price levels (e.g., 100 MPC bought at 3 different prices),
+# the fills are tracked in raw_ex1_response as individual fill events.
+#
+# CSV Fields for Multi-Level Support:
+# - ex1_qty_filled:     Total quantity filled (sum of all fills)
+# - ex1_price_actual:   Last fill price (single fill)
+# - ex1_price_avg:     Volume-weighted average price (calculated from all fills)
+# - raw_ex1_response: JSON array of individual fill events from exchange API
+#
+# Display Logic (dashboard.py):
+# - Single fill (1 line):  "85.0 @ $0.01630"
+# - Multi-level (3 lines):  "Σ 100.0 @ $0.01652"  ← Summe + Durchschnittspreis
+#                         "40.0 @ $0.01630"    ← Teilorder 1
+#                         "25.0 @ $0.01680"    ← Teilorder 2
+#
+# To enable multi-level detection:
+# 1. exchange API must return individual fills in response (check MEXC/KuCoin API docs)
+# 2. raw_ex1_response must be stored as JSON string in CSV
+# 3. ex1_price_avg must be calculated from: Σ(qty * price) / Σ(qty)
+#
+# =============================================================================
+
+
 
 
 def ensure_log_dir():
