@@ -1313,7 +1313,7 @@ else:
                         is_multi = abs(avg_price - fill_price) > 0.0001 if avg_price and fill_price else False
                         
                         # Try to get individual fills from raw response
-                        fills_html = f"<strong>{market_qty:.1f} @ ${avg_price:.{prec}f}</strong>"
+                        fills_html = f"<strong>${market_qty:.1f} MPC @ ${avg_price:.{prec}f}</strong>"
                         
                         if is_multi and r.get('raw_ex1_response'):
                             try:
@@ -1323,7 +1323,7 @@ else:
                                 # This structure varies by exchange - typically a list of fills
                                 fills_data = resp.get('data', resp.get('fills', []))
                                 if fills_data and isinstance(fills_data, list):
-                                    fills_html = f"<strong>Σ {market_qty:.1f} @ ${avg_price:.{prec}f}</strong>"
+                                    fills_html = f"<strong>Σ ${market_qty:.1f} MPC @ ${avg_price:.{prec}f}</strong>"
                                     for f in fills_data:
                                         # Get trade IDs per fill (multi-line display)
                                         for f in fills_data:
@@ -1344,15 +1344,15 @@ else:
                         # Fall 3: PARTIAL - multiple fills
                         elif ls_status == 'PARTIAL':
                             # Show multiple fills if available
-                            ls_display = f"<strong>PARTIAL</strong><br><span style='font-size:10px;'>{r['ex2_qty']:.1f} @ ${r['ex2_price']:.5f}</span>"
+                            ls_display = f"<strong>PARTIAL</strong><br><span style='font-size:10px;'>{r['ex2_qty']:.1f} MPC @ ${r['ex2_price']:.5f}</span>"
                         # Fall 2: WATCHING - editable
                         elif ls_status == 'WATCHING':
                             prec = 5 if 'KUCOIN' in r['ex2_exchange'] else 5
-                            ls_display = f"<strong>WATCHING</strong><br><span style='font-size:10px;'>{r['ex2_qty']:.1f} @ ${r['ex2_price']:.5f}</span><br><span style='color:#00e676;cursor:pointer;'>[EDIT]</span>"
+                            ls_display = f"<strong>WATCHING</strong><br><span style='font-size:10px;'>{r['ex2_qty']:.1f} MPC @ ${r['ex2_price']:.5f}</span><br><span style='color:#00e676;cursor:pointer;'>[EDIT]</span>"
                         # Fall 1: FILLED
                         elif ls_status == 'FILLED':
                             prec = 5 if 'KUCOIN' in r['ex2_exchange'] else 5
-                            ls_display = f"<strong>{r['ex2_qty']:.1f} @ ${r['ex2_price']:.{prec}f}</strong>"
+                            ls_display = f"<strong>{r['ex2_qty']:.1f} MPC @ ${r['ex2_price']:.{prec}f}</strong>"
                         # Fall 4: Error/Cancelled
                         else:
                             ls_display = f"<strong>⚠️ {ls_status}"
