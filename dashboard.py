@@ -1267,10 +1267,10 @@ else:
                         table_html += f"<tr>"
                         table_html += f"<td>{r['datetime']}</td>"
                         table_html += f"<td style='font-family:monospace;'>{r['trade_id']}</td>"
+                        table_html += f"<td>{r['spread']:.2f}%</td>"
                         market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
                         table_html += f"<td>{market_side}</td>"
-                        table_html += f"<td>{r['spread']:.2f}%</td>"
-                        table_html += f"<td>{r['ex1_exchange']}</td>"
+                        table_html += f"<td>${r['ex1_price']:.4f}</td>"
                         table_html += f"<td>{r['ex1_qty']:.1f}</td>"
                         table_html += f"<td>→</td>"
                         table_html += f"<td>{r['ex2_exchange']}</td>"
@@ -1321,7 +1321,7 @@ code{{background:#333;padding:2px 6px;border-radius:3px;}}
 <input type="text" id="searchInput" placeholder="Trade ID suchen...">
 </div>
 <div id="count" style="margin-bottom:15px;color:#888;"></div>
-<table><thead><tr><th>Datum</th><th>Trade ID</th><th>Market Side</th><th>Spread</th><th>Ex1</th><th>Ex1 Qty</th><th>Ex2</th><th>Ex2 Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
+<table><thead><tr><th>Datum</th><th>Trade ID</th><th>Spread</th><th>Market Side</th><th>Market Qty</th><th>Fill Price</th><th>→</th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
 <tbody id="tradeBody"></tbody></table>
 <script>
 var trades = {trades_json};
@@ -1385,7 +1385,7 @@ filterTable();
                     
                     # CSV Export
                     df = pd.DataFrame(rows)
-                    csv_cols = ['datetime', 'trade_id', 'market_side', 'strategy', 'spread',
+                    csv_cols = ['datetime', 'trade_id', 'market_side', 'market_qty', 'fill_price', 'strategy', 'spread',
                                'ex1_exchange', 'ex1_order_id', 'ex1_qty', 'ex1_price', 'ex1_value', 'ex1_fees',
                                'ex2_exchange', 'ex2_order_id', 'ex2_qty', 'ex2_price', 'ex2_value', 'ex2_fees',
                                'gross', 'fees', 'net', 'profit_mpc', 'profit_usdt', 'status']
