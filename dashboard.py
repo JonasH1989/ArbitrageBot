@@ -1258,7 +1258,7 @@ else:
                     """, unsafe_allow_html=True)
                     
                     table_html = '<table class="log-table"><thead><tr>'
-                    table_html += '<th>Datum</th><th>Trade ID</th><th>Spread</th><th>Market Side</th>'
+                    table_html += '<th>Datum<br>Trade ID</th><th>Spread</th><th>Market Side</th>'
                     table_html += '<th>Ex1</th><th>Qty</th><th>→</th><th>Ex2</th><th>Qty</th>'
                     table_html += '<th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th>'
                     table_html += '</tr></thead><tbody>'
@@ -1269,8 +1269,7 @@ else:
                         se = {'FILLED': '✅', 'PARTIAL': '⚠️', 'WATCHING': '⏳', 'CANCELLED': '❌', 'FAILED': '🔴'}.get(r['status'], '❓')
                         
                         table_html += f"<tr>"
-                        table_html += f"<td>{r['datetime']}</td>"
-                        table_html += f"<td style='font-family:monospace;'>{r['trade_id']}</td>"
+                        table_html += f"<td><div style='text-align:left;'>{r['datetime']}<br><span style='font-family:monospace;font-size:10px;'>{r['trade_id']}</span></div></td>"
                         table_html += f"<td>{r['spread']:.2f}%</td>"
                         market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
                         table_html += f"<td>{market_side}</td>"
@@ -1327,7 +1326,7 @@ code{{background:#333;padding:2px 6px;border-radius:3px;}}
 <input type="text" id="searchInput" placeholder="Trade ID suchen...">
 </div>
 <div id="count" style="margin-bottom:15px;color:#888;"></div>
-<table><thead><tr><th>Datum</th><th>Trade ID</th><th>Spread</th><th>Market Side</th><th>Market Qty</th><th>Fill Price</th><th>→</th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
+<table><thead><tr><th>Datum<br>Trade ID</th><th>Spread</th><th>Market Side</th><th>Market Qty</th><th>Fill Price</th><th>→</th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
 <tbody id="tradeBody"></tbody></table>
 <script>
 var trades = {trades_json};
