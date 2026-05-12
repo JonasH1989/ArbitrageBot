@@ -1344,15 +1344,15 @@ else:
                         # Fall 3: PARTIAL - multiple fills
                         elif ls_status == 'PARTIAL':
                             # Show multiple fills if available
-                            ls_display = f"<strong>PARTIAL</strong><br><span style='font-size:10px;'>{r['ex2_qty']:.1f} MPC @ ${r['ex2_price']:.5f}</span>"
+                            ls_display = f"<strong>PARTIAL</strong><br><span style='font-size:10px;'>{r.get('ex2_qty_filled') or r.get('ex2_qty_ordered'):.1f} MPC @ ${r.get('ex2_price_actual') or r.get('ex2_price_expected'):.5f}</span>"
                         # Fall 2: WATCHING - editable
                         elif ls_status == 'WATCHING':
                             prec = 5 if 'KUCOIN' in r['ex2_exchange'] else 5
-                            ls_display = f"<strong>WATCHING</strong><br><span style='font-size:10px;'>{r['ex2_qty']:.1f} MPC @ ${r['ex2_price']:.5f}</span><br><span style='color:#00e676;cursor:pointer;'>[EDIT]</span>"
+                            ls_display = f"<strong>WATCHING</strong><br><span style='font-size:10px;'>{r.get('ex2_qty_filled') or r.get('ex2_qty_ordered'):.1f} MPC @ ${r.get('ex2_price_actual') or r.get('ex2_price_expected'):.5f}</span><br><span style='color:#00e676;cursor:pointer;'>[EDIT]</span>"
                         # Fall 1: FILLED
                         elif ls_status == 'FILLED':
                             prec = 5 if 'KUCOIN' in r['ex2_exchange'] else 5
-                            ls_display = f"<strong>{r['ex2_qty']:.1f} MPC @ ${r['ex2_price']:.{prec}f}</strong>"
+                            ls_display = f"<strong>{r.get('ex2_qty_filled') or r.get('ex2_qty_ordered'):.1f} MPC @ ${r.get('ex2_price_actual') or r.get('ex2_price_expected'):.{prec}f}</strong>"
                         # Fall 4: Error/Cancelled
                         else:
                             ls_display = f"<strong>⚠️ {ls_status}"
