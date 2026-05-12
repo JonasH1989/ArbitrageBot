@@ -376,6 +376,7 @@ def log_trade(
         ex1_data.get("qty_filled", 0),
         ex1_data.get("price_expected", 0),
         ex1_data.get("price_actual", 0),
+        ex1_data.get("price_avg", 0),  # Average price for multi-level fills
         ex1_data.get("value_usdt", 0),
         ex1_data.get("fees", 0),
         ex1_data.get("create_ts", 0),
@@ -390,6 +391,7 @@ def log_trade(
         ex2_data.get("qty_filled", 0),
         ex2_data.get("price_expected", 0),
         ex2_data.get("price_actual", 0),
+        ex2_data.get("price_avg", 0),  # Average price for multi-level fills
         ex2_data.get("value_usdt", 0),
         ex2_data.get("fees", 0),
         ex2_data.get("create_ts", 0),
