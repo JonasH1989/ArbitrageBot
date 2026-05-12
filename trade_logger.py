@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, List, Tuple
 
-LOG_DIR = Path("/home/openclaw/.openclaw/logs")
+LOG_DIR = Path("/app/logs") if Path("/app/logs").exists() else Path("/home/openclaw/.openclaw/logs")
 
 # Unified CSV columns for ALL trades (harmonized format)
 # Exchange-Agnostic: Works with any exchanges (KuCoin, MEXC, Binance, etc.)
