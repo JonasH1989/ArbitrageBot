@@ -784,7 +784,7 @@ else:
         # =========================================================================
         
         # Übersicht - Expanded by default (for charts later)
-        with st.expander("📊 Übersicht", expanded=True):
+        with st.expander("📊 Übersicht", expanded=False):
             # =========================================================================
             # PORTFOLIO RAPPORT - Daily/Overall Performance
             # =========================================================================
