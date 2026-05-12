@@ -425,11 +425,11 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
     return True, ""
 
 def is_active():
-    # Check config.yaml first (dashboard sets isActive in config)
+    # Check config.yaml 'enabled' setting (dashboard sets this!)
     try:
         if get_setting is not None:
-            config_active = get_setting(f"trading.pairs.{TRADING_PAIR}.isActive", False)
-            if config_active:
+            config_enabled = get_setting(f"trading.pairs.{TRADING_PAIR}.enabled", False)
+            if config_enabled:
                 return True
     except:
         pass
