@@ -1259,7 +1259,7 @@ else:
                     """, unsafe_allow_html=True)
                     
                     table_html = '<table class="log-table"><thead><tr>'
-                    table_html += '<th>Datum<br>Trade ID</th><th>Spread<br><span style="font-size:9px;">Strategy</span></th><th>Qty @ Fill<br></th><th>Market Side<br><span style="font-size:9px;">Exchange Trade ID</span></th>'
+                    table_html += '<th>Date<br>Trade ID</th><th>Spread<br><span style="font-size:9px;">Strategy</span></th><th>Qty @ Fill<br></th><th>Market Side<br><span style="font-size:9px;">Exchange Trade ID</span></th>'
                     table_html += '<th>Limit Side<br><span style="font-size:9px;">Qty @ Limit</span></th><th>Ex2</th><th>Qty</th>'
                     table_html += '<th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th>'
                     table_html += '</tr></thead><tbody>'
@@ -1358,7 +1358,7 @@ code{{background:#333;padding:2px 6px;border-radius:3px;}}
 <input type="text" id="searchInput" placeholder="Trade ID suchen...">
 </div>
 <div id="count" style="margin-bottom:15px;color:#888;"></div>
-<table><thead><tr><th>Datum<br>Trade ID</th><th>Spread<br><span style="font-size:9px;">Strategy</span></th><th>Qty @ Fill<br></th><th>Market Side<br><span style="font-size:9px;">Exchange Trade ID</span></th><th>Market Qty</th><th>Fill Price</th><th>Limit Side<br><span style="font-size:9px;">Qty @ Limit</span></th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
+<table><thead><tr><th>Date<br>Trade ID</th><th>Spread<br><span style="font-size:9px;">Strategy</span></th><th>Qty @ Fill<br></th><th>Market Side<br><span style="font-size:9px;">Exchange Trade ID</span></th><th>Market Qty</th><th>Fill Price</th><th>Limit Side<br><span style="font-size:9px;">Qty @ Limit</span></th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
 <tbody id="tradeBody"></tbody></table>
 <script>
 var trades = {trades_json};
