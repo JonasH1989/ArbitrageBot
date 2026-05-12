@@ -1172,6 +1172,10 @@ else:
         with st.expander("📜 Log", expanded=False):
             trades = get_trades('MPC-USDT', limit=100)
             
+            # Debug: Show what's happening
+            if not trades:
+                st.warning(f"⚠️ Keine Trades gefunden. CSV-Pfad: /app/logs/MPCUSDT_trades.csv (oder /home/...)")
+            
             if trades:
                 # Prepare trade data
                 rows = []
