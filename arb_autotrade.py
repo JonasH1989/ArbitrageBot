@@ -1508,7 +1508,7 @@ def calculate_best_trade(ob_data, min_trade_qty, threshold_start, stop_threshold
             if spread_pct < stop_threshold:
                 break
 
-            if spread_pct >= threshold_start and cum_vol_mexc >= min_trade_qty and k_bid['qty'] >= min_trade_qty:
+            if spread_pct >= threshold_start and min(cum_vol_mexc, k_bid['qty']) >= min_trade_qty:
                 expected_profit_usdt = (k_bid['price'] - m_ask['price']) * min(cum_vol_mexc, k_bid['qty'])
                 expected_profit_mpc = expected_profit_usdt / m_ask['price'] if m_ask['price'] > 0 else 0
                 profit = expected_profit_mpc if strategy == 'coins' else expected_profit_usdt
@@ -1537,7 +1537,7 @@ def calculate_best_trade(ob_data, min_trade_qty, threshold_start, stop_threshold
             if spread_pct < stop_threshold:
                 break
 
-            if spread_pct >= threshold_start and cum_vol_kucoin >= min_trade_qty and m_bid['qty'] >= min_trade_qty:
+            if spread_pct >= threshold_start and min(cum_vol_kucoin, m_bid['qty']) >= min_trade_qty:
                 expected_profit_usdt = (m_bid['price'] - k_ask['price']) * min(cum_vol_kucoin, m_bid['qty'])
                 expected_profit_mpc = expected_profit_usdt / k_ask['price'] if k_ask['price'] > 0 else 0
                 profit = expected_profit_mpc if strategy == 'coins' else expected_profit_usdt
@@ -1674,7 +1674,7 @@ def main():
                         break
 
                     # START_THRESHOLD check - spread is interesting
-                    if spread_pct >= threshold_start and cum_vol_mexc >= min_trade_qty and k_bid['qty'] >= min_trade_qty:
+                    if spread_pct >= threshold_start and min(cum_vol_mexc, k_bid['qty']) >= min_trade_qty:
                         # Calculate expected profit for decision
                         strategy = get_trading_strategy(TRADING_PAIR)
                         expected_profit_usdt = (k_bid['price'] - m_ask['price']) * min(cum_vol_mexc, k_bid['qty'])
@@ -1709,7 +1709,7 @@ def main():
                         break
 
                     # START_THRESHOLD check
-                    if spread_pct >= threshold_start and cum_vol_kucoin >= min_trade_qty and m_bid['qty'] >= min_trade_qty:
+                    if spread_pct >= threshold_start and min(cum_vol_kucoin, m_bid['qty']) >= min_trade_qty:
                         # Calculate expected profit for decision
                         strategy = get_trading_strategy(TRADING_PAIR)
                         expected_profit_usdt = (m_bid['price'] - k_ask['price']) * min(cum_vol_kucoin, m_bid['qty'])
