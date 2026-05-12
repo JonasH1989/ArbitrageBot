@@ -1291,7 +1291,7 @@ else:
                     
                     trades_json = json.dumps(rows)
                     
-                    popup_html = f"""
+                    popup_html = """
                     <script>
                     function openDetailedView() {{
                         var data = {trades_json};
