@@ -377,6 +377,11 @@ def log_trade(
     ]
     
     # Append to CSV
+    # DEBUG: Log the full path where we're writing
+    import sys
+    sys.stderr.write(f"DEBUG: Writing trade to CSV: {csv_path}\n")
+    sys.stderr.write(f"DEBUG: CSV exists: {csv_path.exists()}\n")
+    
     with open(csv_path, 'a', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(row)
