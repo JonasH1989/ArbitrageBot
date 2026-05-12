@@ -107,17 +107,26 @@ def init_pair_csv(pair: str) -> Path:
 
 def generate_trade_id() -> str:
     """
-    Generate unique trade ID in format: YYYYMMDD_HHMMSS_MMMMMM
+    Generate unique trade ID in format: DDHHMMSSms (hex)
     
-    Example: 20260427_234712_123456
+    Example: 0c1500372b (10 chars)
     
     This format is:
-    - Unique (microsecond precision)
+    - Unique (millisecond precision)
     - Chronologically sortable
-    - Short enough for CSV columns
-    - Exchange-agnostic (no exchange-specific prefix)
+    - Compact (10 chars vs 20+)
+    - Hex-encoded for brevity
+    
+    Contains: DD (day) + HH (hour) + MM (minute) + SS (second) + ms (milliseconds)
     """
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    now = datetime.now()
+    dd = now.strftime("%d")
+    hh = now.strftime("%H")
+    mm = now.strftime("%M")
+    ss = now.strftime("%S")
+    ms = now.strftime("%f")[:2]
+    
+    return f"{int(dd):02x}{int(hh):x}{int(mm):x}{int(ss):x}{int(ms):02x}"
     return ts
 
 
