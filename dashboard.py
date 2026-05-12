@@ -1336,6 +1336,10 @@ else:
                         
                         table_html += f"<td>{fills_html}</td>"
                         
+                        # DEBUG: Print what's in r
+                        import sys
+                        sys.stderr.write(f"DEBUG ROW: r={dict(r)} \n")
+                        
                         # Determine limit side status and display
                         ls_status = r.get('limit_watch_status', '')
                         ls_order_id = r.get('ex2_order_id', '')
