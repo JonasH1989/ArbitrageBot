@@ -1246,6 +1246,8 @@ else:
                     # Clean table
                     st.markdown("""
                     <style>
+                        .log-table th, .log-table td {padding: 4px 6px !important; font-size: 11px !important; white-space: nowrap;}
+                        .log-table {font-size: 11px !important;}
                         .log-table{width:100%;border-collapse:collapse;font-size:12px;}
                         .log-table th{background:#262730;color:#aaa;text-align:left;padding:8px 10px;border-bottom:2px solid #444;}
                         .log-table td{padding:8px 10px;border-bottom:1px solid #222;color:#eee;}
@@ -1299,6 +1301,8 @@ else:
                         var html = `<!DOCTYPE html>
 <html><head><title>Trade Details</title>
 <style>
+                        .log-table th, .log-table td {padding: 4px 6px !important; font-size: 11px !important; white-space: nowrap;}
+                        .log-table {font-size: 11px !important;}
 *{{margin:0;padding:0;box-sizing:border-box;}}
 body{{font-family:system-ui,sans-serif;background:#0f0f14;color:#eee;padding:20px;}}
 h1{{color:#fff;margin-bottom:20px;}}
