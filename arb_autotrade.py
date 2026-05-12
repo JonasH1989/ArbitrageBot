@@ -425,6 +425,16 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
     return True, ""
 
 def is_active():
+    # Check config.yaml first (dashboard sets isActive in config)
+    try:
+        if get_setting is not None:
+            config_active = get_setting(f"trading.pairs.{TRADING_PAIR}.isActive", False)
+            if config_active:
+                return True
+    except:
+        pass
+    
+    # Fallback: check flag file
     """Check if bot is marked as active"""
     return os.path.exists(ACTIVE_FLAG_FILE)
 
