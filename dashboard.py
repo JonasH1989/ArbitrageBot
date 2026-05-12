@@ -1256,7 +1256,7 @@ else:
                     """, unsafe_allow_html=True)
                     
                     table_html = '<table class="log-table"><thead><tr>'
-                    table_html += '<th>Datum</th><th>Trade ID</th><th>Market Side</th><th>Spread</th>'
+                    table_html += '<th>Datum</th><th>Trade ID</th><th>Spread</th><th>Market Side</th>'
                     table_html += '<th>Ex1</th><th>Qty</th><th>→</th><th>Ex2</th><th>Qty</th>'
                     table_html += '<th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th>'
                     table_html += '</tr></thead><tbody>'
