@@ -1030,42 +1030,6 @@ else:
         
         
         # Einstellungen
-        # TOOL: Convert old trade IDs to new hex format
-        if st.button("🔄 Trade IDs konvertieren", key="convert_ids"):
-            import csv
-            import pandas as pd
-            
-            csv_path = "/app/logs/MPCUSDT_trades.csv"
-            if Path(csv_path).exists():
-                df = pd.read_csv(csv_path)
-                
-                def convert_id(old_id):
-                    try:
-                        parts = old_id.split('_')
-                        if len(parts) != 3:
-                            return old_id
-                        date_part = parts[0]
-                        time_part = parts[1]
-                        us_part = parts[2]
-                        
-                        day = int(date_part[6:8])
-                        hour = int(time_part[:2])
-                        minute = int(time_part[2:4])
-                        second = int(time_part[4:6])
-                        ms = int(us_part[:2])
-                        
-                        return f"{day:02x}{hour:02x}{minute:02x}{second:02x}{ms:02x}"
-                    except:
-                        return old_id
-                
-                df['trade_id'] = df['trade_id'].apply(convert_id)
-                df.to_csv(csv_path, index=False)
-                st.success(f"✅ Konvertiert: {len(df)} Trades")
-            else:
-                st.error("CSV nicht gefunden")
-        
-        st.markdown("---")
-        
         with st.expander("⚙️ Einstellungen", expanded=False):
             s1, s2, s3, s4 = st.columns([1, 1, 1, 1])
             
