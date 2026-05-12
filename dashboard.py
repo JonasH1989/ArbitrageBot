@@ -1340,9 +1340,14 @@ else:
                         import sys
                         sys.stderr.write(f"DEBUG ROW: r={dict(r)} \n")
                         
-                        # Determine limit side status and display
-                        ls_status = r.get('limit_watch_status', '')
-                        ls_order_id = r.get('ex2_order_id', '')
+                        # Determine limit side status and display - with safety for missing keys
+                        ls_status = r.get('limit_watch_status', '') or ''
+                        ls_order_id = str(r.get('ex2_order_id', '')) or ''
+                        ls_exchange = r.get('ex2_exchange', '') or ''
+                        
+                        # Debug actual values
+                        import sys
+                        sys.stderr.write(f"LIMIT DEBUG: ls_status={repr(ls_status)}, ls_order_id={repr(ls_order_id)}, ls_ex={repr(ls_exchange)}\n")
                         
                         # Fall 5: Order missing
                         if not ls_order_id or ls_order_id in ['', '0', 'N/A']:
