@@ -293,6 +293,13 @@ def start_http_log_server(port: int = 8503):
                 reader = csv.DictReader(f)
                 rows = list(reader)
             
+            # Clean rows - replace None with empty string
+            cleaned_rows = []
+            for row in rows:
+                cleaned = {k: (v if v is not None else '') for k, v in row.items()}
+                cleaned_rows.append(cleaned)
+            rows = cleaned_rows
+            
             # Reverse to get newest first
             rows = rows[::-1]
             
@@ -308,10 +315,14 @@ def start_http_log_server(port: int = 8503):
             })
         except Exception as e:
             import traceback
+            # Try to clean rows that can't be serialized
+            import sys
+            exc_info = sys.exc_info()
             return jsonify({
                 'status': 'error', 
                 'message': str(e),
-                'trace': traceback.format_exc()
+                'trace': traceback.format_exc(),
+                'error_type': str(type(e).__name__),
             }), 500
 
     @app.route('/trades/summary/<pair>', methods=['GET'])
