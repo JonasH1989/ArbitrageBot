@@ -12,7 +12,6 @@ from pathlib import Path
 import os
 import pandas as pd
 import io
-import io
 from trade_logger import *
 import sys
 from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, get_alert_settings, set_alert_settings, get_api_keys, set_api_keys, get_all_pairs, add_pair, remove_pair, get_log_level, set_log_level
@@ -785,141 +784,8 @@ else:
         # =========================================================================
         
         # Übersicht - Expanded by default (for charts later)
-        with st.expander("📊 Übersicht", expanded=False):
-            # =========================================================================
-            # PORTFOLIO RAPPORT - Daily/Overall Performance
-            # =========================================================================
-            
-            # Load wallet snapshots from CSV
-            snapshot_path = '/app/logs/wallet_snapshots.csv'
-            if not os.path.exists(snapshot_path):
-                snapshot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', 'wallet_snapshots.csv')
-            
-            snapshots_df = None
-            if os.path.exists(snapshot_path):
-                try:
-                    snapshots_df = pd.read_csv(snapshot_path)
-                    snapshots_df['timestamp'] = pd.to_datetime(snapshots_df['timestamp'])
-                    snapshots_df = snapshots_df.sort_values('timestamp')
-                    
-                    # Handle old CSV format (total_coins) vs new (total_mpc)
-                    if 'total_coins' in snapshots_df.columns and 'total_mpc' not in snapshots_df.columns:
-                        snapshots_df = snapshots_df.rename(columns={
-                            'total_mpc': 'total_mpc',
-                            'total_usdt': 'total_usdt',
-                            'total_value_usdt': 'total_value_usdt'
-                        })
-                except Exception as e:
-                    st.caption(f"Snapshot CSV Fehler: {e}")
-            
-            # Get current prices for fair comparison
-            try:
-                mexc_resp = requests.get("https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=1", timeout=5)
-                current_mpc_price = float(mexc_resp.json().get('asks', [[0]])[0][0]) if 'asks' in mexc_resp.json() else 0.01427
-            except:
-                current_mpc_price = 0.01427  # fallback
-            
-            # Portfolio Rapport
-            with st.expander("💼 Portfolio Rapport", expanded=True):
-                if snapshots_df is not None and len(snapshots_df) > 0:
-                    first_row = snapshots_df.iloc[0]
-                    last_row = snapshots_df.iloc[-1]
-                    
-                    snapshots_24h = snapshots_df[snapshots_df['timestamp'] >= (datetime.now() - pd.Timedelta(hours=24))]
-                    
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.markdown("### 📈 Gesamt (Start → Heute)")
-                        mpc_start = first_row['total_mpc']
-                        mpc_now = last_row['total_mpc']
-                        mpc_delta = mpc_now - mpc_start
-                        usdt_start = first_row['total_usdt']
-                        usdt_now = last_row['total_usdt']
-                        usdt_delta = usdt_now - usdt_start
-                        
-                        value_start = (mpc_start * current_mpc_price) + usdt_start
-                        value_now = (mpc_now * current_mpc_price) + usdt_now
-                        value_delta = value_now - value_start
-                        
-                        st.metric("MPC", f"{mpc_now:,.0f}", f"{mpc_delta:+,.0f}")
-                        st.metric("USDT", f"${usdt_now:,.2f}", f"{usdt_delta:+,.2f}")
-                        st.metric("Gesamt", f"${value_now:,.2f}", f"{value_delta:+,.2f}")
-                    
-                    with col2:
-                        st.markdown("### 🕐 24-Stunden")
-                        if len(snapshots_24h) > 1:
-                            first_24h = snapshots_24h.iloc[0]
-                            last_24h = snapshots_24h.iloc[-1]
-                            
-                            mpc_24h_start = first_24h['total_mpc']
-                            mpc_24h_end = last_24h['total_mpc']
-                            mpc_24h_delta = mpc_24h_end - mpc_24h_start
-                            
-                            usdt_24h_start = first_24h['total_usdt']
-                            usdt_24h_end = last_24h['total_usdt']
-                            usdt_24h_delta = usdt_24h_end - usdt_24h_start
-                            
-                            val_24h_start = (mpc_24h_start * current_mpc_price) + usdt_24h_start
-                            val_24h_end = (mpc_24h_end * current_mpc_price) + usdt_24h_end
-                            val_24h_delta = val_24h_end - val_24h_start
-                            
-                            st.metric("MPC", f"{mpc_24h_end:,.0f}", f"{mpc_24h_delta:+,.0f}")
-                            st.metric("USDT", f"${usdt_24h_end:,.2f}", f"{usdt_24h_delta:+,.2f}")
-                            st.metric("Gesamt", f"${val_24h_end:,.2f}", f"{val_24h_delta:+,.2f}")
-                        else:
-                            st.caption("Nicht genug Snapshots für 24h")
-                    
-                    with col3:
-                        st.markdown("### 📊 Trade Stats")
-                        try:
-                            resp = requests.get('http://localhost:8505/trades/summary/MPC-USDT', timeout=5)
-                            if resp.status_code == 200:
-                                data = resp.json()
-                                st.metric("Trades gesamt", data.get('total_trades', 0))
-                                st.metric("Trades offen", data.get('pending_limit_orders', 0))
-                                st.metric("Win Rate", f"{data.get('win_rate', '0%')}")
-                            else:
-                                st.metric("Trades gesamt", "N/A")
-                                st.metric("Trades offen", "N/A")
-                                st.metric("Win Rate", "N/A")
-                        except:
-                            st.metric("Trades gesamt", "N/A")
-                            st.metric("Trades offen", "N/A")
-                            st.metric("Win Rate", "N/A")
-                    
-                    st.markdown("### 📈 MPC Akkumulation")
-                    
-                    snapshots_df['date'] = snapshots_df['timestamp'].dt.date
-                    daily_df = snapshots_df.groupby('date').agg({
-                        'total_mpc': 'last',
-                        'total_usdt': 'last',
-                        'total_value_usdt': 'last'
-                    }).reset_index()
-                    
-                    if len(daily_df) > 0:
-                        daily_df['mpc_delta'] = daily_df['total_mpc'].diff().fillna(0)
-                        daily_df['value_delta'] = daily_df['total_value_usdt'].diff().fillna(0)
-                        daily_df['cumulative_mpc_gain'] = daily_df['total_mpc'] - daily_df['total_mpc'].iloc[0]
-                        
-                        chart_data = daily_df[['date', 'cumulative_mpc_gain']].copy()
-                        chart_data.columns = ['Datum', 'MPC Gewinn']
-                        
-                        st.line_chart(chart_data.set_index('Datum'))
-                        
-                        with st.expander("📅 Tägliche Changes", expanded=False):
-                            show_df = daily_df[['date', 'total_mpc', 'mpc_delta', 'total_usdt', 'value_delta']].copy()
-                            show_df.columns = ['Datum', 'MPC Bestand', 'MPC Δ', 'USDT', 'Wert Δ']
-                            show_df['MPC Δ'] = show_df['MPC Δ'].apply(lambda x: f"{x:+,.0f}" if x != 0 else "—")
-                            show_df['Wert Δ'] = show_df['Wert Δ'].apply(lambda x: f"{x:+,.2f}" if x != 0 else "—")
-                            st.dataframe(show_df.tail(14), width="stretch")
-                else:
-                    st.info("Keine Wallet Snapshots verfügbar. Der Bot macht stündliche Snapshots.")
-                    st.caption("Diese werden in logs/wallet_snapshots.csv gespeichert.")
-            
-            # =========================================================================
-            # END PORTFOLIO RAPPORT
-            # =========================================================================
+        with st.expander("📊 Übersicht", expanded=True):
+            st.info("Charts und Visualisierung kommen hier.")
         
         # Orderbook detailed view
         with st.expander("📋 Orderbook", expanded=False):
@@ -1170,16 +1036,8 @@ else:
                     st.metric(" ", f"{total_avail:.2f} {sym}", f"Total: {total_all:.2f} {sym}")
         
         # Log - Trade history
-        # DEBUG: Print trade loading info
-        import sys
-        sys.stderr.write(f"LOG SECTION: Loading trades\n")
-        
         with st.expander("📜 Log", expanded=False):
             trades = get_trades('MPC-USDT', limit=100)
-            
-            # Debug: Show what's happening
-            if not trades:
-                st.warning(f"⚠️ Keine Trades gefunden. CSV-Pfad: /app/logs/MPCUSDT_trades.csv (oder /home/...)")
             
             if trades:
                 # Prepare trade data
@@ -1197,18 +1055,17 @@ else:
                         ts = t.get('internal_ts', '')
                         try:
                             dt = datetime.fromisoformat(ts)
-                            date_str = dt.strftime('%d.%m.%Y')
+                            date_str = dt.strftime('%d.%m')
                             time_str = dt.strftime('%H:%M:%S')
                         except:
-                            date_str = ts[:10] if len(ts) > 10 else ts[:6] + '.' + ts[:2] if len(ts) >= 6 else 'N/A'
+                            date_str = ts[:10] if len(ts) > 10 else 'N/A'
                             time_str = ts[-8:] if len(ts) > 8 else ts
                         
                         rows.append({
-                            'datetime': f"{date_str} {time_str}",
+                            'date': date_str,
+                            'time': time_str,
                             'trade_id': t.get('trade_id', ''),
-                            'market_side': t.get('ex1_exchange', '') + (' Buy' if 'M' in direction else ' Sell'),
-                            'market_qty': float(t.get('ex1_qty_filled', 0) or 0),
-                            'fill_price': float(t.get('ex1_price_avg', t.get('ex1_price_actual', 0)) or 0),
+                            'trade_id_short': t.get('trade_id', '')[-6:],
                             'direction': 'K→M' if 'K->M' in direction else 'M→K',
                             'strategy': t.get('strategy', current_strategy),
                             'spread': float(t.get('spread_pct', 0) or 0),
@@ -1251,9 +1108,6 @@ else:
                     # Clean table
                     st.markdown("""
                     <style>
-                        .log-table td {vertical-align: top;}
-                        .log-table th, .log-table td {padding: 4px 6px !important; font-size: 11px !important; white-space: nowrap; vertical-align: top;} {padding: 4px 6px !important; font-size: 11px !important; white-space: nowrap;}
-                        .log-table {font-size: 11px !important;}
                         .log-table{width:100%;border-collapse:collapse;font-size:12px;}
                         .log-table th{background:#262730;color:#aaa;text-align:left;padding:8px 10px;border-bottom:2px solid #444;}
                         .log-table td{padding:8px 10px;border-bottom:1px solid #222;color:#eee;}
@@ -1264,119 +1118,30 @@ else:
                     """, unsafe_allow_html=True)
                     
                     table_html = '<table class="log-table"><thead><tr>'
-                    table_html += '<th>Date<br>Trade ID</th><th>Spread<br><span style="font-size:9px;">Strategy</span></th><th>Market Side<br><span style="font-size:9px;">Exchange Trade ID</span></th><th>Qty @ Fill<br></th>'
-                    table_html += '<th>Limit Side<br><span style="font-size:9px;">Order ID</span></th><th>Qty @ Limit<br></th><th>Status</th><th style="text-align:right;">Fees</th><th style="text-align:right;">USDT</th><th style="text-align:right;">MPC</th>'
+                    table_html += '<th>Datum</th><th>Zeit</th><th>ID</th><th>Dir</th><th>Spread</th>'
+                    table_html += '<th>Ex1</th><th>Qty</th><th>→</th><th>Ex2</th><th>Qty</th>'
+                    table_html += '<th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th>'
                     table_html += '</tr></thead><tbody>'
                     
                     for r in rows:
                         gc = 'pos' if r['gross'] > 0 else 'neg'
                         nc = 'pos' if r['net'] > 0 else 'neg'
-                        pc = 'pos' if r['profit_mpc'] > 0 else 'neg'
                         se = {'FILLED': '✅', 'PARTIAL': '⚠️', 'WATCHING': '⏳', 'CANCELLED': '❌', 'FAILED': '🔴'}.get(r['status'], '❓')
                         
                         table_html += f"<tr>"
-                        table_html += f"<td><div style='text-align:left;'><strong>{r['datetime']}</strong><br><span style='font-family:monospace;font-size:10px;'>{r['trade_id']}</span></div></td>"
-                        table_html += f"<td><strong>{r['spread']:.2f}%</strong><br><span style='font-size:10px;'>{r['strategy']}</span></td>"
-                        # Market Side + Order ID
-                        
-                        ex1_order = r.get('ex1_order_id', '')
-                        market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
-                        # Add fill trade IDs for multi-level display in Market Side column
-                        # Check for multi-level fills first
-                        avg_price = r.get('ex1_price_avg', r.get('fill_price', 0))
-                        fill_price = r.get('fill_price', 0)
-                        is_multi = abs(avg_price - fill_price) > 0.0001 if avg_price and fill_price else False
-                        ex1_display = f"<strong>{market_side}</strong>"
-                        if is_multi and r.get('raw_ex1_response'):
-                            try:
-                                import json
-                                resp = json.loads(r['raw_ex1_response'])
-                                fills_data = resp.get('data', resp.get('fills', resp.get('data', {}).get('fillList', [])))
-                                if not isinstance(fills_data, list):
-                                    fills_data = [fills_data] if fills_data else []
-                                for f in fills_data:
-                                    f_id = f.get('tradeId') or f.get('orderId') or ''
-                                    if f_id:
-                                        ex1_display += f"<br><span style='font-size:10px;'>{f_id}</span>"
-                            except:
-                                pass
-                        ex1_display += f"<br><span style='font-size:10px;'>{ex1_order}</span>" if ex1_order else ex1_display + f"<br><span style='font-size:10px;'>-</span>"
-                        # Market Side + Order ID - check for multi-level first
-                        avg_price = r.get('ex1_price_avg', r.get('fill_price', 0))
-                        fill_price = r.get('fill_price', 0)
-                        is_multi = abs(avg_price - fill_price) > 0.0001 if avg_price and fill_price else False
-                        
-                        table_html += f"<td>{ex1_display}</td>"
-                        
-                        # Qty @ Fill - check for multi-level fills from raw_ex1_response
-                        prec = 5 if 'MEXC' in r['ex1_exchange'] else 6
-                        market_qty = r.get('market_qty', 0)
-                        fill_price = r.get('fill_price', 0)
-                        avg_price = r.get('ex1_price_avg', fill_price)
-                        
-                        # Check if multi-level fill (avg != fill indicates multiple levels)
-                        is_multi = abs(avg_price - fill_price) > 0.0001 if avg_price and fill_price else False
-                        
-                        # Try to get individual fills from raw response
-                        fills_html = f"<strong>${market_qty:.1f} MPC @ ${avg_price:.{prec}f}</strong>"
-                        
-                        if is_multi and r.get('raw_ex1_response'):
-                            try:
-                                import json
-                                resp = json.loads(r['raw_ex1_response'])
-                                # Parse fills from exchange response
-                                # This structure varies by exchange - typically a list of fills
-                                fills_data = resp.get('data', resp.get('fills', []))
-                                if fills_data and isinstance(fills_data, list):
-                                    fills_html = f"<strong>Σ ${market_qty:.1f} MPC @ ${avg_price:.{prec}f}</strong>"
-                                    for f in fills_data:
-                                        # Get trade IDs per fill (multi-line display)
-                                        for f in fills_data:
-                                            f_id = f.get('tradeId') or f.get('orderId') or ''
-                                            if f_id:
-                                                fills_html += f"<br><span style='font-size:10px;'>{f_id}</span>"
-                            except:
-                                pass
-                        
-                        table_html += f"<td>{fills_html}</td>"
-                        
-                        # DEBUG: Print what's in r
-                        import sys
-                        sys.stderr.write(f"DEBUG ROW: r={dict(r)} \n")
-                        
-                        # Determine limit side status and display - with safety for missing keys
-                        ls_status = r.get('limit_watch_status', '') or ''
-                        ls_order_id = r.get('ex2_order_id', '')
-                        ls_exchange = r.get('ex2_exchange', '') or ''
-                        
-                        # Debug actual values
-                        import sys
-                        sys.stderr.write(f"LIMIT DEBUG: ls_status={repr(ls_status)}, ls_order_id={repr(ls_order_id)}, ls_ex={repr(ls_exchange)}\n")
-                        
-                        # Fall 5: Order missing
-                        if not ls_order_id or ls_order_id in ['', '0', 'N/A']:
-                            ls_display = "<strong>⚠️ Order fehlt!</strong>"
-                        # Fall 3: PARTIAL - multiple fills
-                        elif ls_status == 'PARTIAL':
-                            # Show multiple fills if available
-                            ls_display = f"<strong>PARTIAL</strong><br><span style='font-size:10px;'>{r.get('ex2_qty_filled') or r.get('ex2_qty_ordered'):.1f} MPC @ ${r.get('ex2_price_actual') or r.get('ex2_price_expected'):.5f}</span>"
-                        # Fall 2: WATCHING - editable
-                        elif ls_status == 'WATCHING':
-                            prec = 5 if 'KUCOIN' in r['ex2_exchange'] else 5
-                            ls_display = f"<strong>WATCHING</strong><br><span style='font-size:10px;'>{r.get('ex2_qty_filled') or r.get('ex2_qty_ordered'):.1f} MPC @ ${r.get('ex2_price_actual') or r.get('ex2_price_expected'):.5f}</span><br><span style='color:#00e676;cursor:pointer;'>[EDIT]</span>"
-                        # Fall 1: FILLED
-                        elif ls_status == 'FILLED':
-                            prec = 5 if 'KUCOIN' in r['ex2_exchange'] else 5
-                            ls_display = f"<strong>{r.get('ex2_qty_filled') or r.get('ex2_qty_ordered'):.1f} MPC @ ${r.get('ex2_price_actual') or r.get('ex2_price_expected'):.{prec}f}</strong>"
-                        # Fall 4: Error/Cancelled
-                        else:
-                            ls_display = f"<strong>⚠️ {ls_status}"
-                        
-                        table_html += f"<td>{ls_display}</td>"
-                        table_html += f"<td>{se}</td>"
-                        table_html += f"<td style='text-align:right;'>{r['fees']:.4f}</td>"
+                        table_html += f"<td>{r['date']}</td>"
+                        table_html += f"<td>{r['time']}</td>"
+                        table_html += f"<td style='font-family:monospace;'>{r['trade_id_short']}</td>"
+                        table_html += f"<td>{r['direction']}</td>"
+                        table_html += f"<td>{r['spread']:.2f}%</td>"
+                        table_html += f"<td>{r['ex1_exchange']}</td>"
+                        table_html += f"<td>{r['ex1_qty']:.1f}</td>"
+                        table_html += f"<td>→</td>"
+                        table_html += f"<td>{r['ex2_exchange']}</td>"
+                        table_html += f"<td>{r['ex2_qty']:.1f}</td>"
+                        table_html += f"<td style='text-align:right;' class='{gc}'>${r['gross']:.4f}</td>"
                         table_html += f"<td style='text-align:right;font-weight:bold;' class='{nc}'>${r['net']:.4f}</td>"
-                        table_html += f"<td style='text-align:right;' class='{pc}'>{r['profit_mpc']:+.4f}</td>"
+                        table_html += f"<td>{se}</td>"
                         table_html += f"</tr>"
                     
                     table_html += '</tbody></table>'
@@ -1389,16 +1154,13 @@ else:
                     
                     trades_json = json.dumps(rows)
                     
-                    popup_html = """
+                    popup_html = f"""
                     <script>
                     function openDetailedView() {{
                         var data = {trades_json};
                         var html = `<!DOCTYPE html>
 <html><head><title>Trade Details</title>
 <style>
-                        .log-table td {vertical-align: top;}
-                        .log-table th, .log-table td {padding: 4px 6px !important; font-size: 11px !important; white-space: nowrap; vertical-align: top;} {padding: 4px 6px !important; font-size: 11px !important; white-space: nowrap;}
-                        .log-table {font-size: 11px !important;}
 *{{margin:0;padding:0;box-sizing:border-box;}}
 body{{font-family:system-ui,sans-serif;background:#0f0f14;color:#eee;padding:20px;}}
 h1{{color:#fff;margin-bottom:20px;}}
@@ -1423,7 +1185,7 @@ code{{background:#333;padding:2px 6px;border-radius:3px;}}
 <input type="text" id="searchInput" placeholder="Trade ID suchen...">
 </div>
 <div id="count" style="margin-bottom:15px;color:#888;"></div>
-<table><thead><tr><th>Date<br>Trade ID</th><th>Spread<br><span style="font-size:9px;">Strategy</span></th><th>Market Side<br><span style="font-size:9px;">Exchange Trade ID</span></th><th>Qty @ Fill<br></th><th>Market Qty</th><th>Fill Price</th><th>Limit Side<br><span style="font-size:9px;">Exchange Trade ID</span></th><th>Qty @ Limit<br></th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
+<table><thead><tr><th>Datum</th><th>Zeit</th><th>Trade ID</th><th>Dir</th><th>Spread</th><th>Ex1</th><th>Ex1 Qty</th><th>Ex2</th><th>Ex2 Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
 <tbody id="tradeBody"></tbody></table>
 <script>
 var trades = {trades_json};
@@ -1487,16 +1249,11 @@ filterTable();
                     
                     # CSV Export
                     df = pd.DataFrame(rows)
-                    csv_cols = ['datetime', 'trade_id', 'market_side', 'market_qty', 'fill_price', 'strategy', 'spread',
+                    csv_cols = ['date', 'time', 'trade_id', 'direction', 'strategy', 'spread',
                                'ex1_exchange', 'ex1_order_id', 'ex1_qty', 'ex1_price', 'ex1_value', 'ex1_fees',
                                'ex2_exchange', 'ex2_order_id', 'ex2_qty', 'ex2_price', 'ex2_value', 'ex2_fees',
                                'gross', 'fees', 'net', 'profit_mpc', 'profit_usdt', 'status']
                     csv_bytes = df[csv_cols].to_csv(index=False).encode('utf-8')
-                    st.download_button("📥 Excel", 
-    data=(lambda: pd.read_csv(io.BytesIO(csv_bytes)).to_excel(io.BytesIO(), index=False) or io.BytesIO().getvalue())(),
-    file_name=f"MPC_trades_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
                     st.download_button("📥 CSV Export", data=csv_bytes, file_name=f"MPC_trades_{datetime.now().strftime('%Y%m%d_%H%M')}.csv", mime="text/csv")
                 else:
                     st.info("Keine Trades")
