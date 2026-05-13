@@ -46,6 +46,7 @@ def _log_config_change(path: str, value: Any, caller_info: str):
         'caller': caller_info,
         'file_hash': _get_file_hash()
     }
+    global _config_change_log  # Declare as global to avoid UnboundLocalError
     with _config_lock:
         _config_change_log.append(entry)
         # Keep last 100 entries
