@@ -1175,6 +1175,25 @@ else:
         sys.stderr.write(f"LOG SECTION: Loading trades\n")
         
         with st.expander("📜 Log", expanded=False):
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                if st.button("🔧 Repair CSV", help="Repair corrupted CSV data"):
+                    st.info("Running repair script...")
+                    import subprocess
+                    result = subprocess.run(
+                        ["python", "repair_csv.py"],
+                        capture_output=True, text=True,
+                        cwd="/app"
+                    )
+                    if result.returncode == 0:
+                        st.success("✅ CSV Repair erfolgreich!")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Repair fehlgeschlagen: {result.stderr}")
+            with col2:
+                st.write("Korrigiert verschobene Spalten in der Server-CSV")
+            
+            st.markdown("---")
             trades = get_trades('MPC-USDT', limit=100)
             
             # Debug: Show what's happening
