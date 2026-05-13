@@ -1349,30 +1349,36 @@ else:
                         ls_order_id = r.get('ex2_order_id', '')
                         ls_exchange = r.get('ex2_exchange', '') or ''
                         
-                        # Debug actual values
-                        import sys
-                        sys.stderr.write(f"LIMIT DEBUG: ls_status={repr(ls_status)}, ls_order_id={repr(ls_order_id)}, ls_ex={repr(ls_exchange)}\n")
+                        # Limit Side (Column 5) - Exchange + Buy/Sell on line 1, Order ID on line 2
+                        ls_status = r.get('limit_watch_status', '') or ''
+                        ls_order_id = r.get('ex2_order_id', '') or ''
+                        ls_exchange = r.get('ex2_exchange', '') or ''
+                        ls_side = 'Sell' if 'M' in r['direction'] else 'Buy'
                         
-                        # Fall 5: Order missing
-                        if not ls_order_id or ls_order_id in ['', '0', 'N/A']:
-                            ls_display = "<strong>⚠️ Order fehlt!</strong>"
-                        # Fall 3: PARTIAL - multiple fills
-                        elif ls_status == 'PARTIAL':
-                            # Show multiple fills if available
-                            ls_display = f"<strong>PARTIAL</strong><br><span style='font-size:10px;'>{r.get('ex2_qty_filled') or r.get('ex2_qty_ordered'):.1f} MPC @ ${r.get('ex2_price_actual') or r.get('ex2_price_expected'):.5f}</span>"
-                        # Fall 2: WATCHING - editable
-                        elif ls_status == 'WATCHING':
-                            prec = 5 if 'KUCOIN' in r['ex2_exchange'] else 5
-                            ls_display = f"<strong>WATCHING</strong><br><span style='font-size:10px;'>{r.get('ex2_qty_filled') or r.get('ex2_qty_ordered'):.1f} MPC @ ${r.get('ex2_price_actual') or r.get('ex2_price_expected'):.5f}</span><br><span style='color:#00e676;cursor:pointer;'>[EDIT]</span>"
-                        # Fall 1: FILLED
-                        elif ls_status == 'FILLED':
-                            prec = 5 if 'KUCOIN' in r['ex2_exchange'] else 5
-                            ls_display = f"<strong>{r.get('ex2_qty_filled') or r.get('ex2_qty_ordered'):.1f} MPC @ ${r.get('ex2_price_actual') or r.get('ex2_price_expected'):.{prec}f}</strong>"
-                        # Fall 4: Error/Cancelled
-                        else:
-                            ls_display = f"<strong>⚠️ {ls_status}"
+                        ls_display = f"<strong>{ls_exchange} {ls_side}</strong><br><span style='font-size:10px;'>{ls_order_id or '-'}</span>"
                         
                         table_html += f"<td>{ls_display}</td>"
+                        
+                        # Qty @ Limit (Column 6) - Menge + Preis, mit Status-Behandlung
+                        ls_qty = r.get('ex2_qty_filled', 0) or r.get('ex2_qty_ordered', 0)
+                        ls_price = r.get('ex2_price_actual', 0) or r.get('ex2_price_expected', 0)
+                        
+                        if ls_status == 'FILLED' and ls_qty > 0:
+                            fills_html = f"<strong>{ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
+                        elif ls_status == 'PARTIAL' and ls_qty > 0:
+                            fills_html = f"<strong>PARTIAL: {ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
+                        elif ls_status == 'WATCHING':
+                            fills_html = f"<span style='color:#00e676;'>⏳ {ls_qty:.1f} MPC @ ${ls_price:.5f}</span>"
+                        elif ls_status == 'CANCELLED':
+                            fills_html = f"<span style='color:#f87171;'>❌ CANCELLED</span>"
+                        elif ls_status == 'FAILED':
+                            fills_html = f"<span style='color:#f87171;'>🔴 FAILED</span>"
+                        elif ls_order_id in ['', '0', 'N/A', 'FAILED'] or not ls_order_id:
+                            fills_html = f"<span style='color:#f87171;'>⚠️ No Order</span>"
+                        else:
+                            fills_html = f"{ls_qty:.1f} MPC @ ${ls_price:.5f}"
+                        
+                        table_html += f"<td>{fills_html}</td>"
                         table_html += f"<td>{se}</td>"
                         table_html += f"<td style='text-align:right;'>{r['fees']:.4f}</td>"
                         table_html += f"<td style='text-align:right;font-weight:bold;' class='{nc}'>${r['net']:.4f}</td>"
