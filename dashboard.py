@@ -1294,147 +1294,120 @@ else:
                         table_html += f"<tr>"
                         table_html += f"<td><div style='text-align:left;'><strong>{r['datetime']}</strong><br><span style='font-family:monospace;font-size:10px;'>{r['trade_id']}</span></div></td>"
                         table_html += f"<td><strong>{r['spread']:.2f}%</strong><br><span style='font-size:10px;'>{r['strategy']}</span></td>"
-                        # Market Side + Order ID
                         
-                        ex1_order = r.get('ex1_order_id', '')
+                        # ===== COLUMN 3: Market Side =====
+                        # Line 1: Exchange + Buy/Sell
+                        # Lines 2+: Trade IDs (one per fill)
                         market_side = r['ex1_exchange'] + (' Buy' if 'M' in r['direction'] else ' Sell')
-                        # Add fill trade IDs for multi-level display in Market Side column
-                        # Check for multi-level fills first
-                        avg_price = r.get('ex1_price_avg', r.get('fill_price', 0))
-                        fill_price = r.get('fill_price', 0)
-                        is_multi = abs(avg_price - fill_price) > 0.0001 if avg_price and fill_price else False
-                        ex1_display = f"<strong>{market_side}</strong>"
-                        if is_multi and r.get('raw_ex1_response'):
+                        mkt_display = f"<strong>{market_side}</strong>"
+                        
+                        # Get market fills from raw response
+                        mkt_fills = []
+                        if r.get('raw_ex1_response'):
                             try:
                                 import json
                                 resp = json.loads(r['raw_ex1_response'])
-                                fills_data = resp.get('data', resp.get('fills', resp.get('data', {}).get('fillList', [])))
-                                if not isinstance(fills_data, list):
-                                    fills_data = [fills_data] if fills_data else []
-                                for f in fills_data:
-                                    f_id = f.get('tradeId') or f.get('orderId') or ''
-                                    if f_id:
-                                        ex1_display += f"<br><span style='font-size:10px;'>{f_id}</span>"
+                                mkt_fills = resp.get('data', resp.get('fills', resp.get('data', {}).get('fillList', [])))
+                                if not isinstance(mkt_fills, list):
+                                    mkt_fills = [mkt_fills] if mkt_fills else []
                             except:
-                                pass
-                        ex1_display += f"<br><span style='font-size:10px;'>{ex1_order}</span>" if ex1_order else ex1_display + f"<br><span style='font-size:10px;'>-</span>"
-                        # Market Side + Order ID - check for multi-level first
-                        avg_price = r.get('ex1_price_avg', r.get('fill_price', 0))
-                        fill_price = r.get('fill_price', 0)
-                        is_multi = abs(avg_price - fill_price) > 0.0001 if avg_price and fill_price else False
+                                mkt_fills = []
                         
-                        table_html += f"<td>{ex1_display}</td>"
+                        # Add trade IDs for each fill
+                        for f in mkt_fills:
+                            f_id = f.get('tradeId') or f.get('orderId') or ''
+                            if f_id:
+                                mkt_display += f"<br><span style='font-size:10px;'>{f_id}</span>"
                         
-                        # Qty @ Fill - check for multi-level fills from raw_ex1_response
+                        # If no fills data, show main order ID
+                        if not mkt_fills:
+                            ex1_order = r.get('ex1_order_id', '')
+                            mkt_display += f"<br><span style='font-size:10px;'>{ex1_order or '-'}</span>"
+                        
+                        table_html += f"<td>{mkt_display}</td>"
+                        
+                        # ===== COLUMN 4: Qty @ Fill =====
+                        # Line 1: Σ TotalQty @ AvgPrice
+                        # Lines 2+: Individual fill Menge @ Preis (NO trade ID)
                         prec = 5 if 'MEXC' in r['ex1_exchange'] else 6
-                        market_qty = r.get('market_qty', 0)
-                        fill_price = r.get('fill_price', 0)
-                        avg_price = r.get('ex1_price_avg', fill_price)
+                        mkt_qty = r.get('market_qty', 0)
+                        mkt_avg = r.get('ex1_price_avg', r.get('fill_price', 0))
                         
-                        # Check if multi-level fill (avg != fill indicates multiple levels)
-                        is_multi = abs(avg_price - fill_price) > 0.0001 if avg_price and fill_price else False
+                        if len(mkt_fills) > 1:
+                            qty_fill_html = f"<strong>Σ {mkt_qty:.1f} MPC @ ${mkt_avg:.{prec}f}</strong>"
+                            for f in mkt_fills:
+                                f_qty = float(f.get('size', f.get('executedQty', 0)) or 0)
+                                f_price = float(f.get('price', 0) or 0)
+                                qty_fill_html += f"<br><span style='font-size:10px;'>{f_qty:.1f} @ ${f_price:.{prec}f}</span>"
+                        else:
+                            qty_fill_html = f"<strong>{mkt_qty:.1f} MPC @ ${mkt_avg:.{prec}f}</strong>"
                         
-                        # Try to get individual fills from raw response
-                        fills_html = f"<strong>${market_qty:.1f} MPC @ ${avg_price:.{prec}f}</strong>"
+                        table_html += f"<td>{qty_fill_html}</td>"
                         
-                        if is_multi and r.get('raw_ex1_response'):
-                            try:
-                                import json
-                                resp = json.loads(r['raw_ex1_response'])
-                                # Parse fills from exchange response
-                                # This structure varies by exchange - typically a list of fills
-                                fills_data = resp.get('data', resp.get('fills', []))
-                                if fills_data and isinstance(fills_data, list):
-                                    fills_html = f"<strong>Σ ${market_qty:.1f} MPC @ ${avg_price:.{prec}f}</strong>"
-                                    for f in fills_data:
-                                        # Get trade IDs per fill (multi-line display)
-                                        for f in fills_data:
-                                            f_id = f.get('tradeId') or f.get('orderId') or ''
-                                            if f_id:
-                                                fills_html += f"<br><span style='font-size:10px;'>{f_id}</span>"
-                            except:
-                                pass
-                        
-                        table_html += f"<td>{fills_html}</td>"
-                        
-                        # DEBUG: Print what's in r
-                        import sys
-                        sys.stderr.write(f"DEBUG ROW: r={dict(r)} \n")
-                        
-                        # Determine limit side status and display - with safety for missing keys
-                        ls_status = r.get('limit_watch_status', '') or ''
-                        ls_order_id = r.get('ex2_order_id', '')
-                        ls_exchange = r.get('ex2_exchange', '') or ''
-                        
-                        # Limit Side (Column 5) - Exchange + Buy/Sell on line 1, Order ID on line 2
-                        ls_status = r.get('limit_watch_status', '') or ''
-                        ls_order_id = r.get('ex2_order_id', '') or ''
+                        # ===== COLUMN 5: Limit Side =====
+                        # Line 1: Exchange + Buy/Sell
+                        # Line 2: Order ID (single order, even if multiple fills)
                         ls_exchange = r.get('ex2_exchange', '') or ''
                         ls_side = 'Sell' if 'M' in r['direction'] else 'Buy'
-                        
-                        ls_display = f"<strong>{ls_exchange} {ls_side}</strong><br><span style='font-size:10px;'>{ls_order_id or '-'}</span>"
+                        ls_order_id = r.get('ex2_order_id', '') or '-'
+                        ls_display = f"<strong>{ls_exchange} {ls_side}</strong><br><span style='font-size:10px;'>{ls_order_id}</span>"
                         
                         table_html += f"<td>{ls_display}</td>"
                         
-                        # Qty @ Limit (Column 6) - Multi-line display for partials, status handling
+                        # ===== COLUMN 6: Qty @ Limit =====
+                        # Line 1: Σ TotalQty @ AvgPrice (or status indicator)
+                        # Lines 2+: Individual fill Menge @ Preis (NO trade ID)
+                        ls_status = r.get('limit_watch_status', '') or ''
                         ls_qty = r.get('ex2_qty_filled', 0) or r.get('ex2_qty_ordered', 0)
                         ls_price = r.get('ex2_price_actual', 0) or r.get('ex2_price_expected', 0)
                         
-                        # Check for multi-level fills from raw_ex2_response
-                        is_multi_ex2 = False
-                        fills_data = []
+                        # Get limit fills from raw response
+                        lmt_fills = []
                         if r.get('raw_ex2_response'):
                             try:
                                 import json
                                 resp2 = json.loads(r['raw_ex2_response'])
-                                fills_data = resp2.get('data', resp2.get('fills', resp2.get('data', {}).get('fillList', [])))
-                                if not isinstance(fills_data, list):
-                                    fills_data = [fills_data] if fills_data else []
-                                is_multi_ex2 = len(fills_data) > 1
+                                lmt_fills = resp2.get('data', resp2.get('fills', resp2.get('data', {}).get('fillList', [])))
+                                if not isinstance(lmt_fills, list):
+                                    lmt_fills = [lmt_fills] if lmt_fills else []
                             except:
-                                fills_data = []
+                                lmt_fills = []
                         
-                        # Build fills_html based on status
                         if ls_status == 'FILLED' and ls_qty > 0:
-                            if is_multi_ex2:
-                                fills_html = f"<strong>Σ {ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
-                                for f in fills_data:
-                                    f_id = f.get('tradeId') or f.get('orderId') or ''
+                            if len(lmt_fills) > 1:
+                                lim_html = f"<strong>Σ {ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
+                                for f in lmt_fills:
                                     f_qty = float(f.get('size', f.get('executedQty', 0)) or 0)
                                     f_price = float(f.get('price', 0) or 0)
-                                    if f_id:
-                                        fills_html += f"<br><span style='font-size:10px;'>{f_qty:.1f} @ ${f_price:.5f} ({f_id[:12]}...)</span>"
+                                    lim_html += f"<br><span style='font-size:10px;'>{f_qty:.1f} @ ${f_price:.5f}</span>"
                             else:
-                                fills_html = f"<strong>{ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
+                                lim_html = f"<strong>{ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
                         elif ls_status == 'PARTIAL' and ls_qty > 0:
-                            if is_multi_ex2:
-                                fills_html = f"<strong>PARTIAL Σ {ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
-                                for f in fills_data:
-                                    f_id = f.get('tradeId') or f.get('orderId') or ''
+                            if len(lmt_fills) > 1:
+                                lim_html = f"<strong>PARTIAL Σ {ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
+                                for f in lmt_fills:
                                     f_qty = float(f.get('size', f.get('executedQty', 0)) or 0)
                                     f_price = float(f.get('price', 0) or 0)
-                                    if f_id:
-                                        fills_html += f"<br><span style='font-size:10px;'>{f_qty:.1f} @ ${f_price:.5f} ({f_id[:12]}...)</span>"
+                                    lim_html += f"<br><span style='font-size:10px;'>{f_qty:.1f} @ ${f_price:.5f}</span>"
                             else:
-                                fills_html = f"<strong>PARTIAL: {ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
+                                lim_html = f"<strong>PARTIAL: {ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
                         elif ls_status == 'WATCHING':
                             if ls_qty > 0:
-                                fills_html = f"<span style='color:#00e676;'>⏳ {ls_qty:.1f} MPC @ ${ls_price:.5f}</span>"
-                                # Placeholder for edit button - will be functional later
-                                fills_html += f"<br><span style='color:#00e676;cursor:pointer;font-size:10px;'>[EDIT]</span>"
+                                lim_html = f"<span style='color:#00e676;'>⏳ {ls_qty:.1f} MPC @ ${ls_price:.5f}</span>"
+                                lim_html += f"<br><span style='color:#00e676;cursor:pointer;font-size:10px;'>[EDIT]</span>"
                             else:
-                                fills_html = f"<span style='color:#888;'>⏳ Pending...</span>"
-                                fills_html += f"<br><span style='color:#888;font-size:10px;'>[EDIT]</span>"
+                                lim_html = f"<span style='color:#888;'>⏳ Pending...</span>"
+                                lim_html += f"<br><span style='color:#888;font-size:10px;'>[EDIT]</span>"
                         elif ls_status == 'CANCELLED':
-                            fills_html = f"<span style='color:#f87171;'>❌ CANCELLED</span>"
+                            lim_html = f"<span style='color:#f87171;'>❌ CANCELLED</span>"
                         elif ls_status == 'FAILED':
-                            fills_html = f"<span style='color:#f87171;'>🔴 FAILED</span>"
+                            lim_html = f"<span style='color:#f87171;'>🔴 FAILED</span>"
                         elif ls_order_id in ['', '0', 'N/A', 'FAILED'] or not ls_order_id:
-                            fills_html = f"<span style='color:#f87171;'>⚠️ No Order</span>"
+                            lim_html = f"<span style='color:#f87171;'>⚠️ No Order</span>"
                         else:
-                            fills_html = f"{ls_qty:.1f} MPC @ ${ls_price:.5f}"
+                            lim_html = f"{ls_qty:.1f} MPC @ ${ls_price:.5f}"
                         
-                        table_html += f"<td>{fills_html}</td>"
+                        table_html += f"<td>{lim_html}</td>"
                         table_html += f"<td>{se}</td>"
                         table_html += f"<td style='text-align:right;'>{r['fees']:.4f}</td>"
                         table_html += f"<td style='text-align:right;font-weight:bold;' class='{nc}'>${r['net']:.4f}</td>"
