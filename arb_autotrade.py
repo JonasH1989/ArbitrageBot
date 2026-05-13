@@ -314,6 +314,13 @@ def start_http_log_server(port: int = 8503):
                 'pair': pair,
                 'count': len(rows),
                 'csv_path': str(csv_path),
+                'debug': {
+                    'csv_exists': csv_path.exists(),
+                    'csv_size': os.path.getsize(csv_path) if csv_path.exists() else 0,
+                    'total_rows': len(rows),
+                    'first_row_keys': list(rows[0].keys()) if rows else [],
+                    'first_row_sample': {k: rows[0][k] for k in list(rows[0].keys())[:10]} if rows else {},
+                },
                 'trades': rows
             })
         except Exception as e:
