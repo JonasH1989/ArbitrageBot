@@ -286,7 +286,10 @@ def start_http_log_server(port: int = 8503):
             limit = int(request.args.get('limit', 50))
             
             # Use the same path logic as trade_logger
-            csv_path = get_trade_csv_path(pair)
+            from pathlib import Path
+            normalized_pair = pair.replace('-', '').replace('/', '')
+            LOG_DIR = Path('/app/logs') if Path('/app/logs').exists() else Path('/home/openclaw/.openclaw/logs')
+            csv_path = LOG_DIR / f"{normalized_pair}_trades.csv"
             
             # Read CSV
             with open(csv_path, 'r', newline='') as f:
