@@ -285,54 +285,46 @@ def start_http_log_server(port: int = 8503):
         try:
             limit = int(request.args.get('limit', 50))
             
-            # Use the same path logic as trade_logger
             from pathlib import Path
             normalized_pair = pair.replace('-', '').replace('/', '')
             LOG_DIR = Path('/app/logs') if Path('/app/logs').exists() else Path('/home/openclaw/.openclaw/logs')
             csv_path = LOG_DIR / f"{normalized_pair}_trades.csv"
             
-            # Read CSV
+            if not csv_path.exists():
+                return jsonify({'status': 'error', 'message': f'CSV not found: {csv_path}'}), 404
+            
             with open(csv_path, 'r', newline='') as f:
                 reader = csv.DictReader(f)
                 rows = list(reader)
             
-            # Clean rows - replace None with empty string
+            # FULLY clean rows - replace None with '' and ensure all values are strings
             cleaned_rows = []
             for row in rows:
-                cleaned = {k: (v if v is not None else '') for k, v in row.items()}
+                cleaned = {}
+                for k, v in row.items():
+                    if v is None:
+                        cleaned[k] = ''
+                    elif isinstance(v, (int, float)):
+                        cleaned[k] = v
+                    else:
+                        cleaned[k] = str(v) if v else ''
                 cleaned_rows.append(cleaned)
-            rows = cleaned_rows
             
-            # Reverse to get newest first
-            rows = rows[::-1]
-            
-            # Limit
-            rows = rows[:limit]
+            rows = cleaned_rows[::-1][:limit]
             
             return jsonify({
                 'status': 'ok',
                 'pair': pair,
                 'count': len(rows),
                 'csv_path': str(csv_path),
-                'debug': {
-                    'csv_exists': csv_path.exists(),
-                    'csv_size': os.path.getsize(csv_path) if csv_path.exists() else 0,
-                    'total_rows': len(rows),
-                    'first_row_keys': list(rows[0].keys()) if rows else [],
-                    'first_row_sample': {k: rows[0][k] for k in list(rows[0].keys())[:10]} if rows else {},
-                },
                 'trades': rows
             })
         except Exception as e:
             import traceback
-            # Try to clean rows that can't be serialized
-            import sys
-            exc_info = sys.exc_info()
             return jsonify({
                 'status': 'error', 
                 'message': str(e),
-                'trace': traceback.format_exc(),
-                'error_type': str(type(e).__name__),
+                'trace': traceback.format_exc()
             }), 500
 
     @app.route('/trades/summary/<pair>', methods=['GET'])
