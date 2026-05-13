@@ -322,15 +322,17 @@ def start_http_log_server(port: int = 8503):
             for row in latest_rows:
                 cleaned = {}
                 for k, v in row.items():
-                    # STRICT: No None values at all
+                    # STRICT: No None values at all, and skip keys that are 'None' or 'null'
+                    if k is None or k == 'None' or k == 'null' or k == '':
+                        continue  # Skip malformed columns
                     if v is None:
                         cleaned[k] = ''
                     elif isinstance(v, (int, float)):
                         cleaned[k] = v
                     elif isinstance(v, dict):
-                        cleaned[k] = v  # Keep dicts as-is for json.dumps
+                        cleaned[k] = v
                     elif isinstance(v, list):
-                        cleaned[k] = v  # Keep lists as-is
+                        cleaned[k] = v
                     else:
                         cleaned[k] = str(v) if v is not None else ''
                 cleaned_trades.append(cleaned)
