@@ -1189,10 +1189,27 @@ else:
                         ex1_val = float(t.get('ex1_value_usdt', 0) or 0)
                         ex2_val = float(t.get('ex2_value_usdt', 0) or 0)
                         fees = float(t.get('ex1_fees', 0) or 0) + float(t.get('ex2_fees', 0) or 0)
-                        gross = ex2_val - ex1_val
-                        net = gross - fees
-                        direction = t.get('direction', '')
                         status = t.get('limit_watch_status', 'UNKNOWN')
+                        
+                        # For WATCHING/PENDING trades, ex2_val is 0 (limit not filled)
+                        # Calculate EXPECTED profit instead of showing false negative
+                        if status in ['WATCHING', 'PARTIAL'] and ex2_val == 0:
+                            # Use expected values for pending limit orders
+                            ex2_qty = float(t.get('ex2_qty_ordered', 0) or 0)
+                            ex2_price_exp = float(t.get('ex2_price_expected', 0) or 0)
+                            ex2_val = ex2_qty * ex2_price_exp
+                            gross = ex2_val - ex1_val
+                            # fees might not be accurate yet for pending orders
+                            net = gross - fees if fees > 0 else gross
+                            profit_usdt = float(t.get('profit_usdt_expected', 0) or 0)
+                            profit_mpc = float(t.get('profit_mpc_expected', 0) or 0)
+                        else:
+                            gross = ex2_val - ex1_val
+                            net = gross - fees
+                            profit_usdt = net  # Actual net for filled trades
+                            profit_mpc = float(t.get('profit_mpc_expected', 0) or 0)
+                        
+                        direction = t.get('direction', '')
                         
                         ts = t.get('internal_ts', '')
                         try:
@@ -1228,8 +1245,8 @@ else:
                             'fees': fees,
                             'net': net,
                             'status': status,
-                            'profit_mpc': float(t.get('profit_mpc_expected', 0) or 0),
-                            'profit_usdt': float(t.get('profit_usdt_expected', 0) or 0),
+                            'profit_mpc': profit_mpc,
+                            'profit_usdt': profit_usdt,
                         })
                     except:
                         pass
