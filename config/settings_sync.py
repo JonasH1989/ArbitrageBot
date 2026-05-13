@@ -80,6 +80,16 @@ def set_setting(path: str, value: Any):
     e.g. set_setting('trading.pairs.MPC-USDT.enabled', False)
     """
     config = load_config()
+    
+    # GUARD: If config is empty/None, something is wrong with the YAML file
+    # Do NOT save empty config - this would wipe all settings!
+    if not config or not isinstance(config, dict):
+        import sys
+        print(f"⚠️ WARNING: Config file corrupted or empty! Refusing to save.", file=sys.stderr)
+        print(f"   Will NOT overwrite config.yaml with empty config.", file=sys.stderr)
+        print(f"   Please fix config.yaml manually!", file=sys.stderr)
+        return  # ← EXIT without saving!
+    
     keys = path.split('.')
     d = config
     for k in keys[:-1]:
