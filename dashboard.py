@@ -1409,7 +1409,10 @@ else:
                         
                         table_html += f"<td>{lim_html}</td>"
                         table_html += f"<td>{se}</td>"
-                        table_html += f"<td style='text-align:right;'>{r['fees']:.4f}</td>"
+                        fees_val = r['fees']
+                        fees_color = 'color:#f87171;' if fees_val > 0 else ''
+                        fees_display = f"<span style='{fees_color}'>-${fees_val:.4f}</span>"
+                        table_html += f"<td style='text-align:right;'>{fees_display}</td>"
                         table_html += f"<td style='text-align:right;font-weight:bold;' class='{nc}'>${r['net']:.4f}</td>"
                         table_html += f"<td style='text-align:right;' class='{pc}'>{r['profit_mpc']:+.4f}</td>"
                         table_html += f"</tr>"
