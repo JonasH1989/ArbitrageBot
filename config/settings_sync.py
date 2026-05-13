@@ -160,6 +160,17 @@ def set_setting(path: str, value: Any):
     caller_info = _get_caller_info()
     _log_config_change(path, value, caller_info)
     
+    # TRACKER: Extra logging for safety-critical changes (especially enabled=False)
+    if 'enabled' in path and value is False:
+        import traceback as tb, sys
+        print(f"\n🚨 SAFETY TRACKER: enabled=False set!", file=sys.stderr)
+        print(f"   Path: {path}", file=sys.stderr)
+        print(f"   Caller: {caller_info}", file=sys.stderr)
+        print(f"   Full stack trace:", file=sys.stderr)
+        for line in tb.format_stack()[:10]:
+            print(f"     {line.strip()}", file=sys.stderr)
+        print(f"\n", file=sys.stderr)
+    
     keys = path.split('.')
     d = config
     for k in keys[:-1]:
