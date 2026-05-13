@@ -402,37 +402,65 @@ def get_kucoin_balances() -> dict:
 def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_price: float) -> tuple:
     """Check if we have sufficient balances for a trade.
 
-    Returns: (can_trade: bool, error_msg: str)
+    Returns: (can_trade: bool, error_msg: str, max_tradable_qty: float)
+    
+    If can_trade=False but max_tradable_qty > 0, we can still trade with reduced quantity.
     """
     coin = COIN_SYMBOL.split('-')[0]
 
     if direction in ['M->K', 'M→K']:
         # Buying on MEXC, selling on KuCoin
         usdt_needed = qty * buy_price * 1.002  # +0.2% for fees
-        coin_available_kucoin = get_kucoin_balances().get(coin, {}).get('total', 0)
-
-        if usdt_needed > 0.01:  # Need some USDT on MEXC
-            mexc_bal = get_mexc_balances()
-            if mexc_bal.get('USDT', {}).get('total', 0) < usdt_needed:
-                return False, f"Insufficient USDT on MEXC: need ${usdt_needed:.2f}, have ${mexc_bal.get('USDT', {}).get('total', 0):.2f}"
-
-        if coin_available_kucoin < qty:
-            return False, f"Insufficient {coin} on KuCoin: need {qty:.2f}, have {coin_available_kucoin:.2f}"
+        
+        # Get actual balances
+        mexc_bal = get_mexc_balances()
+        kucoin_bal = get_kucoin_balances()
+        
+        mexc_usdt = mexc_bal.get('USDT', {}).get('total', 0)
+        coin_available_kucoin = kucoin_bal.get(coin, {}).get('total', 0)
+        
+        # Calculate max tradable qty based on limiting factor
+        # USDT limit: how many coins can we buy with available USDT?
+        max_from_usdt = mexc_usdt / (buy_price * 1.002) if buy_price > 0 else 0
+        # Coin limit on KuCoin: how many coins can we sell?
+        max_from_coin = coin_available_kucoin
+        
+        # Minimum of both limits = max tradable qty
+        max_tradable = min(max_from_usdt, max_from_coin)
+        
+        # Check if we have enough for the requested qty
+        if usdt_needed > 0.01 and (mexc_usdt < usdt_needed or coin_available_kucoin < qty):
+            # Not enough for full qty - check if we can trade with reduced qty
+            if max_tradable >= KUCOIN_MIN_QTY:
+                # We can still trade, just with reduced qty
+                return True, "", max_tradable
+            else:
+                return False, f"Insufficient balance for min order ({max_tradable:.1f} < {KUCOIN_MIN_QTY})", max_tradable
 
     elif direction in ['K->M', 'K→M']:
         # Buying on KuCoin, selling on MEXC
         usdt_needed = qty * buy_price * 1.002  # +0.2% for fees
-        coin_available_mexc = get_mexc_balances().get(coin, {}).get('total', 0)
+        
+        # Get actual balances
+        kucoin_bal = get_kucoin_balances()
+        mexc_bal = get_mexc_balances()
+        
+        kucoin_usdt = kucoin_bal.get('USDT', {}).get('total', 0)
+        coin_available_mexc = mexc_bal.get(coin, {}).get('total', 0)
+        
+        # Calculate max tradable qty based on limiting factor
+        max_from_usdt = kucoin_usdt / (buy_price * 1.002) if buy_price > 0 else 0
+        max_from_coin = coin_available_mexc
+        max_tradable = min(max_from_usdt, max_from_coin)
+        
+        # Check if we have enough for the requested qty
+        if usdt_needed > 0.01 and (kucoin_usdt < usdt_needed or coin_available_mexc < qty):
+            if max_tradable >= KUCOIN_MIN_QTY:
+                return True, "", max_tradable
+            else:
+                return False, f"Insufficient balance for min order ({max_tradable:.1f} < {KUCOIN_MIN_QTY})", max_tradable
 
-        if usdt_needed > 0.01:
-            kucoin_bal = get_kucoin_balances()
-            if kucoin_bal.get('USDT', {}).get('total', 0) < usdt_needed:
-                return False, f"Insufficient USDT on KuCoin: need ${usdt_needed:.2f}, have ${kucoin_bal.get('USDT', {}).get('total', 0):.2f}"
-
-        if coin_available_mexc < qty:
-            return False, f"Insufficient {coin} on MEXC: need {qty:.2f}, have {coin_available_mexc:.2f}"
-
-    return True, ""
+    return True, "", qty
 
 def is_active():
     # Check config.yaml 'enabled' setting (dashboard sets this!)
@@ -929,7 +957,8 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     # PRE-TRADE BALANCE CHECK
     # ========================================================================
     log(f"Checking balances for {dir_str} trade...")
-    can_trade, balance_error = check_balances_for_trade(dir_str, qty, buy_price, sell_price)
+    can_trade, balance_error, max_tradable = check_balances_for_trade(dir_str, qty, buy_price, sell_price)
+    
     if not can_trade:
         log(f"❌ BALANCE CHECK FAILED: {balance_error}")
         # CRITICAL: Do NOT execute trade if balance check fails!
@@ -1844,12 +1873,19 @@ def main():
                     check_sell = k['bid'] if dir_check == 'M→K' else m['bid']
                 
                 # Pre-check: can we actually trade?
-                can_trade, balance_error = check_balances_for_trade(dir_check, check_qty, check_buy, check_sell)
+                can_trade, balance_error, max_tradable = check_balances_for_trade(dir_check, check_qty, check_buy, check_sell)
                 if not can_trade:
                     # CANNOT trade - do NOT set trade_in_progress, stay in WAITING
                     if int(time.time()) % 5 == 0:  # Log every 5s to avoid spam
                         log(f"⛔ TRIGGER SKIPPED: {balance_error}", "BALANCE")
                     return  # ← EXIT early, do NOT enter trade
+                
+                # Balance OK - proceed with trade (possibly with reduced qty)
+                # Override volume with max_tradable if needed
+                if max_tradable < check_qty and max_tradable >= KUCOIN_MIN_QTY:
+                    log(f"⚠️ Reduced trade qty: {check_qty:.0f} → {math.floor(max_tradable):.0f} (wallet limit)", "BALANCE")
+                    if best_trade:
+                        best_trade['vol'] = math.floor(max_tradable)
                 
                 # Balance OK - proceed with trade
                 log(f"🚀 TRIGGER: spread={profitable_spread:.2f}% >= threshold={threshold_start}%", "DECISION")
@@ -1937,12 +1973,17 @@ def main():
             # Pre-flight balance check before setting trade_in_progress
             dir_check = best_trade['dir']
             check_qty = math.floor(best_trade['vol'])
-            can_trade, balance_error = check_balances_for_trade(dir_check, check_qty, best_trade['buy'], best_trade['sell'])
+            can_trade, balance_error, max_tradable = check_balances_for_trade(dir_check, check_qty, best_trade['buy'], best_trade['sell'])
             if not can_trade:
                 log(f"⛔ TRADE BLOCKED: {balance_error}")
                 trade_in_progress = False
                 state = STATE_WAITING
                 continue
+            
+            # Override volume with max_tradable if wallet is limiting
+            if max_tradable < check_qty and max_tradable >= KUCOIN_MIN_QTY:
+                log(f"⚠️ Reduced trade qty: {check_qty:.0f} → {math.floor(max_tradable):.0f} (wallet limit)", "BALANCE")
+                best_trade['vol'] = math.floor(max_tradable)
             
             trade_in_progress = True
             vol_for_mexc = math.floor(best_trade['vol'])
