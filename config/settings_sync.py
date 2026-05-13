@@ -25,9 +25,22 @@ if in_docker:
 else:
     SETTINGS_FILE = self_dir / "config.yaml"
 
-# Config change tracking
-_config_change_log = []  # List of {timestamp, path, value, caller_file, caller_line, caller_function}
-_config_lock = threading.Lock()
+# Config change tracking - use a class to avoid global scope issues
+class _ConfigChangeTracker:
+    _log = []
+    _lock = threading.Lock()
+    
+    @classmethod
+    def append(cls, entry):
+        with cls._lock:
+            cls._log.append(entry)
+            if len(cls._log) > 100:
+                cls._log = cls._log[-100:]
+    
+    @classmethod
+    def get_all(cls):
+        with cls._lock:
+            return list(cls._log)
 
 def _get_file_hash() -> str:
     """Get SHA256 hash of config file content"""
@@ -42,25 +55,17 @@ def _log_config_change(path: str, value: Any, caller_info: str):
     entry = {
         'timestamp': ts,
         'path': path,
-        'value': str(value)[:100],  # Truncate long values
+        'value': str(value)[:100],
         'caller': caller_info,
         'file_hash': _get_file_hash()
     }
-    global _config_change_log  # Declare as global to avoid UnboundLocalError
-    with _config_lock:
-        _config_change_log.append(entry)
-        # Keep last 100 entries
-        if len(_config_change_log) > 100:
-            _config_change_log = _config_change_log[-100:]
-    
-    # Print to stderr for visibility
+    _ConfigChangeTracker.append(entry)
     import sys
     print(f"[CONFIG_CHANGE] {ts} | {path} = {str(value)[:50]}... | From: {caller_info}", file=sys.stderr)
 
 def get_config_change_log():
     """Get the config change log"""
-    with _config_lock:
-        return list(_config_change_log)
+    return _ConfigChangeTracker.get_all()
 
 def get_last_config_hash() -> str:
     """Get the current config file hash"""
