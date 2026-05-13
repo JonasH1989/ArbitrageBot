@@ -1683,8 +1683,14 @@ def main():
     log(f"Pair {TRADING_PAIR} enabled in config: {pair_enabled}")
 
     # ALWAYS start inactive for safety - user must enable via dashboard
-    log("=== BOT STARTET IM INAKTIV STATUS (Safety First) ===")
+    log("=== BOT STARTET IM INAKTIV STATUS (Safety First) ===", "CONFIG")
     pair_enabled = False
+    # CRITICAL: Log EXACTLY who/what triggered this safety shutdown
+    import traceback, sys
+    log(f"SAFETY: Setting pair_enabled=False at bot startup", "CONFIG")
+    log(f"SAFETY: Caller stack trace:", "CONFIG")
+    for line in traceback.format_stack()[:8]:
+        log(f"  {line.strip()}", "CONFIG")
     set_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
 
     while True:
