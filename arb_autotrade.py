@@ -39,6 +39,7 @@ except ImportError:
     is_debug_enabled = lambda: False
 
 # Import the harmonized trade logger
+import csv
 from trade_logger import (
     harmonize_kucoin_order,
     harmonize_mexc_order,
