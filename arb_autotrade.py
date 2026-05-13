@@ -312,13 +312,17 @@ def start_http_log_server(port: int = 8503):
             
             rows = cleaned_rows[::-1][:limit]
             
-            return jsonify({
+            # Manually serialize to avoid Flask jsonify issues
+            import json
+            response_data = json.dumps({
                 'status': 'ok',
                 'pair': pair,
                 'count': len(rows),
                 'csv_path': str(csv_path),
                 'trades': rows
             })
+            from flask import Response
+            return Response(response_data, mimetype='application/json')
         except Exception as e:
             import traceback
             return jsonify({
