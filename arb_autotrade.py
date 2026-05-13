@@ -293,53 +293,54 @@ def start_http_log_server(port: int = 8503):
             if not csv_path.exists():
                 return jsonify({'status': 'error', 'message': f'CSV not found: {csv_path}'}), 404
             
-            # Debug: Read raw header line
+            # Debug: Read raw header line FIRST
             with open(csv_path, 'r', newline='') as f:
                 first_line = f.readline().strip()
             
-            header_fields = first_line.split(',')
+            # Parse header - this is the source of truth
+            header_fields = [h.strip() for h in first_line.split(',')]
             
+            # Read data with DictReader
             with open(csv_path, 'r', newline='') as f:
                 reader = csv.DictReader(f)
-                actual_fieldnames = reader.fieldnames
-                rows = list(reader)
+                dict_fieldnames = reader.fieldnames
+                data_rows = list(reader)
             
-            # FULLY clean rows - replace None with '' and ensure all values are strings
-            cleaned_rows = []
-            for row in rows:
-                cleaned = {}
-                for k, v in row.items():
-                    if v is None:
-                        cleaned[k] = ''
-                    elif isinstance(v, (int, float)):
-                        cleaned[k] = v
-                    else:
-                        cleaned[k] = str(v) if v else ''
-                cleaned_rows.append(cleaned)
+            # Get latest rows
+            latest_rows = data_rows[::-1][:limit]
             
-            rows = cleaned_rows[::-1][:limit]
+            # Clean for JSON - CRITICAL: all values must be non-None strings for jsonify
+            def clean_for_json(val):
+                if val is None:
+                    return ''
+                if isinstance(val, (int, float)):
+                    return val
+                return str(val) if val else ''
+            
+            # Build response with STRIPPED header fields
+            cleaned_trades = []
+            for row in latest_rows:
+                cleaned = {k: clean_for_json(row.get(k)) for k in row.keys()}
+                cleaned_trades.append(cleaned)
             
             return jsonify({
                 'status': 'ok',
                 'pair': pair,
-                'count': len(rows),
+                'count': len(cleaned_trades),
                 'csv_path': str(csv_path),
-                'csv_header_fields': header_fields,
-                'csv_dictreader_fieldnames': actual_fieldnames,
-                'csv_num_columns': len(header_fields),
-                'first_trade_raw': dict(rows[0]) if rows else {},
-                'first_trade_spotcheck': {
-                    'ex2_exchange': rows[0].get('ex2_exchange') if rows else None,
-                    'ex2_order_id': rows[0].get('ex2_order_id') if rows else None,
-                    'ex2_type': rows[0].get('ex2_type') if rows else None,
-                    'ex2_side': rows[0].get('ex2_side') if rows else None,
-                    'ex2_qty_ordered': rows[0].get('ex2_qty_ordered') if rows else None,
-                    'ex2_qty_filled': rows[0].get('ex2_qty_filled') if rows else None,
-                    'ex2_price_expected': rows[0].get('ex2_price_expected') if rows else None,
-                    'ex2_price_actual': rows[0].get('ex2_price_actual') if rows else None,
-                    'limit_watch_status': rows[0].get('limit_watch_status') if rows else None,
+                'header_num_fields': len(header_fields),
+                'dictreader_num_fields': len(dict_fieldnames) if dict_fieldnames else 0,
+                'header_fields': header_fields,  # Our parsed header
+                'dict_fieldnames': dict_fieldnames,  # DictReader's inferred header
+                'spotcheck': {
+                    'header_field_18': header_fields[18] if len(header_fields) > 18 else 'MISSING',
+                    'header_field_19': header_fields[19] if len(header_fields) > 19 else 'MISSING',
+                    'header_field_20': header_fields[20] if len(header_fields) > 20 else 'MISSING',
+                    'first_row_field_18': cleaned_trades[0].get('ex2_exchange') if cleaned_trades else 'NO DATA',
+                    'first_row_field_19': cleaned_trades[0].get('ex2_order_id') if cleaned_trades else 'NO DATA',
+                    'first_row_field_20': cleaned_trades[0].get('ex2_type') if cleaned_trades else 'NO DATA',
                 },
-                'trades': rows
+                'trades': cleaned_trades
             })
         except Exception as e:
             import traceback
