@@ -293,8 +293,15 @@ def start_http_log_server(port: int = 8503):
             if not csv_path.exists():
                 return jsonify({'status': 'error', 'message': f'CSV not found: {csv_path}'}), 404
             
+            # Debug: Read raw header line
+            with open(csv_path, 'r', newline='') as f:
+                first_line = f.readline().strip()
+            
+            header_fields = first_line.split(',')
+            
             with open(csv_path, 'r', newline='') as f:
                 reader = csv.DictReader(f)
+                actual_fieldnames = reader.fieldnames
                 rows = list(reader)
             
             # FULLY clean rows - replace None with '' and ensure all values are strings
@@ -312,17 +319,28 @@ def start_http_log_server(port: int = 8503):
             
             rows = cleaned_rows[::-1][:limit]
             
-            # Manually serialize to avoid Flask jsonify issues
-            import json
-            response_data = json.dumps({
+            return jsonify({
                 'status': 'ok',
                 'pair': pair,
                 'count': len(rows),
                 'csv_path': str(csv_path),
+                'csv_header_fields': header_fields,
+                'csv_dictreader_fieldnames': actual_fieldnames,
+                'csv_num_columns': len(header_fields),
+                'first_trade_raw': dict(rows[0]) if rows else {},
+                'first_trade_spotcheck': {
+                    'ex2_exchange': rows[0].get('ex2_exchange') if rows else None,
+                    'ex2_order_id': rows[0].get('ex2_order_id') if rows else None,
+                    'ex2_type': rows[0].get('ex2_type') if rows else None,
+                    'ex2_side': rows[0].get('ex2_side') if rows else None,
+                    'ex2_qty_ordered': rows[0].get('ex2_qty_ordered') if rows else None,
+                    'ex2_qty_filled': rows[0].get('ex2_qty_filled') if rows else None,
+                    'ex2_price_expected': rows[0].get('ex2_price_expected') if rows else None,
+                    'ex2_price_actual': rows[0].get('ex2_price_actual') if rows else None,
+                    'limit_watch_status': rows[0].get('limit_watch_status') if rows else None,
+                },
                 'trades': rows
             })
-            from flask import Response
-            return Response(response_data, mimetype='application/json')
         except Exception as e:
             import traceback
             return jsonify({
