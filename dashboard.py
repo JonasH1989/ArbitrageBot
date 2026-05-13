@@ -1359,16 +1359,55 @@ else:
                         
                         table_html += f"<td>{ls_display}</td>"
                         
-                        # Qty @ Limit (Column 6) - Menge + Preis, mit Status-Behandlung
+                        # Qty @ Limit (Column 6) - Multi-line display for partials, status handling
                         ls_qty = r.get('ex2_qty_filled', 0) or r.get('ex2_qty_ordered', 0)
                         ls_price = r.get('ex2_price_actual', 0) or r.get('ex2_price_expected', 0)
                         
+                        # Check for multi-level fills from raw_ex2_response
+                        is_multi_ex2 = False
+                        fills_data = []
+                        if r.get('raw_ex2_response'):
+                            try:
+                                import json
+                                resp2 = json.loads(r['raw_ex2_response'])
+                                fills_data = resp2.get('data', resp2.get('fills', resp2.get('data', {}).get('fillList', [])))
+                                if not isinstance(fills_data, list):
+                                    fills_data = [fills_data] if fills_data else []
+                                is_multi_ex2 = len(fills_data) > 1
+                            except:
+                                fills_data = []
+                        
+                        # Build fills_html based on status
                         if ls_status == 'FILLED' and ls_qty > 0:
-                            fills_html = f"<strong>{ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
+                            if is_multi_ex2:
+                                fills_html = f"<strong>Σ {ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
+                                for f in fills_data:
+                                    f_id = f.get('tradeId') or f.get('orderId') or ''
+                                    f_qty = float(f.get('size', f.get('executedQty', 0)) or 0)
+                                    f_price = float(f.get('price', 0) or 0)
+                                    if f_id:
+                                        fills_html += f"<br><span style='font-size:10px;'>{f_qty:.1f} @ ${f_price:.5f} ({f_id[:12]}...)</span>"
+                            else:
+                                fills_html = f"<strong>{ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
                         elif ls_status == 'PARTIAL' and ls_qty > 0:
-                            fills_html = f"<strong>PARTIAL: {ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
+                            if is_multi_ex2:
+                                fills_html = f"<strong>PARTIAL Σ {ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
+                                for f in fills_data:
+                                    f_id = f.get('tradeId') or f.get('orderId') or ''
+                                    f_qty = float(f.get('size', f.get('executedQty', 0)) or 0)
+                                    f_price = float(f.get('price', 0) or 0)
+                                    if f_id:
+                                        fills_html += f"<br><span style='font-size:10px;'>{f_qty:.1f} @ ${f_price:.5f} ({f_id[:12]}...)</span>"
+                            else:
+                                fills_html = f"<strong>PARTIAL: {ls_qty:.1f} MPC @ ${ls_price:.5f}</strong>"
                         elif ls_status == 'WATCHING':
-                            fills_html = f"<span style='color:#00e676;'>⏳ {ls_qty:.1f} MPC @ ${ls_price:.5f}</span>"
+                            if ls_qty > 0:
+                                fills_html = f"<span style='color:#00e676;'>⏳ {ls_qty:.1f} MPC @ ${ls_price:.5f}</span>"
+                                # Placeholder for edit button - will be functional later
+                                fills_html += f"<br><span style='color:#00e676;cursor:pointer;font-size:10px;'>[EDIT]</span>"
+                            else:
+                                fills_html = f"<span style='color:#888;'>⏳ Pending...</span>"
+                                fills_html += f"<br><span style='color:#888;font-size:10px;'>[EDIT]</span>"
                         elif ls_status == 'CANCELLED':
                             fills_html = f"<span style='color:#f87171;'>❌ CANCELLED</span>"
                         elif ls_status == 'FAILED':
