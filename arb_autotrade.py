@@ -47,6 +47,8 @@ from trade_logger import (
     get_pending_limit_orders,
     get_trade_summary,
     get_trades,
+    get_trade_csv_path,
+    LOG_DIR as TRADE_LOG_DIR,
 )
 
 from pathlib import Path
@@ -284,17 +286,6 @@ def start_http_log_server(port: int = 8503):
             
             # Use the same path logic as trade_logger
             csv_path = get_trade_csv_path(pair)
-            
-            # Check file exists
-            import os
-            if not csv_path.exists():
-                return jsonify({
-                    'status': 'error', 
-                    'message': f'CSV not found: {csv_path}',
-                    'LOG_DIR': str(LOG_DIR),
-                    'exists_LOG_DIR': LOG_DIR.exists(),
-                    'available_files': os.listdir(str(LOG_DIR)) if LOG_DIR.exists() else []
-                }), 404
             
             # Read CSV
             with open(csv_path, 'r', newline='') as f:
