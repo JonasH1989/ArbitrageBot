@@ -320,28 +320,57 @@ def start_http_log_server(port: int = 8503):
             # Build response with STRIPPED header fields
             cleaned_trades = []
             for row in latest_rows:
-                cleaned = {k: clean_for_json(row.get(k)) for k in row.keys()}
+                cleaned = {}
+                for k, v in row.items():
+                    # STRICT: No None values at all
+                    if v is None:
+                        cleaned[k] = ''
+                    elif isinstance(v, (int, float)):
+                        cleaned[k] = v
+                    elif isinstance(v, dict):
+                        cleaned[k] = v  # Keep dicts as-is for json.dumps
+                    elif isinstance(v, list):
+                        cleaned[k] = v  # Keep lists as-is
+                    else:
+                        cleaned[k] = str(v) if v is not None else ''
                 cleaned_trades.append(cleaned)
             
-            return jsonify({
+            # Build spotcheck with EXPLICIT field extraction
+            sc = {}
+            if cleaned_trades:
+                t0 = cleaned_trades[0]
+                sc = {
+                    'header_field_18': header_fields[18] if len(header_fields) > 18 else 'MISSING',
+                    'header_field_19': header_fields[19] if len(header_fields) > 19 else 'MISSING',
+                    'header_field_20': header_fields[20] if len(header_fields) > 20 else 'MISSING',
+                    'first_row_ex2_exchange': t0.get('ex2_exchange', 'MISSING'),
+                    'first_row_ex2_order_id': t0.get('ex2_order_id', 'MISSING'),
+                    'first_row_ex2_type': t0.get('ex2_type', 'MISSING'),
+                }
+            
+            # Use raw json.dumps first to catch any None issues BEFORE jsonify
+            import json
+            response_data = {
                 'status': 'ok',
                 'pair': pair,
                 'count': len(cleaned_trades),
                 'csv_path': str(csv_path),
                 'header_num_fields': len(header_fields),
                 'dictreader_num_fields': len(dict_fieldnames) if dict_fieldnames else 0,
-                'header_fields': header_fields,  # Our parsed header
-                'dict_fieldnames': dict_fieldnames,  # DictReader's inferred header
-                'spotcheck': {
-                    'header_field_18': header_fields[18] if len(header_fields) > 18 else 'MISSING',
-                    'header_field_19': header_fields[19] if len(header_fields) > 19 else 'MISSING',
-                    'header_field_20': header_fields[20] if len(header_fields) > 20 else 'MISSING',
-                    'first_row_field_18': cleaned_trades[0].get('ex2_exchange') if cleaned_trades else 'NO DATA',
-                    'first_row_field_19': cleaned_trades[0].get('ex2_order_id') if cleaned_trades else 'NO DATA',
-                    'first_row_field_20': cleaned_trades[0].get('ex2_type') if cleaned_trades else 'NO DATA',
-                },
+                'header_fields': header_fields,
+                'dict_fieldnames': dict_fieldnames,
+                'spotcheck': sc,
                 'trades': cleaned_trades
-            })
+            }
+            
+            # Pre-validate with json.dumps (more verbose error)
+            try:
+                json_str = json.dumps(response_data)
+            except Exception as json_err:
+                return jsonify({'status': 'error', 'message': f'JSON dumps failed: {json_err}', 'type': type(json_err).__name__}), 500
+            
+            from flask import Response
+            return Response(json_str, mimetype='application/json')
         except Exception as e:
             import traceback
             return jsonify({
