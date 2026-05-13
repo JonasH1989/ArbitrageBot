@@ -282,21 +282,22 @@ def start_http_log_server(port: int = 8503):
         try:
             limit = int(request.args.get('limit', 50))
             
-            # Get the CSV path
-            csv_path_str = f'/home/openclaw/logs/{pair.replace("-", "")}_trades.csv'
+            # Use the same path logic as trade_logger
+            csv_path = get_trade_csv_path(pair)
             
             # Check file exists
             import os
-            if not os.path.exists(csv_path_str):
+            if not csv_path.exists():
                 return jsonify({
                     'status': 'error', 
-                    'message': f'CSV not found: {csv_path_str}',
-                    'available_files': os.listdir('/home/openclaw/logs/') if os.path.exists('/home/openclaw/logs/') else []
+                    'message': f'CSV not found: {csv_path}',
+                    'LOG_DIR': str(LOG_DIR),
+                    'exists_LOG_DIR': LOG_DIR.exists(),
+                    'available_files': os.listdir(str(LOG_DIR)) if LOG_DIR.exists() else []
                 }), 404
             
             # Read CSV
-            import csv
-            with open(csv_path_str, 'r', newline='') as f:
+            with open(csv_path, 'r', newline='') as f:
                 reader = csv.DictReader(f)
                 rows = list(reader)
             
@@ -310,8 +311,7 @@ def start_http_log_server(port: int = 8503):
                 'status': 'ok',
                 'pair': pair,
                 'count': len(rows),
-                'csv_path': csv_path_str,
-                'debug_rows': [{'trade_id': r.get('trade_id'), 'ex2_qty_filled': r.get('ex2_qty_filled'), 'ex2_qty_ordered': r.get('ex2_qty_ordered'), 'ex2_price_expected': r.get('ex2_price_expected'), 'limit_watch_status': r.get('limit_watch_status')} for r in rows[:2]],
+                'csv_path': str(csv_path),
                 'trades': rows
             })
         except Exception as e:
