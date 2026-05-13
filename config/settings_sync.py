@@ -7,8 +7,12 @@ to avoid dependency issues. All config operations are direct YAML file I/O.
 """
 
 import yaml
+import hashlib
+import traceback
 from pathlib import Path
 from typing import Any, Dict
+from datetime import datetime
+import threading
 
 # Config file path - use DYNAMIC path based on runtime environment
 # In Docker: /app/config/config.yaml
@@ -20,6 +24,60 @@ if in_docker:
     SETTINGS_FILE = Path("/app/config/config.yaml")
 else:
     SETTINGS_FILE = self_dir / "config.yaml"
+
+# Config change tracking
+_config_change_log = []  # List of {timestamp, path, value, caller_file, caller_line, caller_function}
+_config_lock = threading.Lock()
+
+def _get_file_hash() -> str:
+    """Get SHA256 hash of config file content"""
+    if SETTINGS_FILE.exists():
+        with open(SETTINGS_FILE, 'rb') as f:
+            return hashlib.sha256(f.read()).hexdigest()[:16]
+    return "empty"
+
+def _log_config_change(path: str, value: Any, caller_info: str):
+    """Log a config change with caller information"""
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+    entry = {
+        'timestamp': ts,
+        'path': path,
+        'value': str(value)[:100],  # Truncate long values
+        'caller': caller_info,
+        'file_hash': _get_file_hash()
+    }
+    with _config_lock:
+        _config_change_log.append(entry)
+        # Keep last 100 entries
+        if len(_config_change_log) > 100:
+            _config_change_log = _config_change_log[-100:]
+    
+    # Print to stderr for visibility
+    import sys
+    print(f"[CONFIG_CHANGE] {ts} | {path} = {str(value)[:50]}... | From: {caller_info}", file=sys.stderr)
+
+def get_config_change_log():
+    """Get the config change log"""
+    with _config_lock:
+        return list(_config_change_log)
+
+def get_last_config_hash() -> str:
+    """Get the current config file hash"""
+    return _get_file_hash()
+
+def _get_caller_info() -> str:
+    """Get information about who called set_setting"""
+    # Get the full stack trace
+    stack = traceback.extract_stack()
+    # Find our call in the stack (skip internal calls)
+    caller_info = "unknown"
+    for i, frame in enumerate(stack):
+        if 'settings_sync' in frame.filename:
+            continue  # Skip internal calls
+        if frame.filename.endswith('arb_autotrade.py') or frame.filename.endswith('dashboard.py'):
+            caller_info = f"{frame.filename}:{frame.lineno} ({frame.name})"
+            break
+    return caller_info
 
 def load_config() -> Dict[str, Any]:
     """Load config from YAML file with better error reporting"""
@@ -78,6 +136,8 @@ def set_setting(path: str, value: Any):
     """
     Set setting using dot notation and save immediately.
     e.g. set_setting('trading.pairs.MPC-USDT.enabled', False)
+    
+    Logs all changes with caller info for debugging config corruption issues.
     """
     config = load_config()
     
@@ -89,6 +149,10 @@ def set_setting(path: str, value: Any):
         print(f"   Will NOT overwrite config.yaml with empty config.", file=sys.stderr)
         print(f"   Please fix config.yaml manually!", file=sys.stderr)
         return  # ← EXIT without saving!
+    
+    # Log the change BEFORE applying
+    caller_info = _get_caller_info()
+    _log_config_change(path, value, caller_info)
     
     keys = path.split('.')
     d = config
@@ -192,3 +256,8 @@ def is_debug_enabled() -> bool:
 def get_all_settings() -> Dict[str, Any]:
     """Get all settings as a flat dict"""
     return load_config()
+
+def get_config_change_log():
+    """Get the config change log for debugging"""
+    with _config_lock:
+        return list(_config_change_log)
