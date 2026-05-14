@@ -1927,6 +1927,10 @@ def main():
             # Fallback when orderbook fetch fails
             vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 86
             vol_for_kucoin = max(KUCOIN_MIN_QTY, vol_for_mexc)
+        else:
+            # Always define these for logging
+            vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 86
+            vol_for_kucoin = max(KUCOIN_MIN_QTY, vol_for_mexc)
 
 
         # Log every 30 seconds
