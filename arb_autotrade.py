@@ -54,10 +54,10 @@ from trade_logger import (
 
 from pathlib import Path
 
-LOG_DIR = Path('/app/logs') if Path('/app/logs').exists() else Path('/home/openclaw/.openclaw/logs')
-LOG_DIR.mkdir(parents=True, exist_ok=True)  # Ensure log directory exists
+LOG_DIR = Path('/app/logs')
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / 'arb_autotrade.log'
-CONFIG_FILE = '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot/config/config.yaml'
+CONFIG_FILE = '/app/config/config.yaml'
 ACTIVE_FLAG_FILE = LOG_DIR / 'arb_active.flag'
 
 # Exchange API credentials
@@ -287,7 +287,7 @@ def start_http_log_server(port: int = 8503):
             
             from pathlib import Path
             normalized_pair = pair.replace('-', '').replace('/', '')
-            LOG_DIR = Path('/app/logs') if Path('/app/logs').exists() else Path('/home/openclaw/.openclaw/logs')
+            LOG_DIR = Path('/app/logs')
             csv_path = LOG_DIR / f"{normalized_pair}_trades.csv"
             
             if not csv_path.exists():
@@ -1694,7 +1694,7 @@ def main():
     log(f"Logging: Harmonized CSV per pair -> {TRADING_PAIR}_trades.csv")
 
     # Ensure logs directory exists
-    os.makedirs('/home/openclaw/.openclaw/logs', exist_ok=True)
+    os.makedirs('/app/logs', exist_ok=True)
 
     # Thresholds - load from config directly (avoiding settings_sync import issues)
     try:
