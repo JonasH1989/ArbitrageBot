@@ -41,7 +41,7 @@ import csv
 from trade_logger import (
     harmonize_kucoin_order,
     harmonize_mexc_order,
-    log_trade,
+    get_exchange_short_id,  # Keep using original harmonize functions
     update_limit_watch,
     get_pending_limit_orders,
     get_trade_summary,
