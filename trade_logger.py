@@ -164,7 +164,7 @@ def init_pair_csv(pair: str) -> Path:
     
     if not csv_path.exists():
         with open(csv_path, 'w', newline='') as f:
-            writer = csv.writer(f)
+            writer = csv.writer(f, delimiter=';')
             writer.writerow(UNIFIED_COLUMNS)
     
     return csv_path
@@ -459,7 +459,7 @@ def log_trade(
     sys.stderr.write(f"DEBUG: CSV exists: {csv_path.exists()}\n")
     
     with open(csv_path, 'a', newline='') as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, delimiter=';')
         writer.writerow(row)
     
     return trade_id
