@@ -14,6 +14,41 @@ from typing import Dict, Optional, List, Tuple
 
 LOG_DIR = Path("/app/logs")
 
+
+# Exchange configuration cache
+_EXCHANGE_CONFIG = None
+
+def get_exchange_config() -> Dict:
+    """Load exchange config from config.yaml"""
+    global _EXCHANGE_CONFIG
+    if _EXCHANGE_CONFIG is None:
+        config_path = Path('/app/config/config.yaml')
+        if config_path.exists():
+            import yaml
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f)
+                _EXCHANGE_CONFIG = config.get('exchanges', {})
+        else:
+            _EXCHANGE_CONFIG = {}
+    return _EXCHANGE_CONFIG
+
+def get_exchange_short_id(exchange_name: str) -> str:
+    """Get short_id for an exchange (e.g. 'KUCOIN' -> 'KCN')"""
+    config = get_exchange_config()
+    exchange_lower = exchange_name.lower()
+    if exchange_lower in config:
+        return config[exchange_lower].get('short_id', exchange_name[:3].upper())
+    # Fallback: first 3 chars uppercase
+    return exchange_name[:3].upper()
+
+def get_exchange_color(exchange_name: str) -> str:
+    """Get color for an exchange"""
+    config = get_exchange_config()
+    exchange_lower = exchange_name.lower()
+    if exchange_lower in config:
+        return config[exchange_lower].get('color', '#888888')
+    return '#888888'
+
 # Unified CSV columns for ALL trades (harmonized format)
 # Exchange-Agnostic: Works with any exchanges (KuCoin, MEXC, Binance, etc.)
 #
@@ -24,13 +59,13 @@ UNIFIED_COLUMNS = [
     # Trade Identity
     "trade_id",              # Unique ID: YYYYMMDD_HHMMSS_MMMMMM (no prefix)
     "internal_ts",            # When BOT initiated the trade (ISO format)
-    "direction",              # "K->M" or "M->K"
+    "direction",              # "KCN->MXC" or "MXC->KCN"
     "pair",                  # Trading pair e.g. "MPC-USDT"
     "strategy",               # "USDT" or "COINS"
     "spread_pct",             # Spread in % when trade was triggered
     
     # Exchange 1 (Market Order - first leg, always MARKET)
-    "ex1_exchange",          # Exchange name: "KUCOIN", "MEXC", "BINANCE", etc.
+    "ex1",                   # Exchange short_id: "KCN", "MXC", "BNC"
     "ex1_order_id",          # Exchange-specific order ID
     "ex1_type",              # "market" (always for ex1)
     "ex1_side",              # "buy" or "sell"
@@ -45,7 +80,7 @@ UNIFIED_COLUMNS = [
     "ex1_status",            # Exchange status: FILLED, PARTIAL, REJECTED, PENDING
     
     # Exchange 2 (Limit Order - second leg, always LIMIT)
-    "ex2_exchange",          # Exchange name
+    "ex2",                   # Exchange short_id: "KCN", "MXC", "BNC"
     "ex2_order_id",          # Exchange-specific order ID
     "ex2_type",              # "limit" (always for ex2)
     "ex2_side",              # "buy" or "sell"
@@ -362,13 +397,13 @@ def log_trade(
         # Trade Identity
         trade_id,
         internal_ts,
-        direction,
+        direction,  # Now formatted as "KCN->MXC" or "MXC->KCN" from caller
         pair,
         strategy,
         spread_pct,
         
         # Exchange 1 (market order - first leg)
-        ex1_data.get("exchange", ""),
+        get_exchange_short_id(ex1_data.get("exchange", "")),
         ex1_data.get("order_id", ""),
         ex1_data.get("type", ""),
         ex1_data.get("side", ""),
@@ -383,7 +418,7 @@ def log_trade(
         ex1_data.get("status", ""),
         
         # Exchange 2 (limit order - second leg)
-        ex2_data.get("exchange", ""),
+        get_exchange_short_id(ex2_data.get("exchange", "")),
         ex2_data.get("order_id", ""),
         ex2_data.get("type", ""),
         ex2_data.get("side", ""),

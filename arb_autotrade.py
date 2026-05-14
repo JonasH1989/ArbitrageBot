@@ -1020,8 +1020,12 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     Returns:
         (success, trade_id)
     """
-    # Determine direction string for logging
-    dir_str = f"{exchange_market[:1]}->{exchange_limit[:1]}"  # e.g. "K->M" or "M->K"
+    # Determine direction string for logging using short_ids
+    # Import here to avoid circular dependency issues
+    from trade_logger import get_exchange_short_id
+    ex1_short = get_exchange_short_id(exchange_market.upper())
+    ex2_short = get_exchange_short_id(exchange_limit.upper())
+    dir_str = f"{ex1_short}->{ex2_short}"  # e.g. "KCN->MXC"
 
     log(f"=== EXECUTING TRADE {dir_str} (strategy={strategy}) ===")
     coin = COIN_SYMBOL.split('-')[0]
@@ -1166,7 +1170,10 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     response_data1 = result1.get('data', result1) if exchange_market.upper() == "KUCOIN" else result1
     ex1_data = ex1_harmonize(response_data1, "buy", "market", TRADING_PAIR)
     ex1_data['price_expected'] = market_price_expected
-    log(f"   Harmonized: qty_filled={ex1_data['qty_filled']}, value_usdt={ex1_data['value_usdt']:.4f}, fees={ex1_data['fees']:.4f}")
+    # CRITICAL: Set qty_ordered to the PLANNED value (qty parameter), not from exchange response
+    # Exchange may return 0 for qty_ordered in async market orders
+    ex1_data['qty_ordered'] = qty
+    log(f"   Harmonized: qty_ordered={ex1_data['qty_ordered']:.0f}, qty_filled={ex1_data['qty_filled']:.0f}, value_usdt={ex1_data['value_usdt']:.4f}, fees={ex1_data['fees']:.4f}")
 
     # ========================================================================
     # STEP 1.5: Price Drift Check (Jonas' solution: freeze prices at sweep time)
