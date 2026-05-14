@@ -1617,25 +1617,44 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
 
 
 def calculate_best_trade(ob_data, min_trade_qty, threshold_start, stop_threshold, strategy):
-    """Extract best trade from orderbook using sweep algorithm. Used for both initial scan and fresh spread checks."""
+    """Extract best trade from orderbook using BIDIRECTIONAL VOLUME ACCUMULATION.
+    
+    Both sides accumulate volume - the bottleneck determines actual trade volume.
+    If KuCoin L1 is thin but L1+L2 is enough, we use L1+L2.
+    Same for MEXC.
+    
+    Key insight: We must accumulate on BOTH sides, not just fix one side!
+    """
     best_trade = None
     
     if not ob_data:
         return None
     
-    # Direction M→K: Buy MEXC (sweep asks), Sell KuCoin (fix bids)
-    for k_bid in ob_data.get('kucoin_bids', [])[:5]:
-        cum_vol_mexc = 0
-        for m_ask in ob_data.get('mexc_asks', [])[:5]:
+    # Get all levels (not just top 5) for full accumulation
+    kucoin_bids = ob_data.get('kucoin_bids', [])[:10]  # KuCoin sell depth (we buy here)
+    kucoin_asks = ob_data.get('kucoin_asks', [])[:10]  # KuCoin buy depth (we sell here)
+    mexc_asks = ob_data.get('mexc_asks', [])[:10]      # MEXC sell depth (we buy here)
+    mexc_bids = ob_data.get('mexc_bids', [])[:10]      # MEXC buy depth (we sell here)
+    
+    # Direction M→K: Buy MEXC (sweep asks), Sell KuCoin (sweep bids)
+    # Accumulate KuCoin bids first, then sweep through MEXC asks
+    cum_k_bids = 0
+    for k_bid in kucoin_bids:
+        cum_k_bids += k_bid['qty']
+        cum_m_asks = 0
+        for m_ask in mexc_asks:
+            cum_m_asks += m_ask['qty']
             spread = k_bid['price'] - m_ask['price']
             spread_pct = (spread / m_ask['price']) * 100 if m_ask['price'] > 0 else 0
-            cum_vol_mexc += m_ask['qty']
 
             if spread_pct < stop_threshold:
                 break
 
-            if spread_pct >= threshold_start and min(cum_vol_mexc, k_bid['qty']) >= min_trade_qty:
-                expected_profit_usdt = (k_bid['price'] - m_ask['price']) * min(cum_vol_mexc, k_bid['qty'])
+            # Volume is the MINIMUM of both sides (bottleneck determines trade size)
+            trade_vol = min(cum_k_bids, cum_m_asks)
+            
+            if spread_pct >= threshold_start and trade_vol >= min_trade_qty:
+                expected_profit_usdt = (k_bid['price'] - m_ask['price']) * trade_vol
                 expected_profit_mpc = expected_profit_usdt / m_ask['price'] if m_ask['price'] > 0 else 0
                 profit = expected_profit_mpc if strategy == 'coins' else expected_profit_usdt
 
@@ -1644,27 +1663,37 @@ def calculate_best_trade(ob_data, min_trade_qty, threshold_start, stop_threshold
                         'dir': 'M→K',
                         'buy': m_ask['price'],
                         'sell': k_bid['price'],
+                        'buy_ex': 'MEXC',
+                        'sell_ex': 'KUCOIN',
                         'pct': spread_pct,
-                        'vol': min(cum_vol_mexc, k_bid['qty']),
+                        'vol': trade_vol,
+                        'vol_k_bids': cum_k_bids,   # Debug: accumulated KuCoin bid volume
+                        'vol_m_asks': cum_m_asks,   # Debug: accumulated MEXC ask volume
                         'profit_usdt': expected_profit_usdt,
                         'profit_mpc': expected_profit_mpc,
                         'strategy': strategy
                     }
                 break
 
-    # Direction K→M: Buy KuCoin (sweep asks), Sell MEXC (fix bids)
-    for m_bid in ob_data.get('mexc_bids', [])[:5]:
-        cum_vol_kucoin = 0
-        for k_ask in ob_data.get('kucoin_asks', [])[:5]:
+    # Direction K→M: Buy KuCoin (sweep asks), Sell MEXC (sweep bids)
+    # Accumulate MEXC bids first, then sweep through KuCoin asks
+    cum_m_bids = 0
+    for m_bid in mexc_bids:
+        cum_m_bids += m_bid['qty']
+        cum_k_asks = 0
+        for k_ask in kucoin_asks:
+            cum_k_asks += k_ask['qty']
             spread = m_bid['price'] - k_ask['price']
             spread_pct = (spread / k_ask['price']) * 100 if k_ask['price'] > 0 else 0
-            cum_vol_kucoin += k_ask['qty']
 
             if spread_pct < stop_threshold:
                 break
 
-            if spread_pct >= threshold_start and min(cum_vol_kucoin, m_bid['qty']) >= min_trade_qty:
-                expected_profit_usdt = (m_bid['price'] - k_ask['price']) * min(cum_vol_kucoin, m_bid['qty'])
+            # Volume is the MINIMUM of both sides (bottleneck determines trade size)
+            trade_vol = min(cum_m_bids, cum_k_asks)
+            
+            if spread_pct >= threshold_start and trade_vol >= min_trade_qty:
+                expected_profit_usdt = (m_bid['price'] - k_ask['price']) * trade_vol
                 expected_profit_mpc = expected_profit_usdt / k_ask['price'] if k_ask['price'] > 0 else 0
                 profit = expected_profit_mpc if strategy == 'coins' else expected_profit_usdt
 
@@ -1673,8 +1702,12 @@ def calculate_best_trade(ob_data, min_trade_qty, threshold_start, stop_threshold
                         'dir': 'K→M',
                         'buy': k_ask['price'],
                         'sell': m_bid['price'],
+                        'buy_ex': 'KUCOIN',
+                        'sell_ex': 'MEXC',
                         'pct': spread_pct,
-                        'vol': min(cum_vol_kucoin, m_bid['qty']),
+                        'vol': trade_vol,
+                        'vol_m_bids': cum_m_bids,   # Debug: accumulated MEXC bid volume
+                        'vol_k_asks': cum_k_asks,   # Debug: accumulated KuCoin ask volume
                         'profit_usdt': expected_profit_usdt,
                         'profit_mpc': expected_profit_mpc,
                         'strategy': strategy
@@ -1785,82 +1818,10 @@ def main():
         kucoin_min_qty = KUCOIN_MIN_QTY
         min_trade_qty = max(mexc_min_qty, kucoin_min_qty)
 
-        # Find best tradeable spread using sweep algorithm
-        best_trade = None
-        vol_for_mexc = min_trade_qty  # Default volume
-        vol_for_kucoin = min_trade_qty
-
-        if ob_data:
-            # Direction M→K: Buy MEXC (sweep asks), Sell KuCoin (fix bids)
-            # For each KuCoin bid level (best first), sweep through MEXC asks
-            for k_bid in ob_data['kucoin_bids'][:5]:  # Top 5 bid levels
-                cum_vol_mexc = 0  # Cumulative volume on MEXC (buy) side
-
-                for m_ask in ob_data['mexc_asks'][:5]:  # Sweep through asks
-                    spread = k_bid['price'] - m_ask['price']
-                    spread_pct = (spread / m_ask['price']) * 100 if m_ask['price'] > 0 else 0
-                    cum_vol_mexc += m_ask['qty']  # Add cumulative volume
-
-                    # STOP_THRESHOLD check - spread too low, no deeper level will help
-                    if spread_pct < threshold_stop:
-                        break
-
-                    # START_THRESHOLD check - spread is interesting
-                    if spread_pct >= threshold_start and min(cum_vol_mexc, k_bid['qty']) >= min_trade_qty:
-                        # Calculate expected profit for decision
-                        strategy = get_trading_strategy(TRADING_PAIR)
-                        expected_profit_usdt = (k_bid['price'] - m_ask['price']) * min(cum_vol_mexc, k_bid['qty'])
-                        expected_profit_mpc = expected_profit_usdt / m_ask['price'] if m_ask['price'] > 0 else 0
-
-                        profit_for_decision = expected_profit_mpc if strategy == 'coins' else expected_profit_usdt
-
-                        if best_trade is None or profit_for_decision > (best_trade.get('profit_mpc' if strategy == 'coins' else 'profit_usdt', 0)):
-                            best_trade = {
-                                'dir': 'M→K',
-                                'buy': m_ask['price'],
-                                'sell': k_bid['price'],
-                                'pct': spread_pct,
-                                'vol': min(cum_vol_mexc, k_bid['qty']),
-                                'profit_usdt': expected_profit_usdt,
-                                'profit_mpc': expected_profit_mpc,
-                                'strategy': strategy
-                            }
-                        break  # Found tradeable at this bid level, move to next bid
-
-            # Direction K→M: Buy KuCoin (sweep asks), Sell MEXC (fix bids)
-            for m_bid in ob_data['mexc_bids'][:5]:  # Top 5 bid levels on MEXC
-                cum_vol_kucoin = 0  # Cumulative volume on KuCoin (buy) side
-
-                for k_ask in ob_data.get('kucoin_asks', [])[:5]:  # Sweep through asks
-                    spread = m_bid['price'] - k_ask['price']
-                    spread_pct = (spread / k_ask['price']) * 100 if k_ask['price'] > 0 else 0
-                    cum_vol_kucoin += k_ask['qty']  # Add cumulative volume
-
-                    # STOP_THRESHOLD check
-                    if spread_pct < threshold_stop:
-                        break
-
-                    # START_THRESHOLD check
-                    if spread_pct >= threshold_start and min(cum_vol_kucoin, m_bid['qty']) >= min_trade_qty:
-                        # Calculate expected profit for decision
-                        strategy = get_trading_strategy(TRADING_PAIR)
-                        expected_profit_usdt = (m_bid['price'] - k_ask['price']) * min(cum_vol_kucoin, m_bid['qty'])
-                        expected_profit_mpc = expected_profit_usdt / k_ask['price'] if k_ask['price'] > 0 else 0
-
-                        profit_for_decision = expected_profit_mpc if strategy == 'coins' else expected_profit_usdt
-
-                        if best_trade is None or profit_for_decision > (best_trade.get('profit_mpc' if strategy == 'coins' else 'profit_usdt', 0)):
-                            best_trade = {
-                                'dir': 'K→M',
-                                'buy': k_ask['price'],
-                                'sell': m_bid['price'],
-                                'pct': spread_pct,
-                                'vol': min(cum_vol_kucoin, m_bid['qty']),
-                                'profit_usdt': expected_profit_usdt,
-                                'profit_mpc': expected_profit_mpc,
-                                'strategy': strategy
-                            }
-                        break
+        # Find best tradeable spread using BIDIRECTIONAL VOLUME ACCUMULATION
+        # This replaces the old sweep that fixed one side - now both sides accumulate!
+        strategy = get_trading_strategy(TRADING_PAIR)
+        best_trade = calculate_best_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy)
 
         # Log sweep results every 30 seconds
         if int(time.time()) % 10 == 0:
