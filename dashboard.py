@@ -430,7 +430,7 @@ if isinstance(pairs_config, list):
     pairs_config = {p: {'enabled': True, 'strategy': 'usdt', 'threshold_start': 1.0, 'threshold_stop': 0.5, 'alert_enabled': True} for p in pairs_config}
 
 # ENFORCE INAKTIV on redeploy - check flag, set config to match
-if os.path.exists('/home/openclaw/.openclaw/logs/arb_active.flag'):
+if os.path.exists('/app/logs/arb_active.flag'):
     config['trading']['pairs'] = pairs_config
 else:
     # Ensure config is INAKTIV on redeploy
@@ -490,7 +490,7 @@ with st.sidebar:
         try:
             from pathlib import Path
             from datetime import datetime
-            log_dir = Path('/app/logs') if Path('/app/logs').exists() else Path('/home/openclaw/.openclaw/logs')
+            log_dir = Path('/app/logs')
             log_file = log_dir / 'arb_live_log.txt'
             ts = datetime.now().strftime('%H:%M:%S')
             level_str = "Level 1 - Basic" if new_log_level == 1 else "Level 2 - Debug"
