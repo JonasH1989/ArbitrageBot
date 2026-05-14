@@ -4,6 +4,7 @@ Arbitrage Auto-Trade Bot
 Executes trades automatically when opportunities arise
 Uses harmonized trade_logger for unified multi-exchange logging
 """
+import sys
 import requests
 import yaml
 import time
