@@ -1743,6 +1743,14 @@ def main():
 
     # Ensure logs directory exists
     os.makedirs('/app/logs', exist_ok=True)
+    
+    # Start TradeLogger background service
+    try:
+        from trade_logger_service import start as start_logger
+        start_logger()
+        log("TradeLogger service gestartet")
+    except Exception as e:
+        log(f"TradeLogger start fehlgeschlagen: {e}")
 
     # Thresholds - load from config directly (avoiding settings_sync import issues)
     try:

@@ -1,0 +1,243 @@
+"""
+Trade Logger Service - Background Thread for Trade Logging
+
+Architecture:
+- Bot calls log_trade() (sync via trade_logger module) - unchanged
+- This service provides background filler for missing exchange data
+- get_trades() and get_trade_summary() for dashboard reads
+
+Usage:
+    from trade_logger_service import start, get_trades, get_trade_summary
+    start()  # Call once at bot startup
+"""
+
+import csv
+import threading
+import time
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional
+
+LOG_DIR = Path("/app/logs")
+CONFIG_PATH = Path("/app/config/config.yaml")
+
+
+# Exchange configuration
+_EXCHANGE_CONFIG = None
+
+def get_exchange_config() -> Dict:
+    global _EXCHANGE_CONFIG
+    if _EXCHANGE_CONFIG is None:
+        if CONFIG_PATH.exists():
+            import yaml
+            with open(CONFIG_PATH, 'r') as f:
+                config = yaml.safe_load(f)
+                _EXCHANGE_CONFIG = config.get('exchanges', {})
+        else:
+            _EXCHANGE_CONFIG = {}
+    return _EXCHANGE_CONFIG
+
+def get_exchange_short_id(exchange_name: str) -> str:
+    config = get_exchange_config()
+    exchange_lower = exchange_name.lower()
+    if exchange_lower in config:
+        return config[exchange_lower].get('short_id', exchange_name[:3].upper())
+    return exchange_name[:3].upper()
+
+
+# Unified CSV columns (same as trade_logger.py)
+UNIFIED_COLUMNS = [
+    "trade_id", "internal_ts", "direction", "pair", "strategy", "spread_pct",
+    "ex1", "ex1_order_id", "ex1_type", "ex1_side", "ex1_qty_ordered", "ex1_qty_filled",
+    "ex1_price_expected", "ex1_price_actual", "ex1_price_avg", "ex1_value_usdt",
+    "ex1_fees", "ex1_create_ts", "ex1_status",
+    "ex2", "ex2_order_id", "ex2_type", "ex2_side", "ex2_qty_ordered", "ex2_qty_filled",
+    "ex2_price_expected", "ex2_price_actual", "ex2_price_avg", "ex2_value_usdt",
+    "ex2_fees", "ex2_create_ts", "ex2_status",
+    "profit_usdt_expected", "profit_mpc_expected", "profit_usdt_actual", "profit_mpc_actual",
+    "limit_watch_status", "limit_last_check",
+    "error_code", "error_message",
+    "raw_ex1_response", "raw_ex2_response", "updated_at"
+]
+
+
+class TradeLogger:
+    """
+    Background service for trade data management.
+    
+    Provides:
+    - Background filler for missing exchange data
+    - Thread-safe CSV reading
+    """
+    
+    _instance = None
+    _lock = threading.Lock()
+    
+    def __init__(self):
+        self.running = False
+        self.filler_thread = None
+        self._csv_lock = threading.Lock()
+    
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = cls()
+        return cls._instance
+    
+    def start(self):
+        """Start the background filler thread"""
+        if self.running:
+            return
+        
+        self.running = True
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        
+        self.filler_thread = threading.Thread(target=self._background_filler, daemon=True)
+        self.filler_thread.start()
+        
+        print(f"[TradeLogger] Started - LOG_DIR={LOG_DIR}")
+    
+    def stop(self):
+        """Stop the background thread"""
+        self.running = False
+        if self.filler_thread:
+            self.filler_thread.join(timeout=5)
+        print("[TradeLogger] Stopped")
+    
+    def _background_filler(self):
+        """Background filler - polls exchanges for missing trade data"""
+        while self.running:
+            try:
+                time.sleep(60)  # Check every minute
+                
+                for csv_file in LOG_DIR.glob("*_trades.csv"):
+                    self._fill_missing_in_csv(csv_file)
+                    
+            except Exception as e:
+                print(f"[TradeLogger] Filler error: {e}")
+    
+    def _fill_missing_in_csv(self, csv_path: Path):
+        """Check CSV for missing data and fill via API calls"""
+        with self._csv_lock:
+            try:
+                with open(csv_path, 'r', newline='') as f:
+                    reader = csv.DictReader(f)
+                    rows = list(reader)
+                
+                if not rows:
+                    return
+                
+                modified = False
+                
+                for i, row in enumerate(rows):
+                    # ex2_create_ts missing?
+                    if not row.get('ex2_create_ts') or row.get('ex2_create_ts') == '0':
+                        order_id = row.get('ex2_order_id', '')
+                        if order_id and order_id not in ['FAILED', 'NOT_PLACED', '']:
+                            exchange = row.get('ex2', '')
+                            ts = self._fetch_order_timestamp(exchange, order_id)
+                            if ts:
+                                rows[i]['ex2_create_ts'] = ts
+                                modified = True
+                    
+                    # ex2_status missing?
+                    if not row.get('ex2_status') or row.get('ex2_status') == '':
+                        order_id = row.get('ex2_order_id', '')
+                        if order_id and order_id not in ['FAILED', 'NOT_PLACED', '']:
+                            exchange = row.get('ex2', '')
+                            status = self._fetch_order_status(exchange, order_id)
+                            if status:
+                                rows[i]['ex2_status'] = status
+                                modified = True
+                
+                if modified:
+                    with open(csv_path, 'w', newline='') as f:
+                        writer = csv.DictWriter(f, fieldnames=UNIFIED_COLUMNS)
+                        writer.writeheader()
+                        writer.writerows(rows)
+                    print(f"[TradeLogger] Filled missing data in {csv_path.name}")
+                    
+            except Exception as e:
+                print(f"[TradeLogger] Error filling {csv_path}: {e}")
+    
+    def _fetch_order_timestamp(self, exchange: str, order_id: str) -> Optional[int]:
+        """Fetch order timestamp from exchange API"""
+        # TODO: Implement API call to get order createTime
+        return None
+    
+    def _fetch_order_status(self, exchange: str, order_id: str) -> Optional[str]:
+        """Fetch order status from exchange API"""
+        # TODO: Implement API call to get order status
+        return None
+    
+    def get_trades(self, pair: str, limit: int = 50) -> List[Dict]:
+        """Get trades from CSV"""
+        csv_path = self._get_csv_path(pair)
+        
+        if not csv_path.exists():
+            return []
+        
+        with self._csv_lock:
+            with open(csv_path, 'r', newline='') as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+        
+        return list(reversed(rows))[:limit]
+    
+    def get_trade_summary(self, pair: str) -> Dict:
+        """Get summary statistics"""
+        trades = self.get_trades(pair, limit=1000)
+        
+        total_trades = len(trades)
+        completed_trades = len([t for t in trades if t.get('limit_watch_status') == 'FILLED'])
+        pending_limit = len([t for t in trades if t.get('limit_watch_status') == 'WATCHING'])
+        
+        total_profit_usdt = sum(float(t.get('profit_usdt_actual', 0) or 0) for t in trades)
+        total_profit_mpc = sum(float(t.get('profit_mpc_actual', 0) or 0) for t in trades)
+        
+        winning = len([t for t in trades if float(t.get('profit_usdt_actual', 0) or 0) > 0])
+        win_rate = f"{(winning / total_trades * 100):.1f}%" if total_trades > 0 else "0%"
+        
+        return {
+            'total_trades': total_trades,
+            'completed_trades': completed_trades,
+            'pending_limit_orders': pending_limit,
+            'total_profit_usdt': total_profit_usdt,
+            'total_profit_mpc': total_profit_mpc,
+            'win_rate': win_rate,
+        }
+    
+    def _get_csv_path(self, pair: str) -> Path:
+        normalized = pair.replace('-', '').replace('/', '')
+        return LOG_DIR / f"{normalized}_trades.csv"
+
+
+# ========================================================================
+# Module-level functions
+# ========================================================================
+
+_instance = None
+
+def get_instance() -> TradeLogger:
+    global _instance
+    if _instance is None:
+        _instance = TradeLogger.get_instance()
+    return _instance
+
+def start():
+    """Start the TradeLogger service"""
+    get_instance().start()
+
+def stop():
+    """Stop the TradeLogger service"""
+    get_instance().stop()
+
+def get_trades(pair: str, limit: int = 50) -> List[Dict]:
+    """Get trades from CSV - for dashboard"""
+    return get_instance().get_trades(pair, limit)
+
+def get_trade_summary(pair: str) -> Dict:
+    """Get trade summary - for dashboard"""
+    return get_instance().get_trade_summary(pair)
