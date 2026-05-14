@@ -12,7 +12,7 @@ services:
       - "192.168.113.14:18888:8505"
     volumes:
       - arb-config:/app/config
-      - ./logs:/app/logs
+      - arb-logs:/app/logs    # PERSISTENT named volume!
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=Europe/Berlin
@@ -36,7 +36,7 @@ services:
       - "192.168.113.14:8502:8501"
     volumes:
       - arb-config:/app/config
-      - ./logs:/app/logs
+      - arb-logs:/app/logs    # PERSISTENT named volume!
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8501/_stcore/health"]
       interval: 10s
@@ -46,3 +46,4 @@ services:
 
 volumes:
   arb-config:
+  arb-logs:
