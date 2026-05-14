@@ -1797,7 +1797,6 @@ def main():
     start_http_log_server(port=8505)
     http_log("Bot gestartet", "INFO")
     last_config_hash = None  # Track config changes for immediate logging
-    last_trade_time = 0
     last_limit_check = 0
 
     # Read enabled status from config
@@ -2129,12 +2128,10 @@ def main():
             
             # Only complete trade if SUCCESS=True
             if success:
-                last_trade_time = time.time()
-                trade_in_progress = False
+                log(f"✅ Trade executed - waiting for limit fill confirmation")
                 state = STATE_WAITING
             else:
                 log(f"⚠️ Trade execution failed (API error). Resetting.")
-                last_trade_time = time.time()
                 trade_in_progress = False
                 state = STATE_WAITING
 
