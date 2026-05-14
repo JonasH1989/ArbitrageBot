@@ -73,6 +73,9 @@ MEXC_SECRET = _cfg.get('mexc', {}).get('api_secret', '')
 
 MEXC_MIN_USDT = 1.0
 
+# Cooldown after placing a trade (seconds) - prevents rapid-fire trades while limit order is pending
+COOLDOWN_AFTER_TRADE = 30  # 30 seconds should be enough for limit order to be placed
+
 # Fee rates (REAL fees from exchanges, NOT estimates!)
 MEXC_FEE_TAKER = 0.0005   # 0.05% taker fee
 MEXC_FEE_MAKER = -0.0001   # -0.01% maker rebate (negative = we get paid)
@@ -1994,15 +1997,28 @@ def main():
                     success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
                 
                 # Only complete trade if SUCCESS=True
+                # CRITICAL FIX: Don't reset trade_in_progress immediately!
+                # The limit order is still PENDING and we must wait for it to fill
+                # before starting a new trade. Use cooldown instead.
                 if success:
                     last_trade_time = time.time()
-                    trade_in_progress = False
+                    # Keep trade_in_progress=True but add cooldown check in trigger condition
+                    # trade_in_progress will be reset after COOLDOWN seconds
+                    log(f"✅ Trade logged, waiting for limit fill... (cooldown {COOLDOWN_AFTER_TRADE}s)")
                     state = STATE_WAITING
+                    # NOTE: NOT resetting trade_in_progress here!
+                    # It will be reset after cooldown in the main loop
                 else:
                     log(f"⚠️ Trade execution failed (API error). Resetting.")
                     last_trade_time = time.time()
                     trade_in_progress = False
                     state = STATE_WAITING
+        
+        # Cooldown check: Reset trade_in_progress after cooldown period
+        # This prevents rapid-fire trades while waiting for limit order fills
+        if trade_in_progress and (time.time() - last_trade_time) > COOLDOWN_AFTER_TRADE:
+            log(f"⏱ Cooldown ended, trade_in_progress reset")
+            trade_in_progress = False
         
         # Re-check spread before EACH trade in RUNNING state (critical bug fix!)
         # Re-check spread before EACH trade in RUNNING state
