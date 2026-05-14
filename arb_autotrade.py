@@ -4,9 +4,6 @@ Arbitrage Auto-Trade Bot
 Executes trades automatically when opportunities arise
 Uses harmonized trade_logger for unified multi-exchange logging
 """
-import sys
-sys.path.insert(0, '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot')
-
 import requests
 import yaml
 import time
