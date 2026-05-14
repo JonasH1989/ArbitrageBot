@@ -38,6 +38,20 @@ def get_exchange_config() -> Dict:
             _EXCHANGE_CONFIG = {}
     return _EXCHANGE_CONFIG
 
+def get_mexc_credentials() -> Optional[Dict]:
+    """Get MEXC API credentials from config"""
+    if CONFIG_PATH.exists():
+        import yaml
+        with open(CONFIG_PATH, 'r') as f:
+            config = yaml.safe_load(f)
+            mexc = config.get('mexc', {})
+            if mexc.get('api_key') and mexc.get('api_secret'):
+                return {
+                    'api_key': mexc['api_key'],
+                    'api_secret': mexc['api_secret']
+                }
+    return None
+
 def get_exchange_short_id(exchange_name: str) -> str:
     config = get_exchange_config()
     exchange_lower = exchange_name.lower()
@@ -155,6 +169,32 @@ class TradeLogger:
                             if status:
                                 rows[i]['ex2_status'] = status
                                 modified = True
+                    
+                    # ex1_fees missing or 0?
+                    ex1_fees = float(row.get('ex1_fees', 0) or 0)
+                    if ex1_fees == 0:
+                        order_id = row.get('ex1_order_id', '')
+                        exchange = row.get('ex1', '')
+                        if order_id and exchange and order_id not in ['FAILED', 'NOT_PLACED', '']:
+                            pair = row.get('pair', '')
+                            ts = int(row.get('ex1_create_ts', 0) or 0)
+                            fee = self._fetch_fees_for_order(exchange, order_id, pair, ts)
+                            if fee and fee > 0:
+                                rows[i]['ex1_fees'] = fee
+                                modified = True
+                    
+                    # ex2_fees missing or 0?
+                    ex2_fees = float(row.get('ex2_fees', 0) or 0)
+                    if ex2_fees == 0:
+                        order_id = row.get('ex2_order_id', '')
+                        exchange = row.get('ex2', '')
+                        if order_id and exchange and order_id not in ['FAILED', 'NOT_PLACED', '']:
+                            pair = row.get('pair', '')
+                            ts = int(row.get('ex2_create_ts', 0) or 0)
+                            fee = self._fetch_fees_for_order(exchange, order_id, pair, ts)
+                            if fee and fee > 0:
+                                rows[i]['ex2_fees'] = fee
+                                modified = True
                 
                 if modified:
                     with open(csv_path, 'w', newline='') as f:
@@ -176,6 +216,72 @@ class TradeLogger:
         """Fetch order status from exchange API"""
         # TODO: Implement API call to get order status
         return None
+    
+    def _fetch_fees_for_order(self, exchange: str, order_id: str, pair: str, timestamp_ms: int) -> Optional[float]:
+        """
+        Fetch actual fees paid for an order from exchange API.
+        Returns fee in USDT or None if not found.
+        """
+        # Normalize pair for MEXC: MPC-USDT -> MPCUSDT
+        symbol = pair.replace('-', '').replace('/', '')
+        
+        if exchange.upper() == 'MXC':
+            return self._fetch_mexc_fees(order_id, symbol, timestamp_ms)
+        elif exchange.upper() == 'KCN':
+            return self._fetch_kucoin_fees(order_id, symbol, timestamp_ms)
+        return None
+    
+    def _fetch_mexc_fees(self, order_id: str, symbol: str, timestamp_ms: int) -> Optional[float]:
+        """Fetch fees from MEXC myTrades API"""
+        try:
+            import hmac
+            import hashlib
+            import requests
+            
+            mexc_config = self._get_mexc_config()
+            if not mexc_config:
+                return None
+            
+            ts = str(int(time.time() * 1000))
+            params = f'symbol={symbol}&timestamp={ts}'
+            sig = hmac.new(
+                mexc_config['api_secret'].encode('utf-8'),
+                params.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()
+            
+            url = f'https://api.mexc.com/api/v3/myTrades?{params}&signature={sig}'
+            headers = {'X-MEXC-APIKEY': mexc_config['api_key']}
+            
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code != 200:
+                return None
+            
+            trades = resp.json()
+            if not isinstance(trades, list):
+                return None
+            
+            # Find trades matching this order
+            total_fee = 0.0
+            for trade in trades:
+                if str(trade.get('orderId', '')) == str(order_id):
+                    total_fee += float(trade.get('fee', 0) or 0)
+            
+            return total_fee if total_fee > 0 else None
+            
+        except Exception as e:
+            print(f"[TradeLogger] MEXC fee fetch error: {e}")
+            return None
+    
+    def _fetch_kucoin_fees(self, order_id: str, symbol: str, timestamp_ms: int) -> Optional[float]:
+        """Fetch fees from KuCoin dealer API"""
+        # KuCoin has different fee tracking - typically included in fill response
+        # This is more complex and can be added later if needed
+        return None
+    
+    def _get_mexc_config(self) -> Optional[Dict]:
+        """Get MEXC API credentials from config"""
+        return get_mexc_credentials()
     
     def get_trades(self, pair: str, limit: int = 50) -> List[Dict]:
         """Get trades from CSV - for dashboard"""
