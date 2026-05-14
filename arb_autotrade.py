@@ -931,6 +931,24 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
 
         if resp.status_code == 200 and resp.text:
             order_data = resp.json()
+            
+            # CRITICAL FIX: Check for CANCELED status FIRST
+            # If order is CANCELED, we must return qty=0, NOT fall through to fallback
+            order_status = order_data.get('status', '')
+            if order_status == 'CANCELED':
+                log(f"   MEXC order CANCELED (order status API): qty=0")
+                return {
+                    'status': 'Canceled',  # Return CANCELED status, not Filled!
+                    'orderId': order_id,
+                    'quantity': '0',
+                    'amount': '0',
+                    'fees': 0,
+                    'price': '0',
+                    'executedQty': '0',
+                    'cummulativeQuoteQty': '0'
+                }
+            
+            # Order is not canceled - check if it has executed qty
             if order_data.get('executedQty') and float(order_data.get('executedQty', 0)) > 0:
                 qty = float(order_data.get('executedQty', 0))
                 quote = float(order_data.get('cummulativeQuoteQty', 0))
