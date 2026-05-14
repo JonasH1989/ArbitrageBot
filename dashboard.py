@@ -429,15 +429,19 @@ if isinstance(pairs_config, list):
     # Convert list to dict format
     pairs_config = {p: {'enabled': True, 'strategy': 'usdt', 'threshold_start': 1.0, 'threshold_stop': 0.5, 'alert_enabled': True} for p in pairs_config}
 
-# ENFORCE INAKTIV on redeploy - check flag, set config to match
+# ENFORCE INAKTIV on redeploy - ALWAYS start disabled for safety!
+# The active flag is NOT used to enable the bot - user must enable manually in dashboard
+# This prevents the bot from auto-starting after a crash/restart
 if os.path.exists('/app/logs/arb_active.flag'):
-    config['trading']['pairs'] = pairs_config
-else:
-    # Ensure config is INAKTIV on redeploy
-    for p in pairs_config:
-        pairs_config[p]['enabled'] = False
-    config['trading']['pairs'] = pairs_config
-    save_config(config)
+    # Flag exists but DON'T use it to enable - just log it
+    # The flag was set when user last enabled via dashboard, but bot should still start disabled
+    pass  # Do nothing with the flag - bot always starts disabled
+
+# Ensure config is INAKTIV on redeploy (SAFETY FIRST)
+for p in pairs_config:
+    pairs_config[p]['enabled'] = False
+config['trading']['pairs'] = pairs_config
+save_config(config)
 
 thresholds = config['trading'].get('thresholds', {'start': 0.2, 'stop': 0.1})
 
