@@ -1812,13 +1812,43 @@ def main():
     # ALWAYS start inactive for safety - user must enable via dashboard
     log("=== BOT STARTET IM INAKTIV STATUS (Safety First) ===", "CONFIG")
     pair_enabled = False
-    # CRITICAL: Log EXACTLY who/what triggered this safety shutdown
+    
+    # CRITICAL: Always enforce disabled at startup, regardless of config
+    # Delete the active flag file if it exists (prevents auto-activation on restart)
+    try:
+        if ACTIVE_FLAG_FILE.exists():
+            ACTIVE_FLAG_FILE.unlink()
+            log(f"SAFETY: Deleted active flag file at startup", "CONFIG")
+    except Exception as e:
+        log(f"SAFETY: Could not delete flag file: {e}", "CONFIG")
+    
+    # Force config to disabled (belt and suspenders approach)
     import traceback, sys
     log(f"SAFETY: Setting pair_enabled=False at bot startup", "CONFIG")
     log(f"SAFETY: Caller stack trace:", "CONFIG")
     for line in traceback.format_stack()[:8]:
         log(f"  {line.strip()}", "CONFIG")
-    set_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
+    
+    # Save config with disabled=True BEFORE the bot loop starts
+    # This ensures even if the bot crashes immediately, the next start is safe
+    try:
+        cfg = load_config()
+        if 'trading' not in cfg:
+            cfg['trading'] = {}
+        if 'pairs' not in cfg['trading']:
+            cfg['trading']['pairs'] = {}
+        if TRADING_PAIR not in cfg['trading']['pairs']:
+            cfg['trading']['pairs'][TRADING_PAIR] = {}
+        cfg['trading']['pairs'][TRADING_PAIR]['enabled'] = False
+        
+        # Use settings_sync to save
+        import yaml
+        config_path = Path('/app/config/config.yaml')
+        with open(config_path, 'w') as f:
+            yaml.dump(cfg, f)
+        log(f"SAFETY: Config saved with enabled=False", "CONFIG")
+    except Exception as e:
+        log(f"SAFETY: Error saving config: {e}", "CONFIG")
 
     while True:
         # Re-read all settings from config each cycle
