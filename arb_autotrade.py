@@ -1173,6 +1173,9 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     # CRITICAL: Set qty_ordered to the PLANNED value (qty parameter), not from exchange response
     # Exchange may return 0 for qty_ordered in async market orders
     ex1_data['qty_ordered'] = qty
+    # Set create_ts from transactTime if available (extracted earlier)
+    if transact_time1 > 0:
+        ex1_data['create_ts'] = transact_time1
     log(f"   Harmonized: qty_ordered={ex1_data['qty_ordered']:.0f}, qty_filled={ex1_data['qty_filled']:.0f}, value_usdt={ex1_data['value_usdt']:.4f}, fees={ex1_data['fees']:.4f}")
 
     # ========================================================================
@@ -1287,7 +1290,14 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
         response_data2 = result2.get('data', result2) if exchange_limit.upper() == "KUCOIN" else result2
         ex2_data = ex2_harmonize(response_data2, "sell", "limit", TRADING_PAIR)
         ex2_data['price_expected'] = limit_price_expected
-        log(f"   Harmonized: qty_ordered={ex2_data['qty_ordered']}, qty_filled={ex2_data['qty_filled']}, price_actual={ex2_data['price_actual']:.6f}")
+        # CRITICAL: Set qty_ordered to the PLANNED value (sell_qty), not from exchange response
+        # Exchange may return 0 or wrong value for limit orders
+        ex2_data['qty_ordered'] = sell_qty
+        # Set create_ts from order response if available
+        order_ts = int(response_data2.get('createTime', 0) or 0)
+        if order_ts > 0:
+            ex2_data['create_ts'] = order_ts
+        log(f"   Harmonized: qty_ordered={ex2_data['qty_ordered']:.0f}, qty_filled={ex2_data['qty_filled']:.0f}, price_actual={ex2_data['price_actual']:.6f}")
     else:
         log(f"❌ {exchange_limit} Error: {result2}")
         error_code = "LIMIT_ORDER_FAILED"
