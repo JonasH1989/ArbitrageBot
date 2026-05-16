@@ -1838,7 +1838,6 @@ def main():
         cfg['trading']['pairs'][TRADING_PAIR]['enabled'] = False
         
         # Use settings_sync to save
-        import yaml
         config_path = Path('/app/config/config.yaml')
         with open(config_path, 'w') as f:
             yaml.dump(cfg, f)

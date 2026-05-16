@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy bot
 COPY arb_autotrade.py .
 COPY trade_logger.py .
+COPY trade_logger_service.py .
 
 # Copy settings_sync for config access
 COPY config/settings_sync.py /app/settings_sync.py
