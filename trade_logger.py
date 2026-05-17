@@ -313,6 +313,17 @@ def harmonize_order(response: dict, exchange: str, side: str, order_type: str, p
 # HELPER: Create empty row for a trade
 # =============================================================================
 
+
+def fmt(value) -> str:
+    """Format a numeric value with comma as decimal separator."""
+    if value is None or value == "":
+        return ""
+    if isinstance(value, str):
+        return value
+    # It's a number - format with comma
+    return str(value).replace('.', ',')
+
+
 def create_empty_row(trade_id: str) -> dict:
     """Create a row dict with all columns initialized to empty/zero"""
     row = {col: "" for col in UNIFIED_COLUMNS}
@@ -320,9 +331,26 @@ def create_empty_row(trade_id: str) -> dict:
     return row
 
 
+def fmt(value) -> str:
+    """Format a numeric value with comma as decimal separator."""
+    if value is None or value == "":
+        return ""
+    if isinstance(value, str):
+        return value
+    # It's a number - format with comma
+    return str(value).replace('.', ',')
+
+
 def row_to_list(row: dict) -> list:
-    """Convert row dict to list in column order"""
-    return [row.get(col, "") for col in UNIFIED_COLUMNS]
+    """Convert row dict to list in column order, with comma decimals"""
+    result = []
+    for col in UNIFIED_COLUMNS:
+        val = row.get(col, "")
+        # Only convert numeric values (int/float) to comma format
+        if isinstance(val, (int, float)) and not isinstance(val, bool):
+            val = fmt(val)
+        result.append(str(val) if val is not None else "")
+    return result
 
 
 # =============================================================================

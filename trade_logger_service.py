@@ -695,12 +695,34 @@ class TradeLoggerService:
             'win_rate': win_rate,
         }
     
+    def _fmt_value(self, val) -> str:
+        """Format numeric value with comma as decimal separator."""
+        if val is None or val == "":
+            return ""
+        if isinstance(val, str):
+            return val
+        if isinstance(val, (int, float)) and not isinstance(val, bool):
+            return str(val).replace('.', ',')
+        return str(val)
+    
+    def _prepare_row(self, row: Dict) -> Dict:
+        """Prepare row for CSV writing - convert numeric values to comma format."""
+        prepared = {}
+        for col, val in row.items():
+            if isinstance(val, (int, float)) and not isinstance(val, bool):
+                prepared[col] = self._fmt_value(val)
+            else:
+                prepared[col] = val
+        return prepared
+    
     def _write_csv(self, csv_path: Path, rows: List[Dict]):
         """Write rows back to CSV"""
         with open(csv_path, 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=UNIFIED_COLUMNS, delimiter=';')
             writer.writeheader()
-            writer.writerows(rows)
+            # Prepare rows with comma decimals
+            prepared_rows = [self._prepare_row(row) for row in rows]
+            writer.writerows(prepared_rows)
 
 
 # ========================================================================
