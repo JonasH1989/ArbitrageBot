@@ -1182,11 +1182,11 @@ else:
             st.markdown("---")
             trades = get_trades('MPC-USDT', limit=100)
             
-            # Debug: Show what's happening
-            if not trades:
-                st.warning(f"⚠️ Keine Trades gefunden. CSV-Pfad: /app/logs/MPCUSDT_trades.csv (oder /home/...)")
+            # Debug: show empty state
+            # if not trades:
+            #     st.warning(f"⚠️ Keine Trades gefunden...")
             
-            if trades:
+            if True:  # Always run, even with empty trades
                 # Prepare trade data
                 rows = []
                 for t in reversed(trades):
@@ -1543,7 +1543,7 @@ filterTable();
                     st.download_button("📥 CSV Export", data=csv_bytes, file_name=f"MPC_trades_{datetime.now().strftime('%Y%m%d_%H%M')}.csv", mime="text/csv")
                 else:
                     st.info("Keine Trades")
-            else:
+            elif False:  # unreachable, kept for structure
                 st.info("Keine Trades")
         
         if trade_possible_km or trade_possible_mk:
