@@ -369,3 +369,31 @@ print(f"MEXC Response: {mexc_bal}")
 ---
 
 *Letztes Update: 2026-05-07*
+
+---
+
+## ⚠️ KRITISCH: ZWEI MEXC KEYS!
+
+### Read-Only Key (API Read)
+```
+Name: ArbitrageBotREADONLY
+Access Key: mx0vglEZT6rtvympvJ
+Secret Key: a1a045b12c66414c935dd2eff63e2eb0
+```
+- Nur Balances + Open Orders
+- KEINE Trade History (`myTrades` = No permission)
+
+### Trading Key (Volle Rechte!)
+```
+Name: ArbitrageBotTRADEv2
+Access Key: mx0vglBgOfyggoJe3I
+Secret Key: 4d15399a840d494b9a308534f9cf7907
+```
+- **VOLLE RECHTE**: Trading + Trade History lesen!
+- Für `myTrades` und alle anderen Private Endpoints!
+
+### WICHTIG: Immer den RICHTIGEN Key nutzen!
+- Trade History lesen → Trading Key (TRADEv2)
+- Nur Balances prüfen → Read-only Key reicht
+
+*Gespeichert: 2026-05-17*
