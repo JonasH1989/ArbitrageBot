@@ -267,14 +267,20 @@ def start_http_log_server(port: int = 8503):
     def get_log_file():
         """Read the log file from disk (persistent storage)"""
         try:
+            offset = request.args.get('offset', 0, type=int)
+            limit = request.args.get('limit', 2000, type=int)
             with open(LOG_FILE, 'r') as f:
                 lines = f.readlines()
-            # Return last 2000 lines
+            total = len(lines)
+            start = max(0, total - offset - limit)
+            end = max(0, total - offset)
             return jsonify({
                 'status': 'ok',
                 'file': str(LOG_FILE),
-                'total_lines': len(lines),
-                'logs': [l.strip() for l in lines[-2000:]]
+                'total_lines': total,
+                'offset': offset,
+                'limit': limit,
+                'logs': [l.strip() for l in lines[start:end]]
             })
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)})
