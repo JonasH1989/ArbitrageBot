@@ -331,15 +331,6 @@ def create_empty_row(trade_id: str) -> dict:
     return row
 
 
-def fmt(value) -> str:
-    """Format a numeric value with comma as decimal separator."""
-    if value is None or value == "":
-        return ""
-    if isinstance(value, str):
-        return value
-    # It's a number - format with comma
-    return str(value).replace('.', ',')
-
 
 def row_to_list(row: dict) -> list:
     """Convert row dict to list in column order, with comma decimals"""
