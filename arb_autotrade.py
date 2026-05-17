@@ -577,7 +577,11 @@ def set_active(flag):
 def log(msg, level="INFO"):
     """Enhanced logging with optional level - logs to file and HTTP server"""
     ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
-    line = f"[{ts}] [{level}] {msg}"
+    # Replace decimal separator: . (after digit) -> , (German format)
+    # Only replaces . when followed by a digit (not in paths/URLs)
+    import re
+    msg_comma = re.sub(r'(\d)\.(\d)', r'\1,\2', str(msg))
+    line = f"[{ts}] [{level}] {msg_comma}"
     print(line)
 
     # Check log level - DEBUG messages only logged if debug enabled
