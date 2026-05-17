@@ -1179,24 +1179,6 @@ else:
         sys.stderr.write(f"LOG SECTION: Loading trades\n")
         
         with st.expander("📜 Log", expanded=False):
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                if st.button("🔧 Repair CSV", help="Repair corrupted CSV data"):
-                    st.info("Running repair script...")
-                    import subprocess
-                    result = subprocess.run(
-                        ["python", "repair_csv.py"],
-                        capture_output=True, text=True,
-                        cwd="/app"
-                    )
-                    if result.returncode == 0:
-                        st.success("✅ CSV Repair erfolgreich!")
-                        st.rerun()
-                    else:
-                        st.error(f"❌ Repair fehlgeschlagen: {result.stderr}")
-            with col2:
-                st.write("Korrigiert verschobene Spalten in der Server-CSV")
-            
             st.markdown("---")
             trades = get_trades('MPC-USDT', limit=100)
             
@@ -1246,22 +1228,22 @@ else:
                         rows.append({
                             'datetime': f"{date_str} {time_str}",
                             'trade_id': t.get('trade_id', ''),
-                            'market_side': t.get('ex1_exchange', '') + (' Buy' if 'M' in direction else ' Sell'),
+                            'market_side': t.get('ex1', '') + (' Buy' if 'M' in direction else ' Sell'),
                             'market_qty': float(t.get('ex1_qty_filled', 0) or 0),
-                            'fill_price': float(t.get('ex1_price_avg', t.get('ex1_price_actual', 0)) or 0),
+                            'fill_price': float(t.get('ex1_price_actual', 0) or 0),
                             'direction': 'K→M' if 'K->M' in direction else 'M→K',
                             'strategy': t.get('strategy', current_strategy),
                             'spread': float(t.get('spread_pct', 0) or 0),
-                            'ex1_exchange': t.get('ex1_exchange', ''),
+                            'ex1_exchange': t.get('ex1', ''),
                             'ex1_order_id': t.get('ex1_order_id', ''),
                             'ex1_qty': float(t.get('ex1_qty_filled', 0) or 0),
-                            'ex1_price': float(t.get('ex1_price_avg', t.get('ex1_price_actual', 0)) or 0),
+                            'ex1_price': float(t.get('ex1_price_actual', 0) or 0),
                             'ex1_value': ex1_val,
                             'ex1_fees': float(t.get('ex1_fees', 0) or 0),
-                            'ex2_exchange': t.get('ex2_exchange', ''),
+                            'ex2_exchange': t.get('ex2', ''),
                             'ex2_order_id': t.get('ex2_order_id', ''),
                             'ex2_qty': float(t.get('ex2_qty_filled', 0) or 0),
-                            'ex2_price': float(t.get('ex2_price_avg', t.get('ex2_price_actual', 0)) or 0),
+                            'ex2_price': float(t.get('ex2_price_actual', 0) or 0),
                             'ex2_value': ex2_val,
                             'ex2_fees': float(t.get('ex2_fees', 0) or 0),
                             'gross': gross,
