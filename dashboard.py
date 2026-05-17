@@ -1432,104 +1432,6 @@ else:
                     import json
                     import pandas as pd
                     
-                    trades_json = json.dumps(rows)
-                    
-                    popup_html = """
-                    <script>
-                    function openDetailedView() {{
-                        var data = {trades_json};
-                        var html = `<!DOCTYPE html>
-<html><head><title>Trade Details</title>
-<style>
-                        .log-table td {vertical-align: top;}
-                        .log-table th, .log-table td {padding: 4px 6px !important; font-size: 11px !important; white-space: nowrap; vertical-align: top;} {padding: 4px 6px !important; font-size: 11px !important; white-space: nowrap;}
-                        .log-table {font-size: 11px !important;}
-*{{margin:0;padding:0;box-sizing:border-box;}}
-body{{font-family:system-ui,sans-serif;background:#0f0f14;color:#eee;padding:20px;}}
-h1{{color:#fff;margin-bottom:20px;}}
-.filters{{margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;}}
-.filters select,.filters input{{padding:8px;background:#1a1a24;border:1px solid #333;border-radius:6px;color:#fff;font-size:13px;}}
-table{{width:100%;border-collapse:collapse;font-size:12px;background:#1a1a24;border-radius:8px;overflow:hidden;}}
-th{{background:#262730;color:#aaa;text-align:left;padding:12px;border-bottom:2px solid #444;}}
-td{{padding:10px;border-bottom:1px solid #222;}}
-tr:hover{{background:#252535;}}
-.pos{{color:#4ade80;}}
-.neg{{color:#f87171;}}
-.detail-grid{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:10px 0;}}
-.detail-item{{background:#222;padding:10px;border-radius:6px;}}
-.detail-label{{color:#888;font-size:11px;margin-bottom:4px;}}
-.detail-value{{color:#fff;}}
-code{{background:#333;padding:2px 6px;border-radius:3px;}}
-</style></head><body>
-<h1>📊 Trade Details - MPC-USDT</h1>
-<div class="filters">
-<select id="statusFilter"><option value="">Alle Status</option><option value="FILLED">FILLED</option><option value="PARTIAL">PARTIAL</option><option value="WATCHING">WATCHING</option></select>
-<select id="dirFilter"><option value="">Alle Richtungen</option><option value="M→K">M→K</option><option value="K→M">K→M</option></select>
-<input type="text" id="searchInput" placeholder="Trade ID suchen...">
-</div>
-<div id="count" style="margin-bottom:15px;color:#888;"></div>
-<table><thead><tr><th>Date<br>Trade ID</th><th>Spread<br><span style="font-size:9px;">Strategy</span></th><th>Market Side<br><span style="font-size:9px;">Exchange Trade ID</span></th><th>Qty @ Fill<br></th><th>Market Qty</th><th>Fill Price</th><th>Limit Side<br><span style="font-size:9px;">Exchange Trade ID</span></th><th>Qty @ Limit<br></th><th>Ex2</th><th>Qty</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Netto</th><th>Status</th></tr></thead>
-<tbody id="tradeBody"></tbody></table>
-<script>
-var trades = {trades_json};
-function filterTable(){{
-var sf=document.getElementById('statusFilter').value;
-var df=document.getElementById('dirFilter').value;
-var search=document.getElementById('searchInput').value.toLowerCase();
-var filtered=trades.filter(function(t){{
-if(sf&&t.status!==sf)return false;
-if(df&&t.direction!==df)return false;
-if(search&&!t.trade_id.toLowerCase().includes(search))return false;
-return true;
-}});
-document.getElementById('count').textContent=filtered.length+' von '+trades.length+' Trades';
-var html='';
-filtered.forEach(function(r){{
-var gc=r.gross>0?'pos':'neg';
-var nc=r.net>0?'pos':'neg';
-html+='<tr onclick="toggleDetail(\''+r.trade_id+'\')" style="cursor:pointer;">';
-html+='<td>'+r.date+'</td><td>'+r.time+'</td><td style="font-family:monospace;">'+r.trade_id+'</td>';
-html+='<td>'+r.direction+'</td><td>'+r.spread.toFixed(2)+'%</td>';
-html+='<td>'+r.ex1_exchange+'</td><td>'+r.ex1_qty.toFixed(2)+'</td>';
-html+='<td>'+r.ex2_exchange+'</td><td>'+r.ex2_qty.toFixed(2)+'</td>';
-html+='<td style="text-align:right;" class="'+gc+'">$'+r.gross.toFixed(4)+'</td>';
-html+='<td style="text-align:right;font-weight:bold;" class="'+nc+'">$'+r.net.toFixed(4)+'</td>';
-html+='<td>'+r.status+'</td></tr>';
-html+='<tr id="d-'+r.trade_id+'" style="display:none;"><td colspan="12">';
-html+='<div class=detail-grid>';
-html+='<div class=detail-item><div class=detail-label>Ex1 Order ID</div><div class=detail-value><code>'+r.ex1_order_id+'</code></div></div>';
-html+='<div class=detail-item><div class=detail-label>Ex1 Price</div><div class=detail-value>$'+r.ex1_price.toFixed(6)+'</div></div>';
-html+='<div class=detail-item><div class=detail-label>Ex1 Value</div><div class=detail-value>$'+r.ex1_value.toFixed(4)+'</div></div>';
-html+='<div class=detail-item><div class=detail-label>Ex1 Fees</div><div class=detail-value>$'+r.ex1_fees.toFixed(4)+'</div></div>';
-html+='<div class=detail-item><div class=detail-label>Ex2 Order ID</div><div class=detail-value><code>'+r.ex2_order_id+'</code></div></div>';
-html+='<div class=detail-item><div class=detail-label>Ex2 Price</div><div class=detail-value>$'+r.ex2_price.toFixed(6)+'</div></div>';
-html+='<div class=detail-item><div class=detail-label>Ex2 Value</div><div class=detail-value>$'+r.ex2_value.toFixed(4)+'</div></div>';
-html+='<div class=detail-item><div class=detail-label>Ex2 Fees</div><div class=detail-value>$'+r.ex2_fees.toFixed(4)+'</div></div>';
-html+='<div class=detail-item><div class=detail-label>Profit MPC</div><div class=detail-value>'+r.profit_mpc.toFixed(4)+'</div></div>';
-html+='<div class=detail-item><div class=detail-label>Profit USDT</div><div class=detail-value>$'+r.profit_usdt.toFixed(4)+'</div></div>';
-html+='<div class=detail-item><div class=detail-label>Strategie</div><div class=detail-value>'+r.strategy+'</div></div>';
-html+='</div></td></tr>';
-}});
-document.getElementById('tradeBody').innerHTML=html;
-}}
-function toggleDetail(id){{var el=document.getElementById('d-'+id);if(el)el.style.display=el.style.display==='none'?'table-row':'none';}}
-document.getElementById('statusFilter').onchange=filterTable;
-document.getElementById('dirFilter').onchange=filterTable;
-document.getElementById('searchInput').onkeyup=filterTable;
-filterTable();
-<\/script>
-</body></html>`;
-                        var blob = new Blob([html], {type: 'text/html'});
-                        var url = URL.createObjectURL(blob);
-                        var w = window.open(url, '_blank', 'width=1400,height=800');
-                        if (w) w.focus();
-                        URL.revokeObjectURL(url);
-                    }}
-                    </script>
-                    <button onclick="openDetailedView()" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;">🔍 Detaillierte Ansicht öffnen</button>
-                    """
-                    st.markdown(popup_html, unsafe_allow_html=True)
-                    
                     # CSV Export
                     csv_cols = ['datetime', 'trade_id', 'market_side', 'market_qty', 'fill_price', 'strategy', 'spread',
                                'ex1_exchange', 'ex1_order_id', 'ex1_qty', 'ex1_price', 'ex1_value', 'ex1_fees',
@@ -1537,11 +1439,6 @@ filterTable();
                                'gross', 'fees', 'net', 'profit_mpc', 'profit_usdt', 'status']
                     df = pd.DataFrame(rows, columns=csv_cols)
                     csv_bytes = df.to_csv(index=False).encode('utf-8')
-                    st.download_button("📥 Excel", 
-    data=(lambda: pd.read_csv(io.BytesIO(csv_bytes)).to_excel(io.BytesIO(), index=False) or io.BytesIO().getvalue())(),
-    file_name=f"MPC_trades_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
                     st.download_button("📥 CSV Export", data=csv_bytes, file_name=f"MPC_trades_{datetime.now().strftime('%Y%m%d_%H%M')}.csv", mime="text/csv")
                 else:
                     st.info("Keine Trades")
