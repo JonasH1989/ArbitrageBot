@@ -1256,7 +1256,7 @@ else:
                     except:
                         pass
                 
-                if rows:
+                if True:  # Always run
                     # Summary stats
                     total_trades = len(rows)
                     filled_trades = len([r for r in rows if r['status'] == 'FILLED'])
