@@ -263,6 +263,22 @@ def start_http_log_server(port: int = 8503):
         level_logs = [l for l in HTTP_LOGS if l['level'].upper() == level.upper()]
         return jsonify(level_logs[-100:])
 
+    @app.route('/logs/file', methods=['GET'])
+    def get_log_file():
+        """Read the log file from disk (persistent storage)"""
+        try:
+            with open(LOG_FILE, 'r') as f:
+                lines = f.readlines()
+            # Return last 2000 lines
+            return jsonify({
+                'status': 'ok',
+                'file': str(LOG_FILE),
+                'total_lines': len(lines),
+                'logs': [l.strip() for l in lines[-2000:]]
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)})
+
     @app.route('/status', methods=['GET'])
     def get_status():
         return jsonify({
