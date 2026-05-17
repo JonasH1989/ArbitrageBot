@@ -17,6 +17,7 @@ import math
 from datetime import datetime
 import os
 import threading
+import psutil
 
 # Flask for HTTP logging server (optional)
 try:
@@ -287,10 +288,40 @@ def start_http_log_server(port: int = 8503):
 
     @app.route('/status', methods=['GET'])
     def get_status():
+        proc = psutil.Process()
+        mem_info = proc.memory_info()
         return jsonify({
             'status': 'running',
             'logs_count': len(HTTP_LOGS),
-            'uptime_seconds': time.time() - getattr(_http_server, 'start_time', time.time())
+            'uptime_seconds': time.time() - getattr(_http_server, 'start_time', time.time()),
+            'memory_mb': mem_info.rss / 1024 / 1024,
+            'cpu_percent': proc.cpu_percent(),
+            'thread_count': threading.active_count(),
+            'active_flag': ACTIVE_FLAG_FILE.exists(),
+            'config_hash': last_config_hash
+        })
+
+    @app.route('/health', methods=['GET'])
+    def get_health():
+        """Health check with system metrics"""
+        proc = psutil.Process()
+        mem_info = proc.memory_info()
+        
+        # Check disk space
+        try:
+            disk = psutil.disk_usage('/app')
+            disk_pct = disk.percent
+        except:
+            disk_pct = 0
+        
+        return jsonify({
+            'status': 'healthy' if mem_info.rss < 500*1024*1024 else 'warning',
+            'memory_mb': round(mem_info.rss / 1024 / 1024, 2),
+            'memory_limit_mb': 500,
+            'cpu_percent': round(proc.cpu_percent(), 2),
+            'threads': threading.active_count(),
+            'disk_percent': round(disk_pct, 1),
+            'uptime_minutes': round((time.time() - getattr(_http_server, 'start_time', time.time())) / 60, 1)
         })
 
     @app.route('/clear', methods=['POST'])
