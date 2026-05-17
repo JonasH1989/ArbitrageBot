@@ -1276,7 +1276,9 @@ else:
                         .log-table td {vertical-align: top;}
                         .log-table th, .log-table td {padding: 4px 6px !important; font-size: 11px !important; white-space: nowrap; vertical-align: top;} {padding: 4px 6px !important; font-size: 11px !important; white-space: nowrap;}
                         .log-table {font-size: 11px !important;}
-                        .log-table{width:100%;border-collapse:collapse;font-size:12px;}
+                        .log-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
+                        .table-container{max-height:400px;overflow:auto;}
+                        .log-table th{background:#262730;color:#aaa;text-align:left;padding:8px 10px;border-bottom:2px solid #444;position:sticky;top:0;z-index:1;}
                         .log-table th{background:#262730;color:#aaa;text-align:left;padding:8px 10px;border-bottom:2px solid #444;}
                         .log-table td{padding:8px 10px;border-bottom:1px solid #222;color:#eee;}
                         .log-table tr:hover{background:#1e1e2a;}
@@ -1423,7 +1425,7 @@ else:
                         table_html += f"</tr>"
                     
                     table_html += '</tbody></table>'
-                    st.markdown(table_html, unsafe_allow_html=True)
+                    st.markdown(f'<div class="table-container">{table_html}</div>', unsafe_allow_html=True)
                     
                     # Detailed view button
                     st.markdown("---")
