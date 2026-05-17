@@ -1530,8 +1530,9 @@ filterTable();
                     """
                     st.markdown(popup_html, unsafe_allow_html=True)
                     
-                    # CSV Export
-                    df = pd.DataFrame(rows)
+                    # CSV Export (only if we have data)
+                    if rows:
+                        df = pd.DataFrame(rows)
                     csv_cols = ['datetime', 'trade_id', 'market_side', 'market_qty', 'fill_price', 'strategy', 'spread',
                                'ex1_exchange', 'ex1_order_id', 'ex1_qty', 'ex1_price', 'ex1_value', 'ex1_fees',
                                'ex2_exchange', 'ex2_order_id', 'ex2_qty', 'ex2_price', 'ex2_value', 'ex2_fees',
