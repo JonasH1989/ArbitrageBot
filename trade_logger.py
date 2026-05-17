@@ -1,6 +1,12 @@
 """
 Trade Logger - Harmonized Multi-Exchange Trade Capture
-One CSV per trading pair, all trades appended sequentially.
+New Format (2026-05-16): One CSV per trading pair, multiple rows per trade.
+
+Structure per trade:
+- Row 1: Main trade (summaries) - trade_id without suffix
+- Row 2+: ex1p1, ex1p2... - Market (ex1) partial fills
+- ex2sum row: Limit order summary
+- ex2p1, ex2p2... - Limit (ex2) partial fills
 
 Harmonization: Exchange-specific API responses are normalized into
 a unified schema so data is comparable across exchanges.
@@ -8,14 +14,43 @@ a unified schema so data is comparable across exchanges.
 import csv
 import os
 import json
+import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, List, Tuple
 
 LOG_DIR = Path("/app/logs")
 
+# =============================================================================
+# DEBUG LOGGING
+# =============================================================================
+DEBUG_LOG_FILE = LOG_DIR / "trade_logger_debug.log"
 
-# Exchange configuration cache
+def debug_log(message: str, level: str = "INFO"):
+    """Log debug messages to both stderr and debug file"""
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+    log_line = f"[{ts}] [{level}] {message}"
+    print(log_line, file=sys.stderr)
+    
+    # Also write to debug file
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        with open(DEBUG_LOG_FILE, 'a') as f:
+            f.write(log_line + "\n")
+    except Exception as e:
+        print(f"DEBUG: Could not write to debug log: {e}", file=sys.stderr)
+
+def debug_trade_write(trade_id: str, row_num: int, columns: Dict):
+    """Log details about a row being written"""
+    debug_log(f"TRADE_WRITE: {trade_id} | Row {row_num}")
+    for k, v in columns.items():
+        if v:
+            debug_log(f"  {k}: {v}")
+
+# =============================================================================
+# EXCHANGE CONFIG
+# =============================================================================
 _EXCHANGE_CONFIG = None
 
 def get_exchange_config() -> Dict:
@@ -38,109 +73,106 @@ def get_exchange_short_id(exchange_name: str) -> str:
     exchange_lower = exchange_name.lower()
     if exchange_lower in config:
         return config[exchange_lower].get('short_id', exchange_name[:3].upper())
-    # Fallback: first 3 chars uppercase
     return exchange_name[:3].upper()
 
-def get_exchange_color(exchange_name: str) -> str:
-    """Get color for an exchange"""
-    config = get_exchange_config()
-    exchange_lower = exchange_name.lower()
-    if exchange_lower in config:
-        return config[exchange_lower].get('color', '#888888')
-    return '#888888'
-
-# Unified CSV columns for ALL trades (harmonized format)
-# Exchange-Agnostic: Works with any exchanges (KuCoin, MEXC, Binance, etc.)
-#
-# Schema: Market-Side (Exchange 1) + Limit-Side (Exchange 2)
-# - Market-Side: Always a MARKET order (first leg of arbitrage)
-# - Limit-Side: Always a LIMIT order (second leg, may be pending/filled/cancelled)
+# =============================================================================
+# UNIFIED COLUMNS (41 columns - A to AP)
+# =============================================================================
 UNIFIED_COLUMNS = [
-    # Trade Identity
-    "trade_id",              # Unique ID: YYYYMMDD_HHMMSS_MMMMMM (no prefix)
-    "internal_ts",            # When BOT initiated the trade (ISO format)
-    "direction",              # "KCN->MXC" or "MXC->KCN"
-    "pair",                  # Trading pair e.g. "MPC-USDT"
-    "strategy",               # "USDT" or "COINS"
-    "spread_pct",             # Spread in % when trade was triggered
+    # A: trade_id - Unique ID (DDHHMMSSms hex)
+    "trade_id",
+    # B: internal_ts - When BOT initiated the trade (ISO format)
+    "internal_ts",
+    # C: direction - "KCN->MXC" or "MXC->KCN"
+    "direction",
+    # D: pair - Trading pair e.g. "MPC-USDT"
+    "pair",
+    # E: strategy - "USDT" or "COINS"
+    "strategy",
+    # F: spread_pct - Spread in % when trade was triggered (3 decimals)
+    "spread_pct",
     
-    # Exchange 1 (Market Order - first leg, always MARKET)
-    "ex1",                   # Exchange short_id: "KCN", "MXC", "BNC"
-    "ex1_order_id",          # Exchange-specific order ID
-    "ex1_type",              # "market" (always for ex1)
-    "ex1_side",              # "buy" or "sell"
-    "ex1_qty_ordered",       # Quantity ordered
-    "ex1_qty_filled",        # Quantity filled
-    "ex1_price_expected",    # Expected price when trade was initiated (pK or pM)
-    "ex1_price_actual",      # Actual execution price
-    "ex1_price_avg",       # Average fill price (for multi-level fills)
-    "ex1_value_usdt",        # Total value in USDT
-    "ex1_fees",              # Fees paid in USDT
-    "ex1_create_ts",         # Exchange timestamp (ms)
-    "ex1_status",            # Exchange status: FILLED, PARTIAL, REJECTED, PENDING
+    # G-J: ex1 basic info (Market order)
+    # G: ex1 - Exchange short_id
+    "ex1",
+    # H: ex1_order_id
+    "ex1_order_id",
+    # I: ex1_type - "market" (hardcoded)
+    "ex1_type",
+    # J: ex1_side - "buy" or "sell"
+    "ex1_side",
+    # K: ex1_qty_ordered - From bot when placing order
+    "ex1_qty_ordered",
+    # L: ex1_qty_filled - Sum of all partial fills
+    "ex1_qty_filled",
+    # M: ex1_price_expected - From orderbook scan
+    "ex1_price_expected",
+    # N: ex1_price_actual - Weighted avg of all fills
+    "ex1_price_actual",
+    # O: ex1_value_usdt - Sum of all fill values
+    "ex1_value_usdt",
+    # P: ex1_fees - Sum of all fees
+    "ex1_fees",
+    # Q: ex1_create_ts - From first API response
+    "ex1_create_ts",
+    # R: ex1_status - "FILLED" when all partials complete
+    "ex1_status",
     
-    # Exchange 2 (Limit Order - second leg, always LIMIT)
-    "ex2",                   # Exchange short_id: "KCN", "MXC", "BNC"
-    "ex2_order_id",          # Exchange-specific order ID
-    "ex2_type",              # "limit" (always for ex2)
-    "ex2_side",              # "buy" or "sell"
-    "ex2_qty_ordered",       # Quantity ordered
-    "ex2_qty_filled",        # Quantity filled (0 = pending)
-    "ex2_price_expected",    # Expected price when trade was initiated
-    "ex2_price_actual",      #
-    "ex2_price_avg",       # Actual fill price (0 if not filled)
-    "ex2_value_usdt",        # Total value in USDT (0 if not filled)
-    "ex2_fees",              # Fees paid in USDT
-    "ex2_create_ts",         # Exchange timestamp (ms)
-    "ex2_status",            # Exchange status: PENDING, FILLED, PARTIAL, CANCELLED
+    # S-AJ: ex2 (Limit order) - only in _ex2sum row and _ex2pN rows
+    # S: ex2 - Exchange short_id
+    "ex2",
+    # T: ex2_order_id
+    "ex2_order_id",
+    # U: ex2_type - "limit" (hardcoded)
+    "ex2_type",
+    # V: ex2_side - "buy" or "sell"
+    "ex2_side",
+    # W: ex2_qty_ordered - From bot when placing order
+    "ex2_qty_ordered",
+    # X: ex2_qty_filled - Sum of partial fills
+    "ex2_qty_filled",
+    # Y: ex2_price_expected
+    "ex2_price_expected",
+    # Z: ex2_price_actual - Weighted avg
+    "ex2_price_actual",
+    # AA: ex2_value_usdt
+    "ex2_value_usdt",
+    # AB: ex2_fees
+    "ex2_fees",
+    # AC: ex2_create_ts
+    "ex2_create_ts",
+    # AD: ex2_status
+    "ex2_status",
     
-    # Profit Calculation
-    "profit_usdt_expected",  # Expected USDT profit (calculated pre-trade)
-    "profit_mpc_expected",   # Expected MPC profit (calculated pre-trade)
-    "profit_usdt_actual",    # Actual USDT profit (filled limit order)
-    "profit_mpc_actual",     # Actual MPC profit (filled limit order)
+    # AE-AH: Profit (only in _ex2sum row)
+    # AE: profit_usdt_expected
+    "profit_usdt_expected",
+    # AF: profit_mpc_expected
+    "profit_mpc_expected",
+    # AG: profit_usdt_actual
+    "profit_usdt_actual",
+    # AH: profit_mpc_actual
+    "profit_mpc_actual",
     
-    # Limit Order Watch State
-    "limit_watch_status",    # "WATCHING", "FILLED", "PARTIAL", "CANCELLED", "EXPIRED", "ERROR"
-    "limit_last_check",      # Last timestamp we checked fill status
+    # AI-AJ: Limit watch
+    # AI: limit_watch_status
+    "limit_watch_status",
+    # AJ: limit_last_check
+    "limit_last_check",
     
-    # Error Handling
-    "error_code",            # Error code: "QTY_ZERO", "PRICE_SLIPPAGE", "API_ERROR", etc.
-    "error_message",         # Human-readable error description
+    # AK-AL: Errors (can be in Row 1 or _ex2sum)
+    # AK: error_code
+    "error_code",
+    # AL: error_message
+    "error_message",
     
-    # Metadata
-    "raw_ex1_response",      # Full JSON response from Exchange 1
-    "raw_ex2_response",      # Full JSON response from Exchange 2
-    "updated_at",            # Last update timestamp (ISO format)
+    # AM: raw_ex1_response
+    "raw_ex1_response",
+    # AN: raw_ex2_response
+    "raw_ex2_response",
+    # AO: raw_ex2_response_ts
+    "raw_ex2_response_ts",
 ]
-
-# =============================================================================
-# MULTI-LEVEL FILL DOCUMENTATION (2026-05-12)
-# =============================================================================
-#
-# When a market order fills across multiple price levels (e.g., 100 MPC bought at 3 different prices),
-# the fills are tracked in raw_ex1_response as individual fill events.
-#
-# CSV Fields for Multi-Level Support:
-# - ex1_qty_filled:     Total quantity filled (sum of all fills)
-# - ex1_price_actual:   Last fill price (single fill)
-# - ex1_price_avg:     Volume-weighted average price (calculated from all fills)
-# - raw_ex1_response: JSON array of individual fill events from exchange API
-#
-# Display Logic (dashboard.py):
-# - Single fill (1 line):  "85.0 @ $0.01630"
-# - Multi-level (3 lines):  "Σ 100.0 @ $0.01652"  ← Summe + Durchschnittspreis
-#                         "40.0 @ $0.01630"    ← Teilorder 1
-#                         "25.0 @ $0.01680"    ← Teilorder 2
-#
-# To enable multi-level detection:
-# 1. exchange API must return individual fills in response (check MEXC/KuCoin API docs)
-# 2. raw_ex1_response must be stored as JSON string in CSV
-# 3. ex1_price_avg must be calculated from: Σ(qty * price) / Σ(qty)
-#
-# =============================================================================
-
-
 
 
 def ensure_log_dir():
@@ -150,7 +182,7 @@ def ensure_log_dir():
 
 def get_trade_csv_path(pair: str) -> Path:
     """Get CSV file path for a trading pair"""
-    # Normalize pair format: MPCUSDT OR MPC-USDT -> MPCUSDT (consistent)
+    # Normalize pair format: MPCUSDT OR MPC-USDT -> MPCUSDT
     normalized_pair = pair.replace("-", "").upper()
     if not normalized_pair.endswith("USDT"):
         normalized_pair += "USDT"
@@ -166,6 +198,7 @@ def init_pair_csv(pair: str) -> Path:
         with open(csv_path, 'w', newline='') as f:
             writer = csv.writer(f, delimiter=';')
             writer.writerow(UNIFIED_COLUMNS)
+        debug_log(f"CSV initialized: {csv_path}")
     
     return csv_path
 
@@ -175,12 +208,6 @@ def generate_trade_id() -> str:
     Generate unique trade ID in format: DDHHMMSSms (hex)
     
     Example: 0c1500372b (10 chars)
-    
-    This format is:
-    - Unique (millisecond precision)
-    - Chronologically sortable
-    - Compact (10 chars vs 20+)
-    - Hex-encoded for brevity
     
     Contains: DD (day) + HH (hour) + MM (minute) + SS (second) + ms (milliseconds)
     """
@@ -192,42 +219,20 @@ def generate_trade_id() -> str:
     ms = now.strftime("%f")[:2]
     
     return f"{int(dd):02x}{int(hh):x}{int(mm):x}{int(ss):x}{int(ms):02x}"
-    return ts
 
 
 # =============================================================================
 # HARMONIZATION FUNCTIONS
-# Convert exchange-specific responses to unified format
 # =============================================================================
 
 def harmonize_kucoin_order(response: dict, side: str, order_type: str, pair: str) -> Dict:
     """
     Harmonize KuCoin order response to unified format.
-    
-    KuCoin Market Order Response fields:
-    - orderId: order ID
-    - symbol: pair symbol
-    - type: "market" 
-    - side: "buy" or "sell"
-    - size: quantity ordered
-    - dealSize: quantity filled
-    - dealFunds: total value
-    - fee: fee amount
-    - feeCurrency: currency of fee
-    - createTime: timestamp in ms
-    - status: "Done", "Active"
-    
-    Returns:
-        Dict with unified field names:
-        - price_expected: Expected price (passed separately when calling)
-        - price_actual: Actual execution price (calculated from dealFunds/dealSize)
     """
-    # Calculate actual price from filled amount
     deal_size = float(response.get('dealSize', 0) or 0)
     deal_funds = float(response.get('dealFunds', 0) or 0)
     price_actual = deal_funds / deal_size if deal_size > 0 else 0
     
-    # Determine status
     status_map = {
         "Done": "FILLED",
         "Active": "OPEN",
@@ -249,48 +254,14 @@ def harmonize_kucoin_order(response: dict, side: str, order_type: str, pair: str
         "fees": float(response.get('fee', 0) or 0),
         "create_ts": int(response.get('createTime', 0) or 0),
         "status": unified_status,
-        "raw_response": response,  # Keep full response for debugging
+        "raw_response": response,
     }
 
 
 def harmonize_mexc_order(response: dict, side: str, order_type: str, pair: str) -> Dict:
     """
     Harmonize MEXC order response to unified format.
-    
-    MEXC Market Order Response fields:
-    - orderId: order ID
-    - symbol: pair symbol (e.g. "MPCUSDT")
-    - side: "BUY" or "SELL"
-    - type: "MARKET"
-    - orderQuantity: quantity ordered
-    - orderAmount: amount ordered (for market buys in USDT)
-    - quantity: quantity filled
-    - amount: amount filled (in USDT value)
-    - fees: fee amount
-    - createTime: timestamp in ms
-    - status: "Filled", "New"
-    
-    MEXC Limit Order Response:
-    - orderId: order ID
-    - symbol: pair symbol
-    - side: "BUY" or "SELL"
-    - type: "LIMIT"
-    - price: limit price
-    - quantity: quantity ordered
-    - orderQuantity: same as quantity
-    - amount: total value
-    - dealQuantity: quantity filled
-    - dealAmount: value filled
-    - fees: fee amount
-    - createTime: timestamp in ms
-    - status: "Filled", "PartiallyFilled", "New", "Cancelled"
-    
-    Returns:
-        Dict with unified field names:
-        - price_expected: Expected price (passed separately when calling)
-        - price_actual: Actual execution price
     """
-    # Handle market vs limit order differences
     if order_type == "market":
         qty_filled = float(response.get('quantity', 0) or 0)
         value_usdt = float(response.get('amount', 0) or 0)
@@ -300,9 +271,8 @@ def harmonize_mexc_order(response: dict, side: str, order_type: str, pair: str) 
         qty_filled = float(response.get('dealQuantity', 0) or 0)
         value_usdt = float(response.get('dealAmount', 0) or 0)
         qty_ordered = float(response.get('quantity', 0) or 0)
-        price_actual = float(response.get('price', 0) or 0)  # Limit price is the price
+        price_actual = float(response.get('price', 0) or 0)
     
-    # Determine status
     status_map = {
         "Filled": "FILLED",
         "PartiallyFilled": "PARTIAL",
@@ -319,13 +289,13 @@ def harmonize_mexc_order(response: dict, side: str, order_type: str, pair: str) 
         "side": side.lower(),
         "qty_ordered": qty_ordered,
         "qty_filled": qty_filled,
-        "price_expected": 0.0,  # Set by caller
+        "price_expected": 0.0,
         "price_actual": price_actual,
         "value_usdt": value_usdt,
         "fees": float(response.get('fees', 0) or 0),
         "create_ts": int(response.get('createTime', 0) or 0),
         "status": unified_status,
-        "raw_response": response,  # Keep full response for debugging
+        "raw_response": response,
     }
 
 
@@ -339,37 +309,65 @@ def harmonize_order(response: dict, exchange: str, side: str, order_type: str, p
         raise ValueError(f"Unknown exchange: {exchange}")
 
 
+# =============================================================================
+# HELPER: Create empty row for a trade
+# =============================================================================
+
+def create_empty_row(trade_id: str) -> dict:
+    """Create a row dict with all columns initialized to empty/zero"""
+    row = {col: "" for col in UNIFIED_COLUMNS}
+    row["trade_id"] = trade_id
+    return row
+
+
+def row_to_list(row: dict) -> list:
+    """Convert row dict to list in column order"""
+    return [row.get(col, "") for col in UNIFIED_COLUMNS]
+
+
+# =============================================================================
+# MAIN LOG FUNCTION
+# =============================================================================
+
 def log_trade(
     pair: str,
     internal_ts: str,
     direction: str,
-    ex1_data: Dict,   # Harmonized data from market exchange
-    ex2_data: Dict,   # Harmonized data from limit exchange (may be partial)
+    ex1_data: Dict,         # Harmonized data from market exchange
+    ex2_data: Dict,         # Harmonized data from limit exchange (may be partial)
+    ex1_partial_fills: List[Dict] = None,  # List of individual fill data
+    ex2_partial_fills: List[Dict] = None,  # List of individual limit fill data
     limit_watch_status: str = "WATCHING",
-    strategy: str = "USDT",               # "USDT" or "COINS"
-    spread_pct: float = 0.0,              # Spread in % when trade was triggered
-    market_price_expected: float = 0.0,   # Expected price (pK or pM) at trade initiation
-    limit_price_expected: float = 0.0,    # Expected price at trade initiation
-    profit_usdt_expected: float = 0.0,    # Expected USDT profit
-    profit_mpc_expected: float = 0.0,     # Expected MPC profit
-    error_code: str = None,              # Error code if any
-    error_message: str = None             # Error message if any
+    strategy: str = "USDT",
+    spread_pct: float = 0.0,
+    market_price_expected: float = 0.0,
+    limit_price_expected: float = 0.0,
+    profit_usdt_expected: float = 0.0,
+    profit_mpc_expected: float = 0.0,
+    error_code: str = None,
+    error_message: str = None,
 ) -> str:
     """
     Log a complete trade to the pair-specific CSV.
     
-    Exchange-Agnostic: Works with any exchange as ex1 (market) and ex2 (limit).
+    Writes MULTIPLE rows per trade:
+    - Row 1: Main trade (summaries)
+    - Row 2+: ex1p1, ex1p2... (Market partial fills)
+    - ex2sum row: Limit order summary
+    - ex2p1, ex2p2... (Limit partial fills)
     
     Args:
         pair: Trading pair e.g. "MPC-USDT"
-        internal_ts: Our internal timestamp when trade was initiated
-        direction: "K->M" or "M->K"
-        ex1_data: Harmonized data from market exchange (always MARKET order)
-        ex2_data: Harmonized data from limit exchange (always LIMIT order)
+        internal_ts: Internal timestamp after successful balance check
+        direction: "KCN->MXC" or "MXC->KCN"
+        ex1_data: Harmonized data from market exchange
+        ex2_data: Harmonized data from limit exchange
+        ex1_partial_fills: List of individual fill dicts from polling
+        ex2_partial_fills: List of individual limit fill dicts
         limit_watch_status: Initial status of limit order
-        strategy: "USDT" or "COINS" strategy used
-        spread_pct: Spread in % when trade was triggered
-        market_price_expected: Expected price at initiation (pK or pM)
+        strategy: "USDT" or "COINS"
+        spread_pct: Spread in % (3 decimals)
+        market_price_expected: Expected price at initiation
         limit_price_expected: Expected price at initiation
         profit_usdt_expected: Expected USDT profit
         profit_mpc_expected: Expected MPC profit
@@ -377,93 +375,184 @@ def log_trade(
         error_message: Error message if trade had errors
     
     Returns:
-        trade_id: Generated trade ID (format: YYYYMMDD_HHMMSS_MMMMMM)
+        trade_id: Generated trade ID
     """
     trade_id = generate_trade_id()
-    updated_at = datetime.now().isoformat()
+    debug_log(f"LOG_TRADE: Starting for trade_id={trade_id}")
+    
+    # Initialize defaults
+    if ex1_partial_fills is None:
+        ex1_partial_fills = []
+    if ex2_partial_fills is None:
+        ex2_partial_fills = []
     
     # Normalize pair for filename
     csv_path = init_pair_csv(pair)
+    debug_log(f"LOG_TRADE: CSV path={csv_path}")
     
-    # Set price_expected fields in harmonized data (if not already set by caller)
-    # These are set here as fallback - caller should set these explicitly
-    if ex1_data.get('price_expected', 0) == 0 and market_price_expected > 0:
-        ex1_data['price_expected'] = market_price_expected
-    if ex2_data.get('price_expected', 0) == 0 and limit_price_expected > 0:
-        ex2_data['price_expected'] = limit_price_expected
+    # Prepare ex1 data
+    ex1_exchange = get_exchange_short_id(ex1_data.get("exchange", ""))
+    ex1_order_id = ex1_data.get("order_id", "")
+    ex1_qty_ordered = ex1_data.get("qty_ordered", 0)
+    ex1_create_ts = ex1_data.get("create_ts", 0)
+    raw_ex1_response = json.dumps(ex1_data.get("raw_response", {}))
     
-    # Build row in unified format
-    row = [
-        # Trade Identity
-        trade_id,
-        internal_ts,
-        direction,  # Now formatted as "KCN->MXC" or "MXC->KCN" from caller
-        pair,
-        strategy,
-        spread_pct,
-        
-        # Exchange 1 (market order - first leg)
-        get_exchange_short_id(ex1_data.get("exchange", "")),
-        ex1_data.get("order_id", ""),
-        ex1_data.get("type", ""),
-        ex1_data.get("side", ""),
-        ex1_data.get("qty_ordered", 0),
-        ex1_data.get("qty_filled", 0),
-        ex1_data.get("price_expected", 0),
-        ex1_data.get("price_actual", 0),
-        ex1_data.get("price_avg", 0),  # Average price for multi-level fills
-        ex1_data.get("value_usdt", 0),
-        ex1_data.get("fees", 0),
-        ex1_data.get("create_ts", 0),
-        ex1_data.get("status", ""),
-        
-        # Exchange 2 (limit order - second leg)
-        get_exchange_short_id(ex2_data.get("exchange", "")),
-        ex2_data.get("order_id", ""),
-        ex2_data.get("type", ""),
-        ex2_data.get("side", ""),
-        ex2_data.get("qty_ordered", 0),
-        ex2_data.get("qty_filled", 0),
-        ex2_data.get("price_expected", 0),
-        ex2_data.get("price_actual", 0),
-        ex2_data.get("price_avg", 0),  # Average price for multi-level fills
-        ex2_data.get("value_usdt", 0),
-        ex2_data.get("fees", 0),
-        ex2_data.get("create_ts", 0),
-        ex2_data.get("status", ""),
-        
-        # Profit Calculation
-        profit_usdt_expected,
-        profit_mpc_expected,
-        0.0,  # profit_usdt_actual (filled later)
-        0.0,  # profit_mpc_actual (filled later)
-        
-        # Limit watch state
-        limit_watch_status,
-        "",  # limit_last_check
-        
-        # Error Handling
-        error_code or "",
-        error_message or "",
-        
-        # Raw responses
-        json.dumps(ex1_data.get("raw_response", {})),
-        json.dumps(ex2_data.get("raw_response", {})),
-        updated_at,
-    ]
+    # Calculate ex1 summaries from partial fills
+    ex1_qty_filled = sum(f.get('qty_filled', 0) for f in ex1_partial_fills) if ex1_partial_fills else ex1_data.get('qty_filled', 0)
+    ex1_value_usdt = sum(f.get('value_usdt', 0) for f in ex1_partial_fills) if ex1_partial_fills else ex1_data.get('value_usdt', 0)
+    ex1_fees = sum(f.get('fees', 0) for f in ex1_partial_fills) if ex1_partial_fills else ex1_data.get('fees', 0)
     
-    # Append to CSV
-    # DEBUG: Log the full path where we're writing
-    import sys
-    sys.stderr.write(f"DEBUG: Writing trade to CSV: {csv_path}\n")
-    sys.stderr.write(f"DEBUG: CSV exists: {csv_path.exists()}\n")
+    # Calculate weighted average price
+    if ex1_qty_filled > 0:
+        ex1_price_actual = ex1_value_usdt / ex1_qty_filled
+    else:
+        ex1_price_actual = 0
     
-    with open(csv_path, 'a', newline='') as f:
-        writer = csv.writer(f, delimiter=';')
-        writer.writerow(row)
+    # Set price_expected from caller
+    ex1_price_expected = market_price_expected if market_price_expected > 0 else ex1_data.get('price_expected', 0)
+    
+    # Determine ex1_status
+    ex1_status = "FILLED" if ex1_qty_filled >= ex1_qty_ordered else "PARTIAL"
+    
+    debug_log(f"LOG_TRADE: ex1 qty_ordered={ex1_qty_ordered}, qty_filled={ex1_qty_filled}, status={ex1_status}")
+    
+    # Prepare ex2 data
+    ex2_exchange = get_exchange_short_id(ex2_data.get("exchange", ""))
+    ex2_order_id = ex2_data.get("order_id", "")
+    ex2_qty_ordered = ex2_data.get("qty_ordered", 0)
+    ex2_create_ts = ex2_data.get("create_ts", 0)
+    raw_ex2_response = json.dumps(ex2_data.get("raw_response", {}))
+    raw_ex2_response_ts = datetime.now().isoformat() if ex2_data.get("raw_response") else ""
+    
+    # Calculate ex2 summaries from partial fills
+    ex2_qty_filled = sum(f.get('qty_filled', 0) for f in ex2_partial_fills) if ex2_partial_fills else ex2_data.get('qty_filled', 0)
+    ex2_value_usdt = sum(f.get('value_usdt', 0) for f in ex2_partial_fills) if ex2_partial_fills else ex2_data.get('value_usdt', 0)
+    ex2_fees = sum(f.get('fees', 0) for f in ex2_partial_fills) if ex2_partial_fills else ex2_data.get('fees', 0)
+    
+    if ex2_qty_filled > 0:
+        ex2_price_actual = ex2_value_usdt / ex2_qty_filled
+    else:
+        ex2_price_actual = 0
+    
+    ex2_price_expected = limit_price_expected if limit_price_expected > 0 else ex2_data.get('price_expected', 0)
+    
+    debug_log(f"LOG_TRADE: ex2 qty_ordered={ex2_qty_ordered}, qty_filled={ex2_qty_filled}")
+    
+    # Calculate actual profits
+    profit_mpc_actual = ex1_qty_filled - ex2_qty_filled if ex1_qty_filled > 0 else 0
+    # profit_usdt_actual would need actual values from filled trades
+    
+    # ==========================================================================
+    # BUILD ROWS
+    # ==========================================================================
+    rows_to_write = []
+    
+    # --------------------------------------------------------------------------
+    # ROW 1: Main trade (summaries)
+    # --------------------------------------------------------------------------
+    row1 = create_empty_row(trade_id)
+    row1["internal_ts"] = internal_ts
+    row1["direction"] = direction
+    row1["pair"] = pair
+    row1["strategy"] = strategy
+    row1["spread_pct"] = f"{spread_pct:.3f}"  # 3 decimal places
+    row1["ex1"] = ex1_exchange
+    row1["ex1_order_id"] = ex1_order_id
+    row1["ex1_type"] = "market"
+    row1["ex1_side"] = ex1_data.get("side", "")
+    row1["ex1_qty_ordered"] = ex1_qty_ordered
+    row1["ex1_qty_filled"] = ex1_qty_filled
+    row1["ex1_price_expected"] = ex1_price_expected
+    row1["ex1_price_actual"] = ex1_price_actual
+    row1["ex1_value_usdt"] = ex1_value_usdt
+    row1["ex1_fees"] = ex1_fees
+    row1["ex1_create_ts"] = ex1_create_ts
+    row1["ex1_status"] = ex1_status
+    row1["error_code"] = error_code or ""
+    row1["error_message"] = error_message or ""
+    row1["raw_ex1_response"] = raw_ex1_response
+    
+    rows_to_write.append(row1)
+    debug_trade_write(trade_id, 1, row1)
+    
+    # --------------------------------------------------------------------------
+    # ROWS 2+: ex1 partial fills (ex1p1, ex1p2...)
+    # --------------------------------------------------------------------------
+    for i, fill in enumerate(ex1_partial_fills):
+        row_n = create_empty_row(f"{trade_id}_ex1p{i+1}")
+        row_n["ex1_qty_filled"] = fill.get('qty_filled', 0)
+        row_n["ex1_price_actual"] = fill.get('price_actual', 0)
+        row_n["ex1_value_usdt"] = fill.get('value_usdt', 0)
+        row_n["ex1_fees"] = fill.get('fees', 0)
+        row_n["ex1_create_ts"] = fill.get('create_ts', ex1_create_ts)  # Fallback
+        row_n["ex1_status"] = "FILLED"
+        rows_to_write.append(row_n)
+        debug_trade_write(trade_id, f"ex1p{i+1}", row_n)
+    
+    # --------------------------------------------------------------------------
+    # ex2sum row: Limit order summary
+    # --------------------------------------------------------------------------
+    ex2sum_row = create_empty_row(f"{trade_id}_ex2sum")
+    ex2sum_row["ex2"] = ex2_exchange
+    ex2sum_row["ex2_order_id"] = ex2_order_id
+    ex2sum_row["ex2_type"] = "limit"
+    ex2sum_row["ex2_side"] = ex2_data.get("side", "")
+    ex2sum_row["ex2_qty_ordered"] = ex2_qty_ordered
+    ex2sum_row["ex2_qty_filled"] = ex2_qty_filled
+    ex2sum_row["ex2_price_expected"] = ex2_price_expected
+    ex2sum_row["ex2_price_actual"] = ex2_price_actual
+    ex2sum_row["ex2_value_usdt"] = ex2_value_usdt
+    ex2sum_row["ex2_fees"] = ex2_fees
+    ex2sum_row["ex2_create_ts"] = ex2_create_ts
+    ex2sum_row["ex2_status"] = "FILLED" if ex2_qty_filled >= ex2_qty_ordered else "PARTIAL"
+    ex2sum_row["profit_usdt_expected"] = profit_usdt_expected
+    ex2sum_row["profit_mpc_expected"] = profit_mpc_expected
+    ex2sum_row["profit_mpc_actual"] = profit_mpc_actual
+    ex2sum_row["limit_watch_status"] = limit_watch_status
+    ex2sum_row["limit_last_check"] = datetime.now().isoformat()
+    ex2sum_row["raw_ex2_response"] = raw_ex2_response
+    ex2sum_row["raw_ex2_response_ts"] = raw_ex2_response_ts
+    
+    rows_to_write.append(ex2sum_row)
+    debug_trade_write(trade_id, "ex2sum", ex2sum_row)
+    
+    # --------------------------------------------------------------------------
+    # ex2p1, ex2p2... rows: Individual limit fills
+    # --------------------------------------------------------------------------
+    for i, fill in enumerate(ex2_partial_fills):
+        row_n = create_empty_row(f"{trade_id}_ex2p{i+1}")
+        row_n["ex2_qty_ordered"] = fill.get('qty_ordered', 0)
+        row_n["ex2_qty_filled"] = fill.get('qty_filled', 0)
+        row_n["ex2_price_actual"] = fill.get('price_actual', 0)
+        row_n["ex2_value_usdt"] = fill.get('value_usdt', 0)
+        row_n["ex2_fees"] = fill.get('fees', 0)
+        row_n["ex2_create_ts"] = fill.get('create_ts', ex2_create_ts)
+        row_n["ex2_status"] = "FILLED"
+        row_n["limit_watch_status"] = "FILLED"
+        rows_to_write.append(row_n)
+        debug_trade_write(trade_id, f"ex2p{i+1}", row_n)
+    
+    # ==========================================================================
+    # WRITE ALL ROWS TO CSV
+    # ==========================================================================
+    debug_log(f"LOG_TRADE: Writing {len(rows_to_write)} rows for {trade_id}")
+    
+    try:
+        with open(csv_path, 'a', newline='') as f:
+            writer = csv.writer(f, delimiter=';')
+            for row in rows_to_write:
+                writer.writerow(row_to_list(row))
+        debug_log(f"LOG_TRADE: Successfully wrote {len(rows_to_write)} rows")
+    except Exception as e:
+        debug_log(f"LOG_TRADE: ERROR writing to CSV: {e}", "ERROR")
+        raise
     
     return trade_id
 
+
+# =============================================================================
+# UPDATE FUNCTIONS
+# =============================================================================
 
 def update_limit_watch(
     trade_id: str,
@@ -472,72 +561,63 @@ def update_limit_watch(
     qty_filled: float = None,
     price_actual: float = None,
     fees: float = None,
-    profit_usdt_actual: float = None,
     profit_mpc_actual: float = None
 ):
     """
     Update limit order watch state for a trade.
-    
-    Args:
-        trade_id: Trade ID to update
-        pair: Trading pair
-        new_status: New limit_watch_status
-        qty_filled: Filled quantity (from limit order fill)
-        price_actual: Actual fill price (ex2_price_actual)
-        fees: Fees paid on limit order
-        profit_usdt_actual: Actual USDT profit after limit fill
-        profit_mpc_actual: Actual MPC profit after limit fill
-    
-    Returns:
-        True if updated, False if not found
     """
     csv_path = get_trade_csv_path(pair)
     
     if not csv_path.exists():
+        debug_log(f"UPDATE_LIMIT_WATCH: CSV not found for {pair}", "WARNING")
         return False
     
     # Read all rows
     rows = []
     with open(csv_path, 'r', newline='') as f:
-        reader = csv.DictReader(f)
+        reader = csv.DictReader(f, delimiter=';')
         fieldnames = reader.fieldnames
         rows = list(reader)
     
-    # Find and update trade
+    # Find and update trade (look for _ex2sum row)
     updated = False
     for row in rows:
-        if row.get("trade_id") == trade_id:
+        if row.get("trade_id") == f"{trade_id}_ex2sum":
             row["limit_watch_status"] = new_status
             row["limit_last_check"] = datetime.now().isoformat()
             
-            # Update fill data if provided
             if qty_filled is not None:
                 row["ex2_qty_filled"] = qty_filled
             if price_actual is not None:
                 row["ex2_price_actual"] = price_actual
             if fees is not None:
                 row["ex2_fees"] = fees
-            if profit_usdt_actual is not None:
-                row["profit_usdt_actual"] = profit_usdt_actual
             if profit_mpc_actual is not None:
                 row["profit_mpc_actual"] = profit_mpc_actual
             
-            row["updated_at"] = datetime.now().isoformat()
             updated = True
+            debug_log(f"UPDATE_LIMIT_WATCH: Updated {trade_id}_ex2sum status={new_status}")
             break
     
     # Write back
     if updated:
         with open(csv_path, 'w', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=';')
             writer.writeheader()
             writer.writerows(rows)
+        debug_log(f"UPDATE_LIMIT_WATCH: Wrote back to CSV")
+    else:
+        debug_log(f"UPDATE_LIMIT_WATCH: {trade_id}_ex2sum not found", "WARNING")
     
     return updated
 
 
+# =============================================================================
+# READ FUNCTIONS
+# =============================================================================
+
 def get_trades(pair: str, limit: int = 100) -> List[Dict]:
-    """Get all trades for a trading pair"""
+    """Get all trades for a trading pair (newest first)"""
     csv_path = get_trade_csv_path(pair)
     
     if not csv_path.exists():
@@ -545,7 +625,7 @@ def get_trades(pair: str, limit: int = 100) -> List[Dict]:
     
     trades = []
     with open(csv_path, 'r', newline='') as f:
-        reader = csv.DictReader(f)
+        reader = csv.DictReader(f, delimiter=';')
         rows = list(reader)
     
     # Reverse to get newest first
@@ -560,26 +640,15 @@ def get_trades(pair: str, limit: int = 100) -> List[Dict]:
 
 
 def get_pending_limit_orders(pair: str = None) -> List[Dict]:
-    """
-    Get all trades with pending limit orders.
-    Used by the limit order watcher to poll for fills.
-    
-    Args:
-        pair: Optional pair filter. If None, checks all pair CSVs.
-    
-    Returns:
-        List of trades with WATCHING status
-    """
+    """Get all trades with pending limit orders."""
     pending = []
     
     if pair:
-        # Check specific pair
         trades = get_trades(pair, limit=1000)
         for trade in trades:
             if trade.get("limit_watch_status") == "WATCHING":
                 pending.append(trade)
     else:
-        # Check all pair CSVs
         for csv_file in LOG_DIR.glob("*_trades.csv"):
             pair_name = csv_file.stem.replace("_trades", "")
             trades = get_trades(pair_name, limit=1000)
@@ -598,204 +667,39 @@ def get_trade_summary(pair: str) -> Dict:
         return {
             "pair": pair,
             "total_trades": 0,
+            "total_profit_mpc": 0,
+            "total_profit_usdt": 0,
             "win_rate": "0%",
-            "total_profit_usdt": 0,
-            "total_profit_mpc": 0,
-            "best_trade_usdt": 0,
-            "avg_profit_usdt": 0,
-            "pending_limit_orders": 0,
         }
     
-    wins = 0
-    losses = 0
-    total_profit_usdt = 0
-    total_profit_mpc = 0
-    best_trade_usdt = 0
-    pending = 0
+    # Filter to main trades only (trade_id without suffix)
+    main_trades = [t for t in trades if not t.get("trade_id", "").endswith(("ex1p1", "ex1p2", "ex2p1", "ex2p2", "ex2sum"))]
     
-    for trade in trades:
-        status = trade.get("limit_watch_status", "")
-        
-        # Only count completed trades for stats
-        if status == "FILLED":
-            # Calculate profit from the trade
-            ex1_value = float(trade.get("ex1_value_usdt", 0) or 0)
-            ex2_value = float(trade.get("ex2_value_usdt", 0) or 0)
-            ex1_fees = float(trade.get("ex1_fees", 0) or 0)
-            ex2_fees = float(trade.get("ex2_fees", 0) or 0)
-            
-            # For K->M: Buy on KuCoin (ex1), Sell on MEXC (ex2)
-            # Direction tells us which is buy/sell
-            direction = trade.get("direction", "")
-            
-            # Calculate profit based on direction
-            if "K->M" in direction:
-                cost = ex1_value  # Bought on KuCoin
-                revenue = ex2_value  # Sold on MEXC
-            else:  # M->K
-                cost = ex1_value  # Bought on MEXC
-                revenue = ex2_value  # Sold on KuCoin
-            
-            net_profit = revenue - cost - ex1_fees - ex2_fees
-            total_profit_usdt += net_profit
-            
-            # Calculate MPC gain (reinvested coins)
-            ex2_price = float(trade.get("ex2_price_avg", 0) or 0)
-            if ex2_price > 0:
-                mpc_gain = net_profit / ex2_price
-                total_profit_mpc += mpc_gain
-            
-            if net_profit > 0:
-                wins += 1
-            else:
-                losses += 1
-            
-            if net_profit > best_trade_usdt:
-                best_trade_usdt = net_profit
-                
-        elif status == "WATCHING":
-            pending += 1
+    total_profit_mpc = sum(float(t.get("profit_mpc_actual", 0) or 0) for t in main_trades)
+    total_profit_usdt = sum(float(t.get("profit_usdt_actual", 0) or 0) for t in main_trades)
     
-    total_completed = wins + losses
-    win_rate = f"{(wins/total_completed*100):.1f}%" if total_completed > 0 else "0%"
-    avg_profit = total_profit_usdt / total_completed if total_completed > 0 else 0
+    # Count FILLED limit orders
+    filled_count = len([t for t in main_trades if t.get("limit_watch_status") == "FILLED"])
+    win_rate = f"{filled_count / len(main_trades) * 100:.0f}%" if main_trades else "0%"
     
     return {
         "pair": pair,
-        "total_trades": len(trades),
-        "completed_trades": total_completed,
+        "total_trades": len(main_trades),
+        "total_profit_mpc": total_profit_mpc,
+        "total_profit_usdt": total_profit_usdt,
         "win_rate": win_rate,
-        "total_profit_usdt": round(total_profit_usdt, 4),
-        "total_profit_mpc": round(total_profit_mpc, 4),
-        "best_trade_usdt": round(best_trade_usdt, 4),
-        "avg_profit_usdt": round(avg_profit, 4),
-        "pending_limit_orders": pending,
     }
 
 
-def export_trades_csv(pair: str) -> Optional[str]:
-    """Export all trades for a pair to a standalone CSV"""
-    trades = get_trades(pair, limit=100000)
-    
-    if not trades:
-        return None
-    
-    export_dir = LOG_DIR / "exports"
-    export_dir.mkdir(parents=True, exist_ok=True)
-    
-    filename = f"{pair}_trades_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    filepath = export_dir / filename
-    
-    with open(filepath, 'w', newline='') as f:
-        if trades:
-            writer = csv.DictWriter(f, fieldnames=trades[0].keys())
-            writer.writeheader()
-            writer.writerows(trades)
-    
-    return str(filepath)
+# =============================================================================
+# UTILITY
+# =============================================================================
 
-
-def get_all_pairs_with_trades() -> List[str]:
-    """Get list of all trading pairs that have CSV files"""
-    pairs = []
-    for csv_file in LOG_DIR.glob("*_trades.csv"):
-        pair = csv_file.stem.replace("_trades", "")
-        pairs.append(pair)
-    return pairs
-
-def get_trade_summary_extended(pair: str) -> Dict:
-    """Get extended summary statistics including average spread"""
-    trades = get_trades(pair, limit=10000)
-    
-    if not trades:
-        return {
-            "pair": pair,
-            "total_trades": 0,
-            "completed_trades": 0,
-            "open_trades": 0,
-            "total_profit_usdt": 0,
-            "total_profit_mpc": 0,
-            "best_trade_usdt": 0,
-            "avg_profit_usdt": 0,
-            "avg_spread_pct": 0,
-            "pending_limit_orders": 0,
-        }
-    
-    completed = 0
-    open_trades = 0
-    total_profit_usdt = 0
-    total_profit_mpc = 0
-    best_trade_usdt = 0
-    total_spread = 0
-    
-    for trade in trades:
-        status = trade.get("limit_watch_status", "")
-        
-        if status == "FILLED":
-            completed += 1
-            
-            ex1_value = float(trade.get("ex1_value_usdt", 0) or 0)
-            ex2_value = float(trade.get("ex2_value_usdt", 0) or 0)
-            ex1_fees = float(trade.get("ex1_fees", 0) or 0)
-            ex2_fees = float(trade.get("ex2_fees", 0) or 0)
-            ex1_price = float(trade.get("ex1_price_avg", 0) or 0)
-            
-            direction = trade.get("direction", "")
-            
-            if "K->M" in direction:
-                cost = ex1_value
-                revenue = ex2_value
-            else:
-                cost = ex1_value
-                revenue = ex2_value
-            
-            net_profit = revenue - cost - ex1_fees - ex2_fees
-            total_profit_usdt += net_profit
-            
-            # Calculate spread for this trade
-            if ex1_price > 0 and ex2_value > 0:
-                spread_pct = ((revenue - cost) / cost) * 100 if cost > 0 else 0
-                total_spread += spread_pct
-            
-            # MPC gain
-            ex2_price = float(trade.get("ex2_price_avg", 0) or 0)
-            if ex2_price > 0:
-                mpc_gain = net_profit / ex2_price
-                total_profit_mpc += mpc_gain
-            
-            if net_profit > best_trade_usdt:
-                best_trade_usdt = net_profit
-                
-        elif status == "WATCHING" or status == "PARTIAL":
-            open_trades += 1
-    
-    avg_profit = total_profit_usdt / completed if completed > 0 else 0
-    avg_spread = total_spread / completed if completed > 0 else 0
-    
-    return {
-        "pair": pair,
-        "total_trades": len(trades),
-        "completed_trades": completed,
-        "open_trades": open_trades,
-        "total_profit_usdt": round(total_profit_usdt, 4),
-        "total_profit_mpc": round(total_profit_mpc, 4),
-        "best_trade_usdt": round(best_trade_usdt, 4),
-        "avg_profit_usdt": round(avg_profit, 4),
-        "avg_spread_pct": round(avg_spread, 3),
-        "pending_limit_orders": open_trades,
-    }
-
-def format_trade_table(trade_data):
-    """Format completed trade as ASCII table"""
-    return f"""
-╔════════════════════════════════════════════════════════════════╗
-║  Trade Summary                                           ║
-╠════════════════════════════════════════════════════════════════╣
-║  Trade ID:     {trade_data.get('trade_id', 'N/A'):<35} ║
-║  Direction:   {trade_data.get('direction', 'N/A'):<35} ║
-║  ───────────────────────────────────────────────────────  ║
-║  Step 1:     {trade_data.get('step1_ex', 'N/A'):<8} {trade_data.get('step1_type', 'N/A'):<10} {trade_data.get('step1_qty', 0):>8.2f} MPC ║
-║  Step 2:     {trade_data.get('step2_ex', 'N/A'):<8} {trade_data.get('step2_type', 'N/A'):<10} @ {trade_data.get('step2_price', 0):>8.5f}    ║
-╠════════════════════════════════════════════════════════════════╣
-║  Profit:     ${trade_data.get('profit_usdt', 0):>8.4f} USDT   │ MPC Gain:  {trade_data.get('profit_mpc', 0):>8.2f} MPC ║
-╚════════════════════════════════════════════════════════════════╝"""
+def clear_debug_log():
+    """Clear the debug log file"""
+    try:
+        if DEBUG_LOG_FILE.exists():
+            DEBUG_LOG_FILE.unlink()
+        debug_log("Debug log cleared")
+    except Exception as e:
+        print(f"Could not clear debug log: {e}", file=sys.stderr)
