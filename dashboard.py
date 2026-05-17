@@ -1530,14 +1530,13 @@ filterTable();
                     """
                     st.markdown(popup_html, unsafe_allow_html=True)
                     
-                    # CSV Export (only if we have data)
-                    if rows:
-                        df = pd.DataFrame(rows)
+                    # CSV Export
                     csv_cols = ['datetime', 'trade_id', 'market_side', 'market_qty', 'fill_price', 'strategy', 'spread',
                                'ex1_exchange', 'ex1_order_id', 'ex1_qty', 'ex1_price', 'ex1_value', 'ex1_fees',
                                'ex2_exchange', 'ex2_order_id', 'ex2_qty', 'ex2_price', 'ex2_value', 'ex2_fees',
                                'gross', 'fees', 'net', 'profit_mpc', 'profit_usdt', 'status']
-                    csv_bytes = df[csv_cols].to_csv(index=False).encode('utf-8')
+                    df = pd.DataFrame(rows, columns=csv_cols)
+                    csv_bytes = df.to_csv(index=False).encode('utf-8')
                     st.download_button("📥 Excel", 
     data=(lambda: pd.read_csv(io.BytesIO(csv_bytes)).to_excel(io.BytesIO(), index=False) or io.BytesIO().getvalue())(),
     file_name=f"MPC_trades_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
