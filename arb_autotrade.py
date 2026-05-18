@@ -1847,6 +1847,7 @@ def main():
     STATE_RUNNING = 'RUNNING'
     state = STATE_WAITING
     trade_in_progress = False
+    hysteresis_armed = False  # Hysteresis flag for start/stop behavior
     last_spread_ok = None  # Track spread condition changes
     last_pair_enabled = None  # Track pair enabled changes
 
@@ -2037,8 +2038,21 @@ def main():
         # State machine logic
         # IMPORTANT: Check balance BEFORE setting trade_in_progress=True
         # This prevents the flag from being set when we can't actually trade
+        # Hysteresis logic: Once activated by threshold_start, stay active until threshold_stop is breached
+        # Check if we need to arm or disarm hysteresis
+        if not hysteresis_armed and profitable_spread >= threshold_start:
+            # First trigger - arm hysteresis
+            hysteresis_armed = True
+            log(f"🔘 HYSTERESIS ARMED: spread={profitable_spread:.2f}% >= {threshold_start}%", "DECISION")
+        elif hysteresis_armed and profitable_spread < threshold_stop:
+            # Breach of stop threshold - disarm hysteresis
+            hysteresis_armed = False
+            log(f"🔴 HYSTERESIS DISARMED: spread={profitable_spread:.2f}% < {threshold_stop}%", "DECISION")
+
         if state == STATE_WAITING:
-            if profitable_spread >= threshold_start and not trade_in_progress:
+            # Trade if: spread >= threshold_start (initial activation) OR (hysteresis armed AND spread >= threshold_stop)
+            trade_condition = (profitable_spread >= threshold_start) or (hysteresis_armed and profitable_spread >= threshold_stop)
+            if trade_condition and not trade_in_progress:
                 
                 # Pre-flight balance check BEFORE entering trade
                 # Determine direction and simulate balance check
@@ -2078,6 +2092,7 @@ def main():
                 log(f"🚀 TRIGGER: spread={profitable_spread:.2f}% >= threshold={threshold_start}%", "DECISION")
                 state = STATE_RUNNING
                 trade_in_progress = True
+                # Hysteresis stays armed - we already set it above
 
                 # Execute best trade found by sweep
                 if best_trade:
