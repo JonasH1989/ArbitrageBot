@@ -194,11 +194,16 @@ def init_pair_csv(pair: str) -> Path:
     ensure_log_dir()
     csv_path = get_trade_csv_path(pair)
     
+    print(f"DEBUG init_pair_csv: pair={pair}, csv_path={csv_path}, exists={csv_path.exists()}")
+    
     if not csv_path.exists():
         with open(csv_path, 'w', newline='') as f:
             writer = csv.writer(f, delimiter=';')
             writer.writerow(UNIFIED_COLUMNS)
         debug_log(f"CSV initialized: {csv_path}")
+        print(f"DEBUG init_pair_csv: CSV file created at {csv_path}")
+    else:
+        print(f"DEBUG init_pair_csv: CSV already exists at {csv_path}")
     
     return csv_path
 
@@ -399,6 +404,8 @@ def log_trade(
     trade_id = generate_trade_id()
     debug_log(f"LOG_TRADE: Starting for trade_id={trade_id}")
     
+    print(f"DEBUG log_trade ENTRY: trade_id={trade_id}, pair={pair}")
+    
     # Initialize defaults
     if ex1_partial_fills is None:
         ex1_partial_fills = []
@@ -408,6 +415,7 @@ def log_trade(
     # Normalize pair for filename
     csv_path = init_pair_csv(pair)
     debug_log(f"LOG_TRADE: CSV path={csv_path}")
+    print(f"DEBUG log_trade: After init_pair_csv, csv_path={csv_path}")
     
     # Prepare ex1 data
     ex1_exchange = get_exchange_short_id(ex1_data.get("exchange", ""))

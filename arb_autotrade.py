@@ -337,9 +337,8 @@ def start_http_log_server(port: int = 8503):
             limit = int(request.args.get('limit', 50))
             
             from pathlib import Path
-            normalized_pair = pair.replace('-', '').replace('/', '')
-            LOG_DIR = Path('/app/logs')
-            csv_path = LOG_DIR / f"{normalized_pair}_trades.csv"
+            normalized_pair = pair.replace('-', '').replace('/', '').upper()
+            csv_path = TRADE_LOG_DIR / f"{normalized_pair}_trades.csv"
             
             if not csv_path.exists():
                 return jsonify({'status': 'error', 'message': f'CSV not found: {csv_path}'}), 404
@@ -1140,20 +1139,27 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
                     "price_expected": limit_price_expected, "price_actual": 0,
                     "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "NOT_PLACED",
                     "raw_response": {}}
-        trade_id = log_trade(
-            pair=TRADING_PAIR,
-            internal_ts=internal_ts,
-            direction=dir_str,
-            ex1_data=ex1_data,
-            ex2_data=ex2_data,
-            limit_watch_status="ERROR",
-            strategy=strategy.upper(),
-            spread_pct=spread_pct,
-            market_price_expected=market_price_expected,
-            limit_price_expected=limit_price_expected,
-            error_code="BALANCE_CHECK_FAILED",
-            error_message=balance_error
-        )
+        log(f"DEBUG: Calling log_trade() - BALANCE_CHECK_FAILED case")
+        try:
+            trade_id = log_trade(
+                pair=TRADING_PAIR,
+                internal_ts=internal_ts,
+                direction=dir_str,
+                ex1_data=ex1_data,
+                ex2_data=ex2_data,
+                limit_watch_status="ERROR",
+                strategy=strategy.upper(),
+                spread_pct=spread_pct,
+                market_price_expected=market_price_expected,
+                limit_price_expected=limit_price_expected,
+                error_code="BALANCE_CHECK_FAILED",
+                error_message=balance_error
+            )
+            log(f"✅ log_trade SUCCESS: {trade_id}")
+        except Exception as e:
+            log(f"❌ log_trade FAILED: {e}", "ERROR")
+            import traceback
+            log(f"❌ Traceback: {traceback.format_exc()}", "ERROR")
         log(f"📝 Trade blocked by balance check: {trade_id}")
         return False, trade_id
     log(f"✅ Balance check passed")
@@ -1296,20 +1302,27 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
                     "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "NOT_PLACED",
                     "raw_response": {}}
 
-        trade_id = log_trade(
-            pair=TRADING_PAIR,
-            internal_ts=internal_ts,
-            direction=dir_str,
-            ex1_data=ex1_data,
-            ex2_data=ex2_data,
-            limit_watch_status="ERROR",
-            strategy=strategy.upper(),
-            spread_pct=spread_pct,
-            market_price_expected=market_price_expected,
-            limit_price_expected=limit_price_expected,
-            error_code=error_code,
-            error_message=error_message
-        )
+        log(f"DEBUG: Calling log_trade() - LIMIT_ORDER_FAILED case")
+        try:
+            trade_id = log_trade(
+                pair=TRADING_PAIR,
+                internal_ts=internal_ts,
+                direction=dir_str,
+                ex1_data=ex1_data,
+                ex2_data=ex2_data,
+                limit_watch_status="ERROR",
+                strategy=strategy.upper(),
+                spread_pct=spread_pct,
+                market_price_expected=market_price_expected,
+                limit_price_expected=limit_price_expected,
+                error_code=error_code,
+                error_message=error_message
+            )
+            log(f"✅ log_trade SUCCESS: {trade_id}")
+        except Exception as e:
+            log(f"❌ log_trade FAILED: {e}", "ERROR")
+            import traceback
+            log(f"❌ Traceback: {traceback.format_exc()}", "ERROR")
         log(f"📝 Trade logged with error: {trade_id}")
         return False, trade_id
 
@@ -1404,22 +1417,29 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     mpc_gain = net_profit / sell_price if sell_price > 0 else 0
 
     # Log trade with harmonized data
-    trade_id = log_trade(
-        pair=TRADING_PAIR,
-        internal_ts=internal_ts,
-        direction=dir_str,
-        ex1_data=ex1_data,
-        ex2_data=ex2_data,
-        limit_watch_status="WATCHING",
-        strategy=strategy.upper(),
-        spread_pct=spread_pct,
-        market_price_expected=market_price_expected,
-        limit_price_expected=limit_price_expected,
-        profit_usdt_expected=net_profit,
-        profit_mpc_expected=mpc_gain,
-        error_code=error_code,
-        error_message=error_message
-    )
+    log(f"DEBUG: Calling log_trade() - SUCCESS case")
+    try:
+        trade_id = log_trade(
+            pair=TRADING_PAIR,
+            internal_ts=internal_ts,
+            direction=dir_str,
+            ex1_data=ex1_data,
+            ex2_data=ex2_data,
+            limit_watch_status="WATCHING",
+            strategy=strategy.upper(),
+            spread_pct=spread_pct,
+            market_price_expected=market_price_expected,
+            limit_price_expected=limit_price_expected,
+            profit_usdt_expected=net_profit,
+            profit_mpc_expected=mpc_gain,
+            error_code=error_code,
+            error_message=error_message
+        )
+        log(f"✅ log_trade SUCCESS: {trade_id}")
+    except Exception as e:
+        log(f"❌ log_trade FAILED: {e}", "ERROR")
+        import traceback
+        log(f"❌ Traceback: {traceback.format_exc()}", "ERROR")
     log(f"📝 Trade logged: {trade_id}")
 
     # Determine if profit is actual (limit filled) or expected (limit pending)
