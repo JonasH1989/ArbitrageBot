@@ -488,20 +488,20 @@ def get_mexc_balances() -> dict:
         data = resp.json()
 
         balances = {}
-        if 'balances' in data:
+        if isinstance(data, dict) and 'balances' in data:
             for b in data['balances']:
-                asset = b['asset']
-                free = float(b.get('free', 0))
-                locked = float(b.get('locked', 0))
+                asset = b.get('asset', '')
+                if not asset:
+                    continue
+                free = float(b.get('free', 0) or 0)
+                locked = float(b.get('locked', 0) or 0)
                 total = free + locked
                 if total > 0:
                     balances[asset] = {'free': free, 'locked': locked, 'total': total}
         return balances
     except Exception as e:
-        log(f"Error getting MEXC balances: {e}")
+        log(f"Error getting MEXC balances: {e}", "ERROR")
         return {}
-
-        return {'USDT': 0.0, COIN_SYMBOL.split('-')[0]: 0.0}
 
 def get_kucoin_balances() -> dict:
     """Get ALL KuCoin account balances with free and locked amounts."""
@@ -552,21 +552,32 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
         # Buying on MEXC, selling on KuCoin
         usdt_needed = qty * buy_price * 1.002  # +0.2% for fees
         
-        # Get actual balances
-        mexc_bal = get_mexc_balances()
-        kucoin_bal = get_kucoin_balances()
+        # Get actual balances with error handling
+        try:
+            mexc_bal = get_mexc_balances()
+            kucoin_bal = get_kucoin_balances()
+        except Exception as e:
+            log(f"Error getting balances for M->K: {e}", "ERROR")
+            return False, f"Balance check error: {e}", 0
         
-        mexc_usdt = mexc_bal.get('USDT', {}).get('total', 0)
-        coin_available_kucoin = kucoin_bal.get(coin, {}).get('total', 0)
+        mexc_usdt = mexc_bal.get('USDT', {}).get('total', 0) if mexc_bal else 0
+        coin_available_kucoin = kucoin_bal.get(coin, {}).get('total', 0) if kucoin_bal else 0
         
         # Calculate max tradable qty based on limiting factor
         # USDT limit: how many coins can we buy with available USDT?
+        # SAFETY: Guard against division by zero
         max_from_usdt = mexc_usdt / (buy_price * 1.002) if buy_price > 0 else 0
         # Coin limit on KuCoin: how many coins can we sell?
-        max_from_coin = coin_available_kucoin
+        max_from_coin = coin_available_kucoin if coin_available_kucoin > 0 else 0
         
         # Minimum of both limits = max tradable qty
         max_tradable = min(max_from_usdt, max_from_coin)
+        
+        # SAFETY: Ensure max_tradable is valid (NaN check)
+        if max_tradable != max_tradable:  # NaN check
+            max_tradable = 0
+        if max_tradable < 0:
+            max_tradable = 0
         
         # Check if we have enough for the requested qty
         if usdt_needed > 0.01 and (mexc_usdt < usdt_needed or coin_available_kucoin < qty):
@@ -582,18 +593,30 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
         usdt_needed = qty * buy_price * 1.002  # +0.2% for fees
         
         # Get actual balances
-        kucoin_bal = get_kucoin_balances()
-        mexc_bal = get_mexc_balances()
+        try:
+            kucoin_bal = get_kucoin_balances()
+            mexc_bal = get_mexc_balances()
+        except Exception as e:
+            log(f"Error getting balances for K->M: {e}", "ERROR")
+            return False, f"Balance check error: {e}", 0
         
-        kucoin_usdt = kucoin_bal.get('USDT', {}).get('total', 0)
-        coin_available_mexc = mexc_bal.get(coin, {}).get('total', 0)
+        kucoin_usdt = kucoin_bal.get('USDT', {}).get('total', 0) if kucoin_bal else 0
+        coin_available_mexc = mexc_bal.get(coin, {}).get('total', 0) if mexc_bal else 0
         
         # Calculate max tradable qty based on limiting factor
+        # SAFETY: Guard against division by zero
         max_from_usdt = kucoin_usdt / (buy_price * 1.002) if buy_price > 0 else 0
-        max_from_coin = coin_available_mexc
+        max_from_coin = coin_available_mexc if coin_available_mexc > 0 else 0
         max_tradable = min(max_from_usdt, max_from_coin)
         
+        # SAFETY: Ensure max_tradable is valid
+        if max_tradable != max_tradable:  # NaN check
+            max_tradable = 0
+        if max_tradable < 0:
+            max_tradable = 0
+        
         # Check if we have enough for the requested qty
+        # SAFETY: Use correct USDT balance for the exchange we're buying on (KuCoin)
         if usdt_needed > 0.01 and (kucoin_usdt < usdt_needed or coin_available_mexc < qty):
             if max_tradable >= KUCOIN_MIN_QTY:
                 return True, "", max_tradable
@@ -1094,6 +1117,8 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     Returns:
         (success, trade_id)
     """
+    # Master try-except to prevent any crash from propagating
+    try:
     # Determine direction string for logging using short_ids
     # Import here to avoid circular dependency issues
     from trade_logger import get_exchange_short_id
@@ -1453,6 +1478,12 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     log(f"{profit_label} Net Profit: ${net_profit:.4f} | {coin} Gain: {mpc_gain:.4f}{profit_note}")
 
     return True, trade_id
+    
+    except Exception as e:
+        log(f"❌ CRITICAL execute_trade exception: {e}", "ERROR")
+        import traceback
+        log(f"❌ Trade function traceback: {traceback.format_exc()}", "ERROR")
+        return False, None
 
 
 # Legacy alias for backward compatibility (will be removed)
@@ -1924,8 +1955,9 @@ def main():
         log(f"SAFETY: Error saving config: {e}", "CONFIG")
 
     while True:
-        # Re-read all settings from config each cycle
-        pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
+        try:
+            # Re-read all settings from config each cycle
+            pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
         current_strategy = get_setting(f'trading.pairs.{TRADING_PAIR}.strategy', 'usdt')
         threshold_start = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_start', 1.0)
         threshold_stop = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_stop', 0.5)
@@ -2044,6 +2076,11 @@ def main():
                 log(f"INAKTIV - keine Trades")
             time.sleep(1)
             continue
+        except Exception as e:
+            log(f"❌ CRITICAL Main loop exception: {e}", "ERROR")
+            import traceback
+            log(f"❌ Main loop traceback: {traceback.format_exc()}", "ERROR")
+            time.sleep(5)  # Wait before retrying
 
         # Log condition check only when state CHANGES (reduce spam)
         current_spread_ok = profitable_spread >= threshold_start
