@@ -49,6 +49,7 @@ from trade_logger import (
     get_trades,
     get_trade_csv_path,
     LOG_DIR as TRADE_LOG_DIR,
+    log_trade,  # Import the trade logging function
 )
 
 from pathlib import Path
