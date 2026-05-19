@@ -25,6 +25,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from trade_logger import to_float
+
 LOG_DIR = Path("/app/logs")
 CONFIG_PATH = Path("/app/config/config.yaml")
 
@@ -169,8 +171,8 @@ class TradeLoggerService:
                             modified = True
                     
                     # 2. Check for multi-fills on ex1 (if qty_ordered != qty_filled)
-                    ex1_ordered = float(main_row.get('ex1_qty_ordered', 0) or 0)
-                    ex1_filled = float(main_row.get('ex1_qty_filled', 0) or 0)
+                    ex1_ordered = to_float(main_row.get('ex1_qty_ordered', 0) or 0)
+                    ex1_filled = to_float(main_row.get('ex1_qty_filled', 0) or 0)
                     if ex1_ordered > 0 and abs(ex1_ordered - ex1_filled) > 1:
                         # Possible multi-fill - check API
                         fills = self._fetch_all_fills_for_ex1(main_row)
@@ -480,15 +482,15 @@ class TradeLoggerService:
             ex2sum_row['ex2_fees'] = fees
         
         # Recalculate actual profit
-        ex1_value = float(main_row.get('ex1_value_usdt', 0) or 0)
-        ex1_fees = float(main_row.get('ex1_fees', 0) or 0)
-        ex2_value = qty_filled * float(ex2sum_row.get('ex2_price_actual', 0) or 0)
+        ex1_value = to_float(main_row.get('ex1_value_usdt', 0) or 0)
+        ex1_fees = to_float(main_row.get('ex1_fees', 0) or 0)
+        ex2_value = qty_filled * to_float(ex2sum_row.get('ex2_price_actual', 0) or 0)
         
         profit_usdt_actual = ex2_value - ex1_value - ex1_fees - fees
         ex2sum_row['profit_usdt_actual'] = profit_usdt_actual
         
         # Calculate profit_mpc_actual
-        ex1_qty_filled = float(main_row.get('ex1_qty_filled', 0) or 0)
+        ex1_qty_filled = to_float(main_row.get('ex1_qty_filled', 0) or 0)
         ex2sum_row['profit_mpc_actual'] = ex1_qty_filled - qty_filled
         
         # Insert fill rows if we have fills
@@ -577,7 +579,7 @@ class TradeLoggerService:
         modified = False
         
         # Check ex1 fees
-        ex1_fees = float(main_row.get('ex1_fees', 0) or 0)
+        ex1_fees = to_float(main_row.get('ex1_fees', 0) or 0)
         if ex1_fees == 0:
             order_id = main_row.get('ex1_order_id', '')
             exchange = main_row.get('ex1', '')
@@ -590,7 +592,7 @@ class TradeLoggerService:
         
         # Check ex2 fees in ex2sum
         if ex2sum_row:
-            ex2_fees = float(ex2sum_row.get('ex2_fees', 0) or 0)
+            ex2_fees = to_float(ex2sum_row.get('ex2_fees', 0) or 0)
             if ex2_fees == 0:
                 order_id = ex2sum_row.get('ex2_order_id', '')
                 exchange = ex2sum_row.get('ex2', '')
@@ -680,10 +682,10 @@ class TradeLoggerService:
         completed_trades = len([t for t in main_trades if t.get('limit_watch_status') == 'FILLED'])
         pending_limit = len([t for t in main_trades if t.get('limit_watch_status') == 'WATCHING'])
         
-        total_profit_usdt = sum(float(t.get('profit_usdt_actual', 0) or 0) for t in main_trades)
-        total_profit_mpc = sum(float(t.get('profit_mpc_actual', 0) or 0) for t in main_trades)
+        total_profit_usdt = sum(to_float(t.get('profit_usdt_actual', 0) or 0) for t in main_trades)
+        total_profit_mpc = sum(to_float(t.get('profit_mpc_actual', 0) or 0) for t in main_trades)
         
-        winning = len([t for t in main_trades if float(t.get('profit_usdt_actual', 0) or 0) > 0])
+        winning = len([t for t in main_trades if to_float(t.get('profit_usdt_actual', 0) or 0) > 0])
         win_rate = f"{(winning / total_trades * 100):.1f}%" if total_trades > 0 else "0%"
         
         return {
