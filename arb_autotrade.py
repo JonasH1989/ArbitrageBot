@@ -2170,7 +2170,7 @@ def main():
                 if success:
                     log(f"✅ Trade executed - waiting for limit fill confirmation")
                     state = STATE_WAITING
-                    # trade_in_progress stays True until limit order confirms
+                    trade_in_progress = False  # Allow next trade to start
                 else:
                     log(f"⚠️ Trade execution failed (API error). Resetting.")
                     trade_in_progress = False
@@ -2252,6 +2252,7 @@ def main():
             if success:
                 log(f"✅ Trade executed - waiting for limit fill confirmation")
                 state = STATE_WAITING
+                trade_in_progress = False  # Allow next trade to start
             else:
                 log(f"⚠️ Trade execution failed (API error). Resetting.")
                 trade_in_progress = False
