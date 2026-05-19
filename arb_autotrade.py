@@ -498,20 +498,20 @@ def get_mexc_balances() -> dict:
         data = resp.json()
 
         balances = {}
-        if 'balances' in data:
+        if isinstance(data, dict) and 'balances' in data:
             for b in data['balances']:
-                asset = b['asset']
-                free = float(b.get('free', 0))
-                locked = float(b.get('locked', 0))
+                asset = b.get('asset', '')
+                if not asset:
+                    continue
+                free = float(b.get('free', 0) or 0)
+                locked = float(b.get('locked', 0) or 0)
                 total = free + locked
                 if total > 0:
                     balances[asset] = {'free': free, 'locked': locked, 'total': total}
         return balances
     except Exception as e:
-        log(f"Error getting MEXC balances: {e}")
+        log(f"Error getting MEXC balances: {e}", "ERROR")
         return {}
-
-        return {'USDT': 0.0, COIN_SYMBOL.split('-')[0]: 0.0}
 
 def get_kucoin_balances() -> dict:
     """Get ALL KuCoin account balances with free and locked amounts."""
@@ -562,21 +562,31 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
         # Buying on MEXC, selling on KuCoin
         usdt_needed = qty * buy_price * 1.002  # +0.2% for fees
         
-        # Get actual balances
-        mexc_bal = get_mexc_balances()
-        kucoin_bal = get_kucoin_balances()
+        # Get actual balances with error handling
+        try:
+            mexc_bal = get_mexc_balances()
+            kucoin_bal = get_kucoin_balances()
+        except Exception as e:
+            log(f"Error getting balances for M->K: {e}", "ERROR")
+            return False, f"Balance check error: {e}", 0
         
-        mexc_usdt = mexc_bal.get('USDT', {}).get('total', 0)
-        coin_available_kucoin = kucoin_bal.get(coin, {}).get('total', 0)
+        mexc_usdt = mexc_bal.get('USDT', {}).get('total', 0) if mexc_bal else 0
+        coin_available_kucoin = kucoin_bal.get(coin, {}).get('total', 0) if kucoin_bal else 0
         
         # Calculate max tradable qty based on limiting factor
-        # USDT limit: how many coins can we buy with available USDT?
+        # SAFETY: Guard against division by zero
         max_from_usdt = mexc_usdt / (buy_price * 1.002) if buy_price > 0 else 0
         # Coin limit on KuCoin: how many coins can we sell?
-        max_from_coin = coin_available_kucoin
+        max_from_coin = coin_available_kucoin if coin_available_kucoin > 0 else 0
         
         # Minimum of both limits = max tradable qty
         max_tradable = min(max_from_usdt, max_from_coin)
+        
+        # SAFETY: Ensure max_tradable is valid (NaN check)
+        if max_tradable != max_tradable:  # NaN check
+            max_tradable = 0
+        if max_tradable < 0:
+            max_tradable = 0
         
         # Check if we have enough for the requested qty
         if usdt_needed > 0.01 and (mexc_usdt < usdt_needed or coin_available_kucoin < qty):
@@ -591,17 +601,28 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
         # Buying on KuCoin, selling on MEXC
         usdt_needed = qty * buy_price * 1.002  # +0.2% for fees
         
-        # Get actual balances
-        kucoin_bal = get_kucoin_balances()
-        mexc_bal = get_mexc_balances()
+        # Get actual balances with error handling
+        try:
+            kucoin_bal = get_kucoin_balances()
+            mexc_bal = get_mexc_balances()
+        except Exception as e:
+            log(f"Error getting balances for K->M: {e}", "ERROR")
+            return False, f"Balance check error: {e}", 0
         
-        kucoin_usdt = kucoin_bal.get('USDT', {}).get('total', 0)
-        coin_available_mexc = mexc_bal.get(coin, {}).get('total', 0)
+        kucoin_usdt = kucoin_bal.get('USDT', {}).get('total', 0) if kucoin_bal else 0
+        coin_available_mexc = mexc_bal.get(coin, {}).get('total', 0) if mexc_bal else 0
         
         # Calculate max tradable qty based on limiting factor
+        # SAFETY: Guard against division by zero
         max_from_usdt = kucoin_usdt / (buy_price * 1.002) if buy_price > 0 else 0
-        max_from_coin = coin_available_mexc
+        max_from_coin = coin_available_mexc if coin_available_mexc > 0 else 0
         max_tradable = min(max_from_usdt, max_from_coin)
+        
+        # SAFETY: Ensure max_tradable is valid (NaN check)
+        if max_tradable != max_tradable:  # NaN check
+            max_tradable = 0
+        if max_tradable < 0:
+            max_tradable = 0
         
         # Check if we have enough for the requested qty
         if usdt_needed > 0.01 and (kucoin_usdt < usdt_needed or coin_available_mexc < qty):
