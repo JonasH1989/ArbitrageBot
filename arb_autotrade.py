@@ -154,11 +154,11 @@ def take_wallet_snapshot():
         mpc_value_usdt = total_mpc * mpc_price if mpc_price else 0
         total_value_usdt = total_usdt + mpc_value_usdt
         
-        # Ensure logs directory exists
-        logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
-        os.makedirs(logs_dir, exist_ok=True)
-        csv_path = os.path.join(logs_dir, 'wallet_snapshots.csv')
-        json_path = os.path.join(logs_dir, 'wallet_snapshots_detail.json')
+        # Use LOG_DIR for consistency with docker volume mount
+        from pathlib import Path
+        LOG_DIR_SNAPSHOT = Path('/app/logs')
+        csv_path = LOG_DIR_SNAPSHOT / 'wallet_snapshots.csv'
+        json_path = LOG_DIR_SNAPSHOT / 'wallet_snapshots_detail.json'
         
         ts = now.strftime('%Y-%m-%d %H:%M:%S')
         
@@ -1929,7 +1929,7 @@ def main():
 
     # Thresholds - load from config directly (avoiding settings_sync import issues)
     try:
-        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config', 'config.yaml')
+        config_path = Path('/app/config/config.yaml')
         with open(config_path, 'r') as f:
             cfg = yaml.safe_load(f)
         pair_cfg = cfg.get('trading', {}).get('pairs', {}).get(TRADING_PAIR, {})
