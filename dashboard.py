@@ -1220,8 +1220,8 @@ else:
                         else:
                             gross = ex2_val - ex1_val
                             net = gross - fees
-                            profit_usdt = net  # Actual net for filled trades
-                            profit_mpc = float(t.get('profit_mpc_expected', 0) or 0)
+                            profit_usdt = float(t.get('profit_usdt_actual', 0) or 0)
+                            profit_mpc = float(t.get('profit_mpc_actual', 0) or 0)
                         
                         direction = t.get('direction', '')
                         
