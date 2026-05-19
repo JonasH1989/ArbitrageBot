@@ -1196,6 +1196,34 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     log(f"✅ Balance check passed")
 
     # ========================================================================
+    # STEP 0: PRE-FLIGHT BALANCE CHECK (safety net - re-check just before execution)
+    # ========================================================================
+    log(f"⚙️ Pre-flight balance check for {dir_str}...", "DEBUG")
+    coin = COIN_SYMBOL.split('-')[0]
+    
+    if exchange_market.upper() == "MEXC":
+        precheck_balances = get_mexc_balances()
+        precheck_usdt = precheck_balances.get('USDT', {}).get('total', 0) if precheck_balances else 0
+        log(f"   MEXC USDT available: ${precheck_usdt:.4f}", "DEBUG")
+        
+        if precheck_usdt < (qty * market_price_expected * 1.002):
+            error_code = "INSUFFICIENT_BALANCE"
+            error_message = f"MEXC has insufficient USDT: ${precheck_usdt:.4f} < ${qty * market_price_expected * 1.002:.4f} needed"
+            log(f"❌ {error_message}")
+            return False, None
+    
+    elif exchange_market.upper() == "KUCOIN":
+        precheck_balances = get_kucoin_balances()
+        precheck_usdt = precheck_balances.get('USDT', {}).get('total', 0) if precheck_balances else 0
+        log(f"   KuCoin USDT available: ${precheck_usdt:.4f}", "DEBUG")
+        
+        if precheck_usdt < (qty * market_price_expected * 1.002):
+            error_code = "INSUFFICIENT_BALANCE"
+            error_message = f"KuCoin has insufficient USDT: ${precheck_usdt:.4f} < ${qty * market_price_expected * 1.002:.4f} needed"
+            log(f"❌ {error_message}")
+            return False, None
+
+    # ========================================================================
     # STEP 1: Market BUY on exchange_market
     # ========================================================================
     log(f"Step 1: {exchange_market} Market BUY...")
@@ -1208,7 +1236,14 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     elif exchange_market.upper() == "MEXC":
         result1 = execute_market_buy_mexc(qty)
         ex1_harmonize = harmonize_mexc_order
-        api_success_check = lambda r: r.get('code') is None or 'orderId' not in r
+        # Check for API errors first - MEXC returns {'code': -2015, 'msg': 'Insufficient balance.'} on balance errors
+        # MEXC success looks like: {'orderId': 'xxx', 'origQty': 'xxx', ...} (no 'code' field on success)
+        # MEXC error looks like: {'code': -2015, 'msg': 'Insufficient balance.'} (has 'code' field on error)
+        if result1.get('code') is not None:
+            # This is an ERROR response - MEXC only sets 'code' on errors
+            error_detected = True
+            error_msg_from_api = result1.get('msg', str(result1))
+            error_code_from_api = result1.get('code', 'UNKNOWN')
     else:
         error_code = "UNKNOWN_EXCHANGE"
         error_message = f"Unknown market exchange: {exchange_market}"
@@ -1217,10 +1252,10 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
 
     log(f"DEBUG {exchange_market} Response: {result1}")
 
-    # Check for API errors
-    if not api_success_check(result1):
+    # Check for API errors (after our enhanced check above)
+    if error_detected:
         error_code = "API_ERROR"
-        error_message = f"{exchange_market} market order failed: {result1}"
+        error_message = f"{exchange_market} market order failed: {error_msg_from_api}"
         log(f"❌ {error_message}")
 
         # Create failed ex1_data for logging
