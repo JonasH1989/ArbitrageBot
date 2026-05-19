@@ -11,8 +11,8 @@ services:
     ports:
       - "192.168.113.14:18888:8505"
     volumes:
-      - arb-config:/app/config
-      - arb-logs:/app/logs    # PERSISTENT named volume!
+      - ./config:/app/config
+      - ./logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=Europe/Berlin
@@ -35,15 +35,11 @@ services:
       - "8501:8501"
       - "192.168.113.14:8502:8501"
     volumes:
-      - arb-config:/app/config
-      - arb-logs:/app/logs    # PERSISTENT named volume!
+      - ./config:/app/config
+      - ./logs:/app/logs
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8501/_stcore/health"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 10s
-
-volumes:
-  arb-config:
-  arb-logs:
