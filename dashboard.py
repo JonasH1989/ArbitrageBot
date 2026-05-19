@@ -633,9 +633,14 @@ if st.session_state.selected_pair is None:
                 
                 trades = get_trades(pair_name, limit=1000)
                 total_trades = len(trades)
+                def to_float(val):
+                    if isinstance(val, str):
+                        val = val.replace(',', '.')
+                    return float(val or 0)
+                
                 total_profit = sum(
-                    (float(t.get('ex2_value_usdt', 0) or 0) - float(t.get('ex1_value_usdt', 0) or 0) - 
-                     float(t.get('ex1_fees', 0) or 0) - float(t.get('ex2_fees', 0) or 0))
+                    (to_float(t.get('ex2_value_usdt', 0)) - to_float(t.get('ex1_value_usdt', 0)) - 
+                     to_float(t.get('ex1_fees', 0)) - to_float(t.get('ex2_fees', 0)))
                     for t in trades
                 )
                 
@@ -1191,9 +1196,13 @@ else:
                 rows = []
                 for t in reversed(trades):
                     try:
-                        ex1_val = float(t.get('ex1_value_usdt', 0) or 0)
-                        ex2_val = float(t.get('ex2_value_usdt', 0) or 0)
-                        fees = float(t.get('ex1_fees', 0) or 0) + float(t.get('ex2_fees', 0) or 0)
+                        def to_float(val):
+                            if isinstance(val, str):
+                                val = val.replace(',', '.')
+                            return float(val or 0)
+                        ex1_val = to_float(t.get('ex1_value_usdt', 0))
+                        ex2_val = to_float(t.get('ex2_value_usdt', 0))
+                        fees = to_float(t.get('ex1_fees', 0)) + to_float(t.get('ex2_fees', 0))
                         status = t.get('limit_watch_status', 'UNKNOWN')
                         
                         # For WATCHING/PENDING trades, ex2_val is 0 (limit not filled)
