@@ -22,6 +22,13 @@ from typing import Dict, Optional, List, Tuple
 
 LOG_DIR = Path("/app/logs")
 
+# Helper for locale-independent float parsing
+def to_float(val):
+    """Parse float from string, handling comma decimal separator."""
+    if isinstance(val, str):
+        val = val.replace(',', '.')
+    return float(val or 0)
+
 # =============================================================================
 # DEBUG LOGGING
 # =============================================================================

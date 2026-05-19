@@ -37,6 +37,15 @@ except ImportError:
     load_config = None
     is_debug_enabled = lambda: False
 
+# Helper function for locale-independent float parsing
+def to_float(val):
+    """Parse float from string, handling comma decimal separator."""
+    if isinstance(val, str):
+        val = val.replace(',', '.')
+    return float(val or 0)
+
+
+
 # Import the harmonized trade logger
 import csv
 from trade_logger import (
@@ -1501,7 +1510,7 @@ def check_limit_order_fills():
         ex2_exchange = trade.get('ex2_exchange', '')
         ex2_order_id = trade.get('ex2_order_id', '')
         trade_id = trade.get('trade_id', '')
-        ex2_price_expected = float(trade.get('ex2_price_expected', 0) or 0)
+        ex2_price_expected = to_float(trade.get('ex2_price_expected', 0))
 
         if not ex2_order_id or ex2_order_id == 'FAILED':
             continue
