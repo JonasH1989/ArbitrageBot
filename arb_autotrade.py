@@ -1262,14 +1262,37 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     elif exchange_market.upper() == "MEXC":
         result1 = execute_market_buy_mexc(qty)
         ex1_harmonize = harmonize_mexc_order
-        # Check for API errors first - MEXC returns {'code': -2015, 'msg': 'Insufficient balance.'} on balance errors
-        # MEXC success looks like: {'orderId': 'xxx', 'origQty': 'xxx', ...} (no 'code' field on success)
-        # MEXC error looks like: {'code': -2015, 'msg': 'Insufficient balance.'} (has 'code' field on error)
+        # MEXC returns {'code': -2015, 'msg': 'Insufficient balance.'} on balance errors
+        # Success: {'orderId': 'xxx', 'origQty': 'xxx', ...} - no 'code' field on success
+        # Error: {'code': -2015, 'msg': '...'} - has 'code' field on error
         if result1.get('code') is not None:
-            # This is an ERROR response - MEXC only sets 'code' on errors
-            error_detected = True
-            error_msg_from_api = result1.get('msg', str(result1))
-            error_code_from_api = result1.get('code', 'UNKNOWN')
+            # API Error - trade failed, log and abort
+            error_message = f"MEXC market order failed: {result1.get('msg', str(result1))}"
+            log(f"❌ {error_message}")
+            ex1_data = {"exchange": "MEXC", "order_id": "FAILED", "type": "market",
+                        "side": "buy", "qty_ordered": qty, "qty_filled": 0,
+                        "price_expected": market_price_expected, "price_actual": 0,
+                        "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "REJECTED",
+                        "raw_response": result1}
+            ex2_data = {"exchange": "KUCOIN", "order_id": "NOT_PLACED", "type": "limit",
+                        "side": "sell", "qty_ordered": 0, "qty_filled": 0,
+                        "price_expected": limit_price_expected, "price_actual": 0,
+                        "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "NOT_PLACED",
+                        "raw_response": {}}
+            try:
+                trade_id = log_trade(
+                    pair=TRADING_PAIR, internal_ts=internal_ts, direction=dir_str,
+                    ex1_data=ex1_data, ex2_data=ex2_data,
+                    limit_watch_status="ERROR", strategy=strategy.upper(),
+                    spread_pct=spread_pct,
+                    market_price_expected=market_price_expected,
+                    limit_price_expected=limit_price_expected,
+                    error_code="API_ERROR", error_message=error_message
+                )
+                log(f"✅ log_trade SUCCESS: {trade_id}")
+            except Exception as e:
+                log(f"❌ log_trade FAILED: {e}", "ERROR")
+            return False, trade_id
     else:
         error_code = "UNKNOWN_EXCHANGE"
         error_message = f"Unknown market exchange: {exchange_market}"
@@ -1277,41 +1300,6 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
         return False, None
 
     log(f"DEBUG {exchange_market} Response: {result1}")
-
-    # Check for API errors (after our enhanced check above)
-    if error_detected:
-        error_code = "API_ERROR"
-        error_message = f"{exchange_market} market order failed: {error_msg_from_api}"
-        log(f"❌ {error_message}")
-
-        # Create failed ex1_data for logging
-        ex1_data = {"exchange": exchange_market.upper(), "order_id": "FAILED", "type": "market",
-                    "side": "buy", "qty_ordered": qty, "qty_filled": 0,
-                    "price_expected": market_price_expected, "price_actual": 0,
-                    "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "REJECTED",
-                    "raw_response": result1}
-        ex2_data = {"exchange": exchange_limit.upper(), "order_id": "FAILED", "type": "limit",
-                    "side": "sell", "qty_ordered": 0, "qty_filled": 0,
-                    "price_expected": limit_price_expected, "price_actual": 0,
-                    "value_usdt": 0, "fees": 0, "create_ts": 0, "status": "NOT_PLACED",
-                    "raw_response": {}}
-
-        trade_id = log_trade(
-            pair=TRADING_PAIR,
-            internal_ts=internal_ts,
-            direction=dir_str,
-            ex1_data=ex1_data,
-            ex2_data=ex2_data,
-            limit_watch_status="ERROR",
-            strategy=strategy.upper(),
-            spread_pct=spread_pct,
-            market_price_expected=market_price_expected,
-            limit_price_expected=limit_price_expected,
-            error_code=error_code,
-            error_message=error_message
-        )
-        log(f"📝 Trade logged with error: {trade_id}")
-        return False, trade_id
 
     # Harmonize successful response
     # KuCoin returns {'code': '200000', 'data': {'orderId': 'xxx'}} - orderId is INSIDE data
