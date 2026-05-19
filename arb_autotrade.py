@@ -1201,27 +1201,53 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     log(f"⚙️ Pre-flight balance check for {dir_str}...", "DEBUG")
     coin = COIN_SYMBOL.split('-')[0]
     
+    # Get BOTH exchanges' balances
+    mexc_bal = get_mexc_balances()
+    kucoin_bal = get_kucoin_balances()
+    
+    mexc_usdt = mexc_bal.get('USDT', {}).get('total', 0) if mexc_bal else 0
+    mexc_coins = mexc_bal.get(coin, {}).get('total', 0) if mexc_bal else 0
+    kucoin_usdt = kucoin_bal.get('USDT', {}).get('total', 0) if kucoin_bal else 0
+    kucoin_coins = kucoin_bal.get(coin, {}).get('total', 0) if kucoin_bal else 0
+    
+    log(f"   MEXC: USDT=${mexc_usdt:.4f}, {coin}={mexc_coins:.2f}", "DEBUG")
+    log(f"   KuCoin: USDT=${kucoin_usdt:.4f}, {coin}={kucoin_coins:.2f}", "DEBUG")
+    
+    # Check needed funds for BOTH sides
+    usdt_needed_ex1 = qty * market_price_expected * 1.002  # For market buy on exchange_market
+    coins_needed_ex2 = qty  # For limit sell on exchange_limit (same qty for USDT strategy)
+    price_for_ex2 = limit_price_expected
+    coins_value_ex2 = coins_needed_ex2 * price_for_ex2
+    
     if exchange_market.upper() == "MEXC":
-        precheck_balances = get_mexc_balances()
-        precheck_usdt = precheck_balances.get('USDT', {}).get('total', 0) if precheck_balances else 0
-        log(f"   MEXC USDT available: ${precheck_usdt:.4f}", "DEBUG")
-        
-        if precheck_usdt < (qty * market_price_expected * 1.002):
+        # MEXC = Market BUY (needs USDT), KUCOIN = Limit SELL (needs coins)
+        if mexc_usdt < usdt_needed_ex1:
             error_code = "INSUFFICIENT_BALANCE"
-            error_message = f"MEXC has insufficient USDT: ${precheck_usdt:.4f} < ${qty * market_price_expected * 1.002:.4f} needed"
+            error_message = f"MEXC has insufficient USDT: ${mexc_usdt:.4f} < ${usdt_needed_ex1:.4f} needed"
+            log(f"❌ {error_message}")
+            return False, None
+        
+        if kucoin_coins < coins_needed_ex2:
+            error_code = "INSUFFICIENT_BALANCE"
+            error_message = f"KuCoin has insufficient {coin}: {kucoin_coins:.2f} < {coins_needed_ex2:.2f} needed"
             log(f"❌ {error_message}")
             return False, None
     
     elif exchange_market.upper() == "KUCOIN":
-        precheck_balances = get_kucoin_balances()
-        precheck_usdt = precheck_balances.get('USDT', {}).get('total', 0) if precheck_balances else 0
-        log(f"   KuCoin USDT available: ${precheck_usdt:.4f}", "DEBUG")
-        
-        if precheck_usdt < (qty * market_price_expected * 1.002):
+        # KUCOIN = Market BUY (needs USDT), MEXC = Limit SELL (needs coins)
+        if kucoin_usdt < usdt_needed_ex1:
             error_code = "INSUFFICIENT_BALANCE"
-            error_message = f"KuCoin has insufficient USDT: ${precheck_usdt:.4f} < ${qty * market_price_expected * 1.002:.4f} needed"
+            error_message = f"KuCoin has insufficient USDT: ${kucoin_usdt:.4f} < ${usdt_needed_ex1:.4f} needed"
             log(f"❌ {error_message}")
             return False, None
+        
+        if mexc_coins < coins_needed_ex2:
+            error_code = "INSUFFICIENT_BALANCE"
+            error_message = f"MEXC has insufficient {coin}: {mexc_coins:.2f} < {coins_needed_ex2:.2f} needed"
+            log(f"❌ {error_message}")
+            return False, None
+    
+    log(f"✅ Pre-flight balance check passed for both sides", "DEBUG")
 
     # ========================================================================
     # STEP 1: Market BUY on exchange_market
