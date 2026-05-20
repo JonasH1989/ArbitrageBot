@@ -972,28 +972,40 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                 trades = resp.json()
 
                 if isinstance(trades, list) and trades:
-                    # Find trade matching our order by timestamp
+                    # Collect ALL trades matching our order by timestamp (multi-fill support!)
+                    # MEXC market orders often execute as multiple partial fills
+                    matching_trades = []
                     for trade in trades:
                         trade_time = int(trade.get('time', 0))
                         if abs(trade_time - transact_time) <= time_window:
                             qty = float(trade.get('qty', 0))
-                            price = float(trade.get('price', 0))
-                            quote_qty = float(trade.get('quoteQty', 0))
-                            # Use REAL fee from exchange API, not an estimate!
-                            fee = float(trade.get('fee', 0) or 0)
-
                             if qty > 0:
-                                log(f"   Found MEXC trade (private API): qty={qty}, price={price}, value=${quote_qty:.4f}, fee=${fee:.6f}")
-                                return {
-                                    'status': 'Filled',
-                                    'orderId': order_id,  # Preserve original order ID
-                                    'quantity': str(qty),
-                                    'amount': str(quote_qty),
-                                    'fees': fee,  # REAL fee from API, not estimated!
-                                    'price': str(price),
-                                    'executedQty': str(qty),
-                                    'cummulativeQuoteQty': str(quote_qty)
-                                }
+                                matching_trades.append(trade)
+                    
+                    if matching_trades:
+                        # Aggregate ALL fills for this order
+                        total_qty = sum(float(t.get('qty', 0)) for t in matching_trades)
+                        total_value = sum(float(t.get('quoteQty', 0)) for t in matching_trades)
+                        total_fee = sum(float(t.get('fee', 0) or 0) for t in matching_trades)
+                        # Calculate weighted average price
+                        avg_price = total_value / total_qty if total_qty > 0 else 0
+                        
+                        log(f"   Found {len(matching_trades)} MEXC fills (multi-fill aggregated):")
+                        for i, t in enumerate(matching_trades):
+                            log(f"      Fill {i+1}: qty={t.get('qty')}, price={t.get('price')}, value=${float(t.get('quoteQty', 0)):.4f}")
+                        log(f"   TOTAL: qty={total_qty:.4f}, avg_price={avg_price:.6f}, value=${total_value:.4f}, fees=${total_fee:.6f}")
+                        
+                        return {
+                            'status': 'Filled',
+                            'orderId': order_id,  # Preserve original order ID
+                            'quantity': str(total_qty),
+                            'amount': str(total_value),
+                            'fees': total_fee,  # REAL fee from API, not estimated!
+                            'price': str(avg_price),  # Weighted average price!
+                            'executedQty': str(total_qty),
+                            'cummulativeQuoteQty': str(total_value),
+                            'fills_count': len(matching_trades)  # Debug info
+                        }
         except Exception as e:
             pass  # Silently continue to next method
 
