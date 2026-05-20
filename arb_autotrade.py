@@ -1890,81 +1890,83 @@ def calculate_best_trade(ob_data, min_trade_qty, threshold_start, stop_threshold
 def _find_best_trade_for_direction(sell_levels, buy_levels, direction, limit_ex, market_ex, min_trade_qty, threshold, strategy):
     """Find best trade for a specific direction (M→K or K→M).
     
-    Sell side = where we place Limit Order (dickere Volumen Seite)
-    Buy side = where we place Market Order (dünnere Volumen Seite)
+    IMPORTANT: The thinner side gets the Market Order, the thicker side gets Limit Order.
+    We don't know which is which just from the direction!
     
     Algorithm:
-    1. Try L1 alone first
-    2. If not enough volume, accumulate L2, L3, etc.
-    3. At each accumulation point, check if trade is valid
-    4. The thinner side determines trade volume and market order side
+    1. AkkumuliereLevel auf BEIDEN Seiten
+    2. Nach jedem Level-Paar: Prüfe welche Seite dünner ist
+    3. trade_vol = MIN(akkumulierte dünnere Seite, dickere Seite an diesem Punkt)
+    4. Spread muss >= threshold sein für dieses Level-Paar
+    5. Dünnere Seite = Market Order
     """
     best = None
     
     if not sell_levels or not buy_levels:
         return None
     
-    # Akkumuliere auf der dünnsten Seite (Sell side = Limit side = dickere Vol)
-    # Aber: Die dünnere Seite ist die eine die Market Order bekommt
-    # Wenn Sell side dünn → Market SELL dort (aber wir SELLEN doch auf Sell side?)
-    # 
-    # Korrektur: Die Seite mit dem KLEINEREN Volumen ist die dünnere
-    # Wenn Sell side dünner ist → akkumuliere Sell side bis Mindestmenge erreicht
-    # trade_vol = MIN(akkumulierte Sell side, Buy side L1 Vol)
-    
-    # Akkumuliere Sell side (wo wir Limit Order platzieren)
-    cum_sell = 0
-    sell_level_idx = 0
+    # Akkumuliere auf BEIDEN Seiten gleichzeitig
+    cum_sell = 0  # Akkumulierte Volumen auf Sell side
+    cum_buy = 0   # Akkumulierte Volumen auf Buy side
     
     for sell_level in sell_levels:
         cum_sell += sell_level['qty']
-        sell_level_idx += 1
         
-        # Buy side: immer nur L1 für Spread-Berechnung (Spread = sell_price - buy_price)
-        buy_l1 = buy_levels[0]
-        
-        # Spread: sell side price - buy side price
-        spread = sell_level['price'] - buy_l1['price']
-        spread_pct = (spread / buy_l1['price']) * 100 if buy_l1['price'] > 0 else 0
-        
-        # Spread muss für DIESES Level >= threshold sein
-        if spread_pct < threshold:
-            # Dieses Level hat nicht genug Spread, aber vielleicht nächste?
-            continue
-        
-        # trade_vol = MIN(akkumulierte Sell side, Buy side verfügbares Vol)
-        # Buy side Volume an diesem Punkt = kumuliert bis zum aktuellen Level der Buy side
-        # Aber wir kaufen nur das was Sell side hergibt = cum_sell
-        trade_vol = min(cum_sell, sell_level['qty'])  # Nur dieses Level auf Sell side
-        
-        # Tatsächlich: Wenn wir Sell side akkumulieren, ist das Vol was wir handeln können
-        # die Summe aller akkumulierten Sell side, ABER begrenzt durch was Buy side hergibt
-        # Buy side hergibt nur L1 (weil wir Market Order machen)
-        # Also: trade_vol = MIN(cum_sell, buy_l1['qty'])
-        
-        # Korrektur: Buy side (Market) kann nur L1 Volumen liefern
-        buy_vol = buy_l1['qty']  # L1 Volumen auf Buy side
-        trade_vol = min(cum_sell, buy_vol)
-        
-        if trade_vol >= min_trade_qty:
-            # Gültiger Trade gefunden!
-            profit_usdt = spread * trade_vol
-            profit_mpc = profit_usdt / buy_l1['price'] if buy_l1['price'] > 0 else 0
+        # Für JEDES Sell Level: akkumuliere Buy Side bis dieses Level erreicht
+        cum_buy = 0
+        for buy_level in buy_levels:
+            cum_buy += buy_level['qty']
             
-            if best is None or profit_usdt > (best.get('profit_usdt' if strategy != 'coins' else 'profit_mpc', 0)):
-                best = {
-                    'dir': direction,
-                    'buy': buy_l1['price'],
-                    'sell': sell_level['price'],
-                    'buy_ex': market_ex,
-                    'sell_ex': limit_ex,
-                    'pct': spread_pct,
-                    'vol': trade_vol,
-                    'sell_levels_used': sell_level_idx,  # How many levels we accumulated on sell side
-                    'profit_usdt': profit_usdt,
-                    'profit_mpc': profit_mpc,
-                    'strategy': strategy
-                }
+            # Spread: sell price - buy price
+            spread = sell_level['price'] - buy_level['price']
+            spread_pct = (spread / buy_level['price']) * 100 if buy_level['price'] > 0 else 0
+            
+            # Spread muss >= threshold sein für DIESES Level-Paar
+            if spread_pct < threshold:
+                break  # Nächstes Buy Level hat vielleicht besseren Spread
+            
+            #trade_vol = MIN(dünnere Seite, dickere Seite an diesem Punkt)
+            #Die dünnere Seite = die mit dem KLEINEREN akkumulierten Volumen
+            thinner_vol = min(cum_sell, cum_buy)
+            thicker_vol = max(cum_sell, cum_buy)
+            
+            trade_vol = thinner_vol  # Wir können nur das handeln was die dünnere Seite hergibt
+            
+            if trade_vol >= min_trade_qty:
+                # Gültiger Trade gefunden!
+                profit_usdt = spread * trade_vol
+                profit_mpc = profit_usdt / buy_level['price'] if buy_level['price'] > 0 else 0
+                
+                # Bestimme welche Seite Market Order bekommt (die dünnere)
+                if cum_sell <= cum_buy:
+                    # Sell side ist dünner → Market BUY auf Sell side
+                    actual_market_ex = limit_ex
+                    actual_limit_ex = market_ex
+                    actual_market_side = 'BUY'
+                    actual_limit_side = 'SELL'
+                else:
+                    # Buy side ist dünner → Market SELL auf Buy side
+                    actual_market_ex = market_ex
+                    actual_limit_ex = limit_ex
+                    actual_market_side = 'SELL'
+                    actual_limit_side = 'BUY'
+                
+                if best is None or profit_usdt > (best.get('profit_usdt' if strategy != 'coins' else 'profit_mpc', 0)):
+                    best = {
+                        'dir': direction,
+                        'buy': buy_level['price'],
+                        'sell': sell_level['price'],
+                        'buy_ex': actual_market_ex if actual_market_side == 'BUY' else actual_limit_ex,
+                        'sell_ex': actual_limit_ex if actual_limit_side == 'SELL' else actual_market_ex,
+                        'pct': spread_pct,
+                        'vol': trade_vol,
+                        'cum_sell': cum_sell,
+                        'cum_buy': cum_buy,
+                        'thinner_side': 'SELL' if cum_sell <= cum_buy else 'BUY',
+                        'profit_usdt': profit_usdt,
+                        'profit_mpc': profit_mpc,
+                        'strategy': strategy
+                    }
     
     return best
 
