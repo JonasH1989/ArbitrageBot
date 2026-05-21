@@ -25,25 +25,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from trade_logger import to_float
+from trade_logger import to_float, UNIFIED_COLUMNS
 
 LOG_DIR = Path("/app/logs")
 CONFIG_PATH = Path("/app/config/config.yaml")
-
-# Unified CSV columns (must match trade_logger.py exactly)
-UNIFIED_COLUMNS = [
-    "trade_id", "internal_ts", "direction", "pair", "strategy", "spread_pct",
-    "ex1", "ex1_order_id", "ex1_type", "ex1_side", "ex1_qty_ordered", "ex1_qty_filled",
-    "ex1_price_expected", "ex1_price_actual", "ex1_price_avg", "ex1_value_usdt",
-    "ex1_fees", "ex1_create_ts", "ex1_status",
-    "ex2", "ex2_order_id", "ex2_type", "ex2_side", "ex2_qty_ordered", "ex2_qty_filled",
-    "ex2_price_expected", "ex2_price_actual", "ex2_price_avg", "ex2_value_usdt",
-    "ex2_fees", "ex2_create_ts", "ex2_status",
-    "profit_usdt_expected", "profit_mpc_expected", "profit_usdt_actual", "profit_mpc_actual",
-    "limit_watch_status", "limit_last_check",
-    "error_code", "error_message",
-    "raw_ex1_response", "raw_ex2_response", "raw_ex2_response_ts"
-]
 
 # Column indices (0-based) for efficient access
 COL = {name: i for i, name in enumerate(UNIFIED_COLUMNS)}
