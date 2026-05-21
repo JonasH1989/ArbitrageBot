@@ -1347,7 +1347,7 @@ else:
                         # Lines 2+: Individual fill Menge @ Preis (NO trade ID)
                         prec = 5 if 'MEXC' in r['ex1_exchange'] else 6
                         mkt_qty = r.get('market_qty', 0)
-                        mkt_avg = r.get('ex1_price_avg', r.get('fill_price', 0))
+                        mkt_avg = r.get('ex1_price_actual', r.get('fill_price', 0))
                         
                         if len(mkt_fills) > 1:
                             qty_fill_html = f"<strong>Σ {mkt_qty:.1f} MPC @ ${mkt_avg:.{prec}f}</strong>"
