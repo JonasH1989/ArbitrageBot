@@ -1933,7 +1933,8 @@ def _find_best_trade_for_direction(sell_levels, buy_levels, direction, limit_ex,
             trade_vol = thinner_vol  # Wir können nur das handeln was die dünnere Seite hergibt
             
             if trade_vol >= min_trade_qty:
-                # Gültiger Trade gefunden!
+                # Gültiger Trade gefunden! -> SOFORT return, nicht weiter akkumulieren!
+                # Wir wollen nur genau genug Volume für die Mindestorder, nicht mehr
                 profit_usdt = spread * trade_vol
                 profit_mpc = profit_usdt / buy_level['price'] if buy_level['price'] > 0 else 0
                 
@@ -1951,22 +1952,21 @@ def _find_best_trade_for_direction(sell_levels, buy_levels, direction, limit_ex,
                     actual_market_side = 'SELL'
                     actual_limit_side = 'BUY'
                 
-                if best is None or profit_usdt > (best.get('profit_usdt' if strategy != 'coins' else 'profit_mpc', 0)):
-                    best = {
-                        'dir': direction,
-                        'buy': buy_level['price'],
-                        'sell': sell_level['price'],
-                        'buy_ex': actual_market_ex if actual_market_side == 'BUY' else actual_limit_ex,
-                        'sell_ex': actual_limit_ex if actual_limit_side == 'SELL' else actual_market_ex,
-                        'pct': spread_pct,
-                        'vol': trade_vol,
-                        'cum_sell': cum_sell,
-                        'cum_buy': cum_buy,
-                        'thinner_side': 'SELL' if cum_sell <= cum_buy else 'BUY',
-                        'profit_usdt': profit_usdt,
-                        'profit_mpc': profit_mpc,
-                        'strategy': strategy
-                    }
+                return {
+                    'dir': direction,
+                    'buy': buy_level['price'],
+                    'sell': sell_level['price'],
+                    'buy_ex': actual_market_ex if actual_market_side == 'BUY' else actual_limit_ex,
+                    'sell_ex': actual_limit_ex if actual_limit_side == 'SELL' else actual_market_ex,
+                    'pct': spread_pct,
+                    'vol': trade_vol,
+                    'cum_sell': cum_sell,
+                    'cum_buy': cum_buy,
+                    'thinner_side': 'SELL' if cum_sell <= cum_buy else 'BUY',
+                    'profit_usdt': profit_usdt,
+                    'profit_mpc': profit_mpc,
+                    'strategy': strategy
+                }
     
     return best
 
