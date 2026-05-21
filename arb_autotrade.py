@@ -2179,6 +2179,9 @@ def main():
             )
 
         # Trade BOTH directions when profitable!
+        # Check for hourly wallet snapshot (BEFORE spread check, so it runs every loop)
+        take_wallet_snapshot()
+        
         if not pair_enabled or not is_active():
             state = STATE_WAITING
             if int(time.time()) % 10 == 0:
