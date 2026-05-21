@@ -334,6 +334,38 @@ def start_http_log_server(port: int = 8503):
             'uptime_minutes': round((time.time() - getattr(_http_server, 'start_time', time.time())) / 60, 1)
         })
 
+    @app.route('/balances', methods=['GET'])
+    def get_balances():
+        """Get current MPC and USDT balances from both exchanges"""
+        try:
+            coin = COIN_SYMBOL.split('-')[0]
+            mexc_bal = get_mexc_balances()
+            kucoin_bal = get_kucoin_balances()
+            
+            mexc_mpc = mexc_bal.get(coin, {'free': 0, 'locked': 0, 'total': 0})
+            mexc_usdt = mexc_bal.get('USDT', {'free': 0, 'locked': 0, 'total': 0})
+            kucoin_mpc = kucoin_bal.get(coin, {'free': 0, 'locked': 0, 'total': 0})
+            kucoin_usdt = kucoin_bal.get('USDT', {'free': 0, 'locked': 0, 'total': 0})
+            
+            return jsonify({
+                'status': 'ok',
+                'pair': TRADING_PAIR,
+                'mexc': {
+                    'MPC': {'free': mexc_mpc['free'], 'locked': mexc_mpc['locked'], 'total': mexc_mpc['total']},
+                    'USDT': {'free': mexc_usdt['free'], 'locked': mexc_usdt['locked'], 'total': mexc_usdt['total']}
+                },
+                'kucoin': {
+                    'MPC': {'free': kucoin_mpc['free'], 'locked': kucoin_mpc['locked'], 'total': kucoin_mpc['total']},
+                    'USDT': {'free': kucoin_usdt['free'], 'locked': kucoin_usdt['locked'], 'total': kucoin_usdt['total']}
+                },
+                'total': {
+                    'MPC': mexc_mpc['total'] + kucoin_mpc['total'],
+                    'USDT': mexc_usdt['total'] + kucoin_usdt['total']
+                }
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
     @app.route('/clear', methods=['POST'])
     def clear_logs():
         global HTTP_LOGS
