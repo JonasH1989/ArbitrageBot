@@ -2279,14 +2279,10 @@ def main():
                 # Only complete trade if SUCCESS=True
                 if success:
                     log(f"✅ Trade executed - Limit Order placed successfully")
-                    # CRITICAL: Do NOT immediately allow next trade!
-                    # We must re-check with FRESH orderbook data because:
-                    # 1. Trade 1 consumed volume from the orderbook
-                    # 2. Stale best_trade data would cause wrong volume calculation
-                    # 3. Per 8 Trade Cases: next trade is allowed ONLY if fresh volume check passes
-                    state = STATE_RUNNING  # Force fresh data check next iteration
-                    trade_in_progress = True  # Block immediate re-entry
-                    log(f"   Checking fresh orderbook for next trade...", "DECISION")
+                    # FIX: Allow the RUNNING state block to check for next trade
+                    # trade_in_progress=False lets the RUNNING block proceed with fresh orderbook check
+                    trade_in_progress = False
+                    state = STATE_RUNNING  # Stay in RUNNING to check for next trade
                 else:
                     log(f"⚠️ Trade execution failed (API error). Resetting.")
                     trade_in_progress = False
