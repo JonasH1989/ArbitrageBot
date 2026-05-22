@@ -300,12 +300,16 @@ def start_http_log_server(port: int = 8503):
     def get_status():
         proc = psutil.Process()
         mem_info = proc.memory_info()
+        try:
+            cpu_pct = proc.cpu_percent()
+        except:
+            cpu_pct = 0.0
         return jsonify({
             'status': 'running',
             'logs_count': len(HTTP_LOGS),
             'uptime_seconds': time.time() - getattr(_http_server, 'start_time', time.time()),
             'memory_mb': mem_info.rss / 1024 / 1024,
-            'cpu_percent': proc.cpu_percent(),
+            'cpu_percent': cpu_pct,
             'thread_count': threading.active_count(),
             'active_flag': ACTIVE_FLAG_FILE.exists(),
             'config_hash': last_config_hash
