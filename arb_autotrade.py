@@ -385,16 +385,17 @@ def start_http_log_server(port: int = 8503):
             if not csv_path.exists():
                 return jsonify({'status': 'error', 'message': f'CSV not found: {csv_path}'}), 404
             
-            # Debug: Read raw header line FIRST
+            # Parse header - this is the source of truth
+            # NOTE: CSV uses SEMICOLON as delimiter!
             with open(csv_path, 'r', newline='') as f:
                 first_line = f.readline().strip()
             
-            # Parse header - this is the source of truth
-            header_fields = [h.strip() for h in first_line.split(',')]
+            # Parse header with SEMICOLON delimiter (not comma!)
+            header_fields = [h.strip() for h in first_line.split(';')]
             
-            # Read data with DictReader
+            # Read data with DictReader using SEMICOLON delimiter
             with open(csv_path, 'r', newline='') as f:
-                reader = csv.DictReader(f)
+                reader = csv.DictReader(f, delimiter=';')
                 dict_fieldnames = reader.fieldnames
                 data_rows = list(reader)
             
