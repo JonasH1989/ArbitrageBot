@@ -1868,7 +1868,7 @@ def calculate_best_trade(ob_data, min_trade_qty, threshold_start, stop_threshold
     - for_follow_up_trade=True: threshold_stop (während Hysteresis aktiv)
     - for_follow_up_trade=False: threshold_start (erster Trade)
     """
-    threshold = threshold_stop if for_follow_up_trade else threshold_start
+    threshold = stop_threshold if for_follow_up_trade else threshold_start
     
     best_trade = None
     
