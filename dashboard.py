@@ -1267,7 +1267,14 @@ else:
                 
                 if True:  # Always run
                     # Summary stats
-                    total_trades = len(rows)
+                    # Count ONLY main trades (no suffixes like _ex1p, _ex2p, _ex2sum)
+                    main_trade_ids = set()
+                    for r in rows:
+                        tid = r.get('trade_id', '')
+                        # Only count main trade IDs (those without fill/sum suffixes)
+                        if tid and not any(tid.endswith(s) for s in ['_ex1p1', '_ex1p2', '_ex1p3', '_ex2p1', '_ex2p2', '_ex2p3', '_ex2sum']):
+                            main_trade_ids.add(tid)
+                    total_trades = len(main_trade_ids)
                     filled_trades = len([r for r in rows if r['status'] == 'FILLED'])
                     winning_trades = len([r for r in rows if r['net'] > 0])
                     total_profit = sum(r['net'] for r in rows)
