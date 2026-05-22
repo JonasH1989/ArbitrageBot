@@ -2074,6 +2074,15 @@ def main():
     except Exception as e:
         log(f"SAFETY: Could not delete flag file: {e}", "CONFIG")
     
+    # CRITICAL: Always enforce disabled at startup, regardless of config
+    # Delete the active flag file if it exists (prevents auto-activation on restart)
+    try:
+        if ACTIVE_FLAG_FILE.exists():
+            ACTIVE_FLAG_FILE.unlink()
+            log(f"SAFETY: Deleted active flag file at startup", "CONFIG")
+    except Exception as e:
+        log(f"SAFETY: Could not delete flag file: {e}", "CONFIG")
+    
     # Force config to disabled (belt and suspenders approach)
     import traceback, sys
     log(f"SAFETY: Setting pair_enabled=False at bot startup", "CONFIG")
@@ -2081,25 +2090,11 @@ def main():
     for line in traceback.format_stack()[:8]:
         log(f"  {line.strip()}", "CONFIG")
     
-    # Save config with disabled=True BEFORE the bot loop starts
-    # This ensures even if the bot crashes immediately, the next start is safe
-    try:
-        cfg = load_config()
-        if 'trading' not in cfg:
-            cfg['trading'] = {}
-        if 'pairs' not in cfg['trading']:
-            cfg['trading']['pairs'] = {}
-        if TRADING_PAIR not in cfg['trading']['pairs']:
-            cfg['trading']['pairs'][TRADING_PAIR] = {}
-        cfg['trading']['pairs'][TRADING_PAIR]['enabled'] = False
-        
-        # Use settings_sync to save
-        config_path = Path('/app/config/config.yaml')
-        with open(config_path, 'w') as f:
-            yaml.dump(cfg, f)
-        log(f"SAFETY: Config saved with enabled=False", "CONFIG")
-    except Exception as e:
-        log(f"SAFETY: Error saving config: {e}", "CONFIG")
+    # NOTE: We do NOT save enabled=False to config.yaml anymore!
+    # Previously this caused the bot to disable itself on EVERY restart,
+    # including Docker restarts after crashes. The local variable
+    # pair_enabled=False is sufficient for runtime safety.
+    # On next manual start, the config will reflect the last manual setting.
 
     while True:
         # Re-read all settings from config each cycle
