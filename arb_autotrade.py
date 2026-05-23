@@ -2053,6 +2053,9 @@ def main():
     start_http_log_server(port=8505)
     http_log("Bot gestartet", "INFO")
     last_config_hash = None  # Track config changes for immediate logging
+    heartbeat_counter = 0
+    last_heartbeat_ts = time.time()
+    last_cpu_mem = (0, 0)
     last_limit_check = 0
 
     # Read enabled status from config
@@ -2125,6 +2128,15 @@ def main():
         log(f"SAFETY: Preserving user-enabled config through restart", "CONFIG")
 
     while True:
+        # Heartbeat log every 30s - shows bot is alive + Mem/CPU
+        heartbeat_counter += 1
+        if time.time() - last_heartbeat_ts >= 30:
+            proc = psutil.Process()
+            mem_mb = proc.memory_info().rss / 1024 / 1024
+            cpu_pct = proc.cpu_percent(interval=0.1)
+            last_heartbeat_ts = time.time()
+            log(f"HEARTBEAT alive=30s | mem={mem_mb:.1f}MB | cpu={cpu_pct:.1f}% | threads={threading.active_count()}", "INFO")
+        
         # Re-read all settings from config each cycle
         pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
         current_strategy = get_setting(f'trading.pairs.{TRADING_PAIR}.strategy', 'usdt')
