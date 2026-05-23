@@ -1546,7 +1546,8 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     mpc_gain = net_profit / sell_price if sell_price > 0 else 0
 
     # Log trade with harmonized data
-    log(f"DEBUG: Calling log_trade() - SUCCESS case")
+    log(f"INFO: Calling log_trade() - SUCCESS case for direction={dir_str}")
+    log(f"INFO: log_trade params - pair={TRADING_PAIR}, ex1_data keys={list(ex1_data.keys()) if ex1_data else None}, ex2_data keys={list(ex2_data.keys()) if ex2_data else None}")
     try:
         trade_id = log_trade(
             pair=TRADING_PAIR,
@@ -1564,6 +1565,7 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
             error_code=error_code,
             error_message=error_message
         )
+        log(f"DEBUG: log_trade returned trade_id={trade_id}")
         log(f"✅ log_trade SUCCESS: {trade_id}")
     except Exception as e:
         log(f"❌ log_trade FAILED: {e}", "ERROR")
