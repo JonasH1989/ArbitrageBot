@@ -2333,8 +2333,17 @@ def main():
                 # Only complete trade if SUCCESS=True
                 if success:
                     log(f"✅ Trade executed - Limit Order placed successfully")
-                    # FIX: Allow the RUNNING state block to check for next trade
-                    # trade_in_progress=False lets the RUNNING block proceed with fresh orderbook check
+                    # CRITICAL: Re-fetch orderbook BEFORE checking for next trade
+                    # The market buy changed the orderbook - we need fresh data
+                    log(f"📡 Refreshing orderbook after trade execution...")
+                    ob_data = get_orderbook_levels()
+                    if ob_data:
+                        log(f"📡 Orderbook refreshed - checking for next trade")
+                    else:
+                        log(f"⚠️ Orderbook refresh failed - waiting...")
+                        time.sleep(2)
+                    
+                    # Reset trade_in_progress to allow next trade check
                     trade_in_progress = False
                     state = STATE_RUNNING  # Stay in RUNNING to check for next trade
                 else:
