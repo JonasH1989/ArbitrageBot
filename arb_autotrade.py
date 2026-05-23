@@ -2354,10 +2354,21 @@ def main():
                 continue
             
             # Calculate fresh spread from orderbook data
-            best_k_bid = ob_data['kucoin_bids'][0]['price'] if ob_data.get('kucoin_bids') else 0
-            best_m_ask = ob_data['mexc_asks'][0]['price'] if ob_data.get('mexc_asks') else 0
-            best_m_bid = ob_data['mexc_bids'][0]['price'] if ob_data.get('mexc_bids') else 0
-            best_k_ask = ob_data['kucoin_asks'][0]['price'] if ob_data.get('kucoin_asks') else 0
+            # SAFEGUARD: Check all list accesses to prevent IndexError crashes
+            kucoin_bids = ob_data.get('kucoin_bids', [])
+            mexc_asks = ob_data.get('mexc_asks', [])
+            mexc_bids = ob_data.get('mexc_bids', [])
+            kucoin_asks = ob_data.get('kucoin_asks', [])
+            
+            if not kucoin_bids or not mexc_asks:
+                log(f"⚠️ Orderbook empty - pausing and retrying next cycle")
+                time.sleep(1)
+                continue
+            
+            best_k_bid = kucoin_bids[0]['price'] if kucoin_bids else 0
+            best_m_ask = mexc_asks[0]['price'] if mexc_asks else 0
+            best_m_bid = mexc_bids[0]['price'] if mexc_bids else 0
+            best_k_ask = kucoin_asks[0]['price'] if kucoin_asks else 0
             
             fresh_spread_pct_mk = ((best_k_bid - best_m_ask) / best_m_ask * 100) if best_m_ask > 0 else 0
             fresh_spread_pct_km = ((best_m_bid - best_k_ask) / best_k_ask * 100) if best_k_ask > 0 else 0
