@@ -35,14 +35,21 @@ def to_float(val):
 DEBUG_LOG_FILE = LOG_DIR / "trade_logger_debug.log"
 
 def debug_log(message: str, level: str = "INFO"):
-    """Log debug messages to both stderr and debug file"""
+    """Log debug messages to both stderr, debug file AND the main bot log"""
     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
     log_line = f"[{ts}] [{level}] {message}"
     print(log_line, file=sys.stderr)
     
-    # Also write to debug file
+    # Also write to main bot log file (same as log() function)
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
+        with open(LOG_FILE, 'a') as f:
+            f.write(log_line + "\n")
+    except Exception as e:
+        print(f"DEBUG: Could not write to log file: {e}", file=sys.stderr)
+    
+    # Also write to debug file
+    try:
         with open(DEBUG_LOG_FILE, 'a') as f:
             f.write(log_line + "\n")
     except Exception as e:
