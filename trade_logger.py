@@ -83,11 +83,31 @@ def get_exchange_config() -> Dict:
     return _EXCHANGE_CONFIG
 
 def get_exchange_short_id(exchange_name: str) -> str:
-    """Get short_id for an exchange (e.g. 'KUCOIN' -> 'KCN')"""
+    """Get short_id for an exchange (e.g. 'KUCOIN' -> 'KCN')
+    
+    Falls back to hardcoded values if not in config:
+    - KUCOIN -> KCN
+    - MEXC -> MXC
+    """
     config = get_exchange_config()
     exchange_lower = exchange_name.lower()
+    
+    # Check config first
     if exchange_lower in config:
-        return config[exchange_lower].get('short_id', exchange_name[:3].upper())
+        short = config[exchange_lower].get('short_id')
+        if short:
+            return short
+    
+    # Hardcoded fallback - these should match TRADE_LOG_STRUCTURE.md
+    fallback_map = {
+        'kucoin': 'KCN',
+        'mexc': 'MXC',
+        'binance': 'BNC',
+    }
+    
+    if exchange_lower in fallback_map:
+        return fallback_map[exchange_lower]
+    
     return exchange_name[:3].upper()
 
 # =============================================================================
