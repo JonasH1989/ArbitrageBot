@@ -1041,7 +1041,18 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                             'price': str(avg_price),  # Weighted average price!
                             'executedQty': str(total_qty),
                             'cummulativeQuoteQty': str(total_value),
-                            'fills_count': len(matching_trades)  # Debug info
+                            'fills_count': len(matching_trades),  # Debug info
+                            # Individual fills for log_trade(ex1_partial_fills) - structured dict format
+                            'ex1_partial_fills': [
+                                {
+                                    'qty_filled': float(t.get('qty', 0)),
+                                    'price_actual': float(t.get('price', 0)),
+                                    'value_usdt': float(t.get('quoteQty', 0)),
+                                    'fees': float(t.get('fee', 0) or 0),
+                                    'create_ts': t.get('time', 0)
+                                }
+                                for t in matching_trades
+                            ]
                         }
         except Exception as e:
             pass  # Silently continue to next method
@@ -1555,6 +1566,7 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
             direction=dir_str,
             ex1_data=ex1_data,
             ex2_data=ex2_data,
+            ex1_partial_fills=ex1_data.get('ex1_partial_fills'),  # Individual MEXC fills
             limit_watch_status="WATCHING",
             strategy=strategy.upper(),
             spread_pct=spread_pct,
