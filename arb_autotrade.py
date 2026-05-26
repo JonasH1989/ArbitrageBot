@@ -1397,6 +1397,8 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     # Set create_ts from transactTime if available (extracted earlier)
     if transact_time1 > 0:
         ex1_data['create_ts'] = transact_time1
+    # Transfer individual fills (for multi-fill MEXC orders)
+    ex1_data['ex1_partial_fills'] = filled_response.get('ex1_partial_fills', [])
     log(f"   Harmonized: qty_ordered={ex1_data['qty_ordered']:.0f}, qty_filled={ex1_data['qty_filled']:.0f}, value_usdt={ex1_data['value_usdt']:.4f}, fees={ex1_data['fees']:.4f}")
 
     # ========================================================================
@@ -1846,7 +1848,15 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
                         'dealSize': deal_size,
                         'dealFunds': deal_funds,
                         'fee': fee,
-                        'orderId': order_id
+                        'orderId': order_id,
+                        # Individual fills for log_trade(ex1_partial_fills)
+                        'ex1_partial_fills': [{
+                            'qty_filled': deal_size,
+                            'price_actual': price,
+                            'value_usdt': deal_funds,
+                            'fees': fee,
+                            'create_ts': int(order_data.get('createdAt', 0) or 0)
+                        }]
                     }
                 elif status == 'Active' or is_active:
                     # Order still filling, keep polling
