@@ -33,6 +33,7 @@ def to_float(val):
 # DEBUG LOGGING
 # =============================================================================
 DEBUG_LOG_FILE = LOG_DIR / "trade_logger_debug.log"
+LOG_FILE = LOG_DIR / "arb_autotrade.log"  # Shared with arb_autotrade.py
 
 def debug_log(message: str, level: str = "INFO"):
     """Log debug messages to both stderr, debug file AND the main bot log"""
