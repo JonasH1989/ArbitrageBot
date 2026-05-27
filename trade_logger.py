@@ -456,7 +456,14 @@ def log_trade(
     ex1_exchange = get_exchange_short_id(ex1_data.get("exchange", ""))
     ex1_order_id = ex1_data.get("order_id", "")
     ex1_qty_ordered = ex1_data.get("qty_ordered", 0)
-    ex1_create_ts = ex1_data.get("create_ts", 0)
+    
+    # Convert Unix ms timestamp to readable format
+    ex1_ts_raw = ex1_data.get("create_ts", 0)
+    if ex1_ts_raw and int(ex1_ts_raw) > 0:
+        ex1_create_ts = datetime.fromtimestamp(int(ex1_ts_raw) / 1000).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    else:
+        ex1_create_ts = ""
+    
     raw_ex1_response = json.dumps(ex1_data.get("raw_response", {}))
     
     # Calculate ex1 summaries from partial fills
@@ -482,7 +489,14 @@ def log_trade(
     ex2_exchange = get_exchange_short_id(ex2_data.get("exchange", ""))
     ex2_order_id = ex2_data.get("order_id", "")
     ex2_qty_ordered = ex2_data.get("qty_ordered", 0)
-    ex2_create_ts = ex2_data.get("create_ts", 0)
+    
+    # Convert Unix ms timestamp to readable format
+    ex2_ts_raw = ex2_data.get("create_ts", 0)
+    if ex2_ts_raw and int(ex2_ts_raw) > 0:
+        ex2_create_ts = datetime.fromtimestamp(int(ex2_ts_raw) / 1000).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    else:
+        ex2_create_ts = ""
+    
     raw_ex2_response = json.dumps(ex2_data.get("raw_response", {}))
     raw_ex2_response_ts = datetime.now().isoformat() if ex2_data.get("raw_response") else ""
     
@@ -517,7 +531,7 @@ def log_trade(
     row1["direction"] = direction
     row1["pair"] = pair
     row1["strategy"] = strategy
-    row1["spread_pct"] = f"{spread_pct:.3f}"  # 3 decimal places
+    row1["spread_pct"] = spread_pct  # Float - will be formatted with comma by row_to_list()
     row1["ex1"] = ex1_exchange
     row1["ex1_order_id"] = ex1_order_id
     row1["ex1_type"] = "market"
@@ -547,6 +561,14 @@ def log_trade(
         row_n["ex1_value_usdt"] = fill.get('value_usdt', 0)
         row_n["ex1_fees"] = fill.get('fees', 0)
         row_n["ex1_create_ts"] = fill.get('create_ts', ex1_create_ts)  # Fallback
+        # Convert Unix ms to readable format for partial fills too
+        if row_n["ex1_create_ts"]:
+            try:
+                ts_val = int(row_n["ex1_create_ts"])
+                if ts_val > 0:
+                    row_n["ex1_create_ts"] = datetime.fromtimestamp(ts_val / 1000).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            except:
+                pass  # Keep as-is if conversion fails
         row_n["ex1_status"] = "FILLED"
         rows_to_write.append(row_n)
         debug_trade_write(trade_id, f"ex1p{i+1}", row_n)
@@ -589,6 +611,14 @@ def log_trade(
         row_n["ex2_value_usdt"] = fill.get('value_usdt', 0)
         row_n["ex2_fees"] = fill.get('fees', 0)
         row_n["ex2_create_ts"] = fill.get('create_ts', ex2_create_ts)
+        # Convert Unix ms to readable format for partial fills too
+        if row_n["ex2_create_ts"]:
+            try:
+                ts_val = int(row_n["ex2_create_ts"])
+                if ts_val > 0:
+                    row_n["ex2_create_ts"] = datetime.fromtimestamp(ts_val / 1000).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            except:
+                pass  # Keep as-is if conversion fails
         row_n["ex2_status"] = "FILLED"
         row_n["limit_watch_status"] = "FILLED"
         rows_to_write.append(row_n)
