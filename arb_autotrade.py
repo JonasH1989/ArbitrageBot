@@ -1142,12 +1142,18 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                 if isinstance(trades, list) and trades:
                     # Collect ALL trades matching our order by timestamp (multi-fill support!)
                     # MEXC market orders often execute as multiple partial fills
+                    # DEDUPLICATE by timestamp to avoid duplicate fills
+                    seen_times = set()
                     matching_trades = []
                     for trade in trades:
                         trade_time = int(trade.get('time', 0))
                         if abs(trade_time - transact_time) <= time_window:
                             qty = float(trade.get('qty', 0))
                             if qty > 0:
+                                # Skip if we already saw this timestamp
+                                if trade_time in seen_times:
+                                    continue
+                                seen_times.add(trade_time)
                                 matching_trades.append(trade)
                     
                     if matching_trades:
