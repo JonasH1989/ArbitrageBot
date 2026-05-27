@@ -119,13 +119,22 @@ def get_mexc_orderbook(pair: str):
     except: pass
     return {'ok': False}
 
-def get_kucoin_balances(api_key: str, api_secret: str, passphrase: str):
-    """Get KuCoin account balances"""
+def get_kucoin_balances(api_key: str, api_secret: str, passphrase: str, wallet_type: str = None):
+    """Get KuCoin account balances filtered by wallet type.
+    
+    Args:
+        wallet_type: Specific wallet type ('trade', 'main', 'margin', 'otc', 'pool').
+                     If None, uses 'kucoin.trading_wallet' setting or 'trade' by default.
+    """
     try:
         import hashlib
         import hmac
         import base64
         import time
+        
+        # Resolve wallet type
+        if wallet_type is None:
+            wallet_type = get_setting('kucoin.trading_wallet', 'trade')
         
         now = int(time.time() * 1000)
         method = 'GET'
@@ -151,6 +160,10 @@ def get_kucoin_balances(api_key: str, api_secret: str, passphrase: str):
             if data.get('code') == '200000':
                 balances = {}
                 for acc in data.get('data', []):
+                    acc_type = acc.get('type', '')
+                    # Filter by wallet type
+                    if acc_type != wallet_type:
+                        continue
                     currency = acc.get('currency', '')
                     available = float(acc.get('available', 0) or 0)
                     total = float(acc.get('balance', 0) or 0)
@@ -158,10 +171,9 @@ def get_kucoin_balances(api_key: str, api_secret: str, passphrase: str):
                         if currency not in balances:
                             balances[currency] = {'available': available, 'total': total}
                         else:
-                            # Sum across multiple accounts (e.g., trade + main + margin)
                             balances[currency]['available'] += available
                             balances[currency]['total'] += total
-                return {'ok': True, 'balances': balances}
+                return {'ok': True, 'balances': balances, 'wallet_type': wallet_type}
             else:
                 return {'ok': False, 'balances': {}, 'error': data.get('msg', 'Unknown error')}
         else:
