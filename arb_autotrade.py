@@ -1669,12 +1669,21 @@ def check_limit_order_fills():
         kucoin_price = 0
 
     for trade in pending:
+        raw_trade_id = trade.get('trade_id', '')
+        
+        # ONLY process _ex2sum rows (parent rows for limit orders)
+        # Skip _ex2pN sub-rows - they are partial fills, not the main limit order
+        if not raw_trade_id.endswith('_ex2sum'):
+            continue
+        
+        # Extract base trade_id (remove _ex2sum suffix)
+        trade_id = raw_trade_id.replace('_ex2sum', '')
+        
         direction = trade.get('direction', '')
         ex2_exchange = trade.get('ex2', '')
         # Normalize: CSV stores 'KCN'/'MXC', code checks 'KUCOIN'/'MEXC'
         ex2_exchange_normalized = 'KUCOIN' if ex2_exchange == 'KCN' else ('MEXC' if ex2_exchange == 'MXC' else ex2_exchange)
         ex2_order_id = trade.get('ex2_order_id', '')
-        trade_id = trade.get('trade_id', '')
         ex2_price_expected = to_float(trade.get('ex2_price_expected', 0))
 
         if not ex2_order_id or ex2_order_id == 'FAILED':
