@@ -546,12 +546,9 @@ with st.sidebar:
                         for wt in ['trade', 'main', 'margin', 'otc', 'pool']:
                             if wt in mpc_wallets:
                                 data = mpc_wallets[wt]
-                                if data['total'] > 0:
-                                    wallet_options.append(wt)
-                                    labels = {'trade': 'Trade Wallet', 'main': 'Main Wallet', 
-                                            'margin': 'Margin Wallet', 'otc': 'OTC Wallet', 'pool': 'Pool Wallet'}
-                                    label = labels.get(wt, wt)
-                                    wallet_labels.append(f"{label} ({data['total']:.0f} MPC)")
+                                wallet_options.append(wt)
+                        labels = {'trade': 'Trade Wallet', 'main': 'Main Wallet', 
+                                'margin': 'Margin Wallet', 'otc': 'OTC Wallet', 'pool': 'Pool Wallet'}
                         
                         if wallet_options:
                             current_wallet = get_setting('kucoin.trading_wallet', 'trade')
@@ -564,7 +561,7 @@ with st.sidebar:
                                 "Wallet:",
                                 options=wallet_options,
                                 index=current_idx,
-                                format_func=lambda x: wallet_labels[wallet_options.index(x)] if x in wallet_labels else x,
+                                format_func=lambda x: labels.get(x, x),
                                 key="kucoin_wallet_select"
                             )
                             
@@ -573,7 +570,7 @@ with st.sidebar:
                                 st.success(f"Wallet gesetzt: {selected}")
                                 st.rerun()
                         else:
-                            st.caption("Keine MPC Wallets mit Balance gefunden")
+                            pass  # All wallets shown
                     else:
                         st.caption("Keine MPC Wallets gefunden")
             except Exception as e:
@@ -611,7 +608,7 @@ with st.sidebar:
                     "Wallet:",
                     options=wallet_options,
                     index=current_idx,
-                    format_func=lambda x: wallet_labels[wallet_options.index(x)],
+                    format_func=lambda x: labels.get(x, x),
                     key="mexc_wallet_select"
                 )
                 
