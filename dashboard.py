@@ -169,6 +169,54 @@ def get_kucoin_balances(api_key: str, api_secret: str, passphrase: str):
     except Exception as e:
         return {'ok': False, 'balances': {}, 'error': str(e)}
 
+def get_kucoin_all_wallets_detailed(api_key: str, api_secret: str, passphrase: str):
+    """Get KuCoin wallets with type breakdown for wallet selection UI."""
+    try:
+        import hashlib
+        import hmac
+        import base64
+        import time
+        
+        now = int(time.time() * 1000)
+        method = 'GET'
+        path = '/api/v1/accounts'
+        body = ''
+        
+        # Signature v1 (same as dashboard uses)
+        message = f'{now}{method}{path}{body}'
+        mac = hmac.new(api_secret.encode(), message.encode(), hashlib.sha256)
+        signature = base64.b64encode(mac.digest()).decode()
+        
+        headers = {
+            'KC-API-KEY': api_key,
+            'KC-API-SIGN': signature,
+            'KC-API-TIMESTAMP': str(now),
+            'KC-API-PASSPHRASE': passphrase,
+            'KC-API-KEY-VERSION': '1'
+        }
+        
+        resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get('code') == '200000':
+                wallets = {}  # {currency: {wallet_type: {available, total}}}
+                for acc in data.get('data', []):
+                    currency = acc.get('currency', '')
+                    acc_type = acc.get('type', '')
+                    available = float(acc.get('available', 0) or 0)
+                    total = float(acc.get('balance', 0) or 0)
+                    if currency:
+                        if currency not in wallets:
+                            wallets[currency] = {}
+                        wallets[currency][acc_type] = {'available': available, 'total': total}
+                return {'ok': True, 'wallets': wallets}
+            else:
+                return {'ok': False, 'wallets': {}, 'error': data.get('msg', 'Unknown error')}
+        else:
+            return {'ok': False, 'wallets': {}, 'error': f'HTTP {resp.status_code}'}
+    except Exception as e:
+        return {'ok': False, 'wallets': {}, 'error': str(e)}
+
 def get_kucoin_trades(api_key: str, api_secret: str, passphrase: str, symbol: str = 'MPC-USDT', limit: int = 10):
     """Get KuCoin trade/fill history"""
     try:
@@ -471,36 +519,51 @@ with st.sidebar:
         # Wallet type selector - only show if API keys are set
         if kucoin_key and kucoin_secret and kucoin_pass:
             try:
-                kucoin_bal = get_kucoin_balances(kucoin_key, kucoin_secret, kucoin_pass)
-                if kucoin_bal.get('ok'):
-                    # Get all wallets for MPC to show options
-                    st.markdown("**Trading Wallet (MPC):**")
+                wallets_data = get_kucoin_all_wallets_detailed(kucoin_key, kucoin_secret, kucoin_pass)
+                if wallets_data.get('ok'):
+                    all_wallets = wallets_data.get('wallets', {})
+                    mpc_wallets = all_wallets.get('MPC', {})
                     
-                    # Get current setting
-                    current_wallet = get_setting('kucoin.trading_wallet', 'trade')
-                    
-                    # Build options from API response
-                    # KuCoin has: trade, main, margin, otc, pool
-                    wallet_options = ['trade', 'main', 'margin', 'otc', 'pool']
-                    wallet_labels = ['Trade Wallet', 'Main Wallet', 'Margin Wallet', 'OTC Wallet', 'Pool Wallet']
-                    
-                    # Find current index
-                    current_idx = 0
-                    if current_wallet in wallet_options:
-                        current_idx = wallet_options.index(current_wallet)
-                    
-                    selected = st.selectbox(
-                        "Wallet für MPC Trading",
-                        options=wallet_options,
-                        index=current_idx,
-                        format_func=lambda x: wallet_labels[wallet_options.index(x)] if x in wallet_labels else x,
-                        key="kucoin_wallet_select"
-                    )
-                    
-                    if selected != current_wallet:
-                        set_setting('kucoin.trading_wallet', selected)
-                        st.success(f"Wallet gesetzt: {selected}")
-                        st.rerun()
+                    if mpc_wallets:
+                        st.markdown("**Trading Wallet (MPC):**")
+                        
+                        # Build options with current balance info
+                        wallet_options = []
+                        wallet_labels = []
+                        
+                        for wt in ['trade', 'main', 'margin', 'otc', 'pool']:
+                            if wt in mpc_wallets:
+                                data = mpc_wallets[wt]
+                                if data['total'] > 0:
+                                    wallet_options.append(wt)
+                                    labels = {'trade': 'Trade Wallet', 'main': 'Main Wallet', 
+                                            'margin': 'Margin Wallet', 'otc': 'OTC Wallet', 'pool': 'Pool Wallet'}
+                                    label = labels.get(wt, wt)
+                                    wallet_labels.append(f"{label} ({data['total']:.0f} MPC)")
+                        
+                        if wallet_options:
+                            current_wallet = get_setting('kucoin.trading_wallet', 'trade')
+                            
+                            current_idx = 0
+                            if current_wallet in wallet_options:
+                                current_idx = wallet_options.index(current_wallet)
+                            
+                            selected = st.selectbox(
+                                "Wallet für MPC Trading",
+                                options=wallet_options,
+                                index=current_idx,
+                                format_func=lambda x: wallet_labels[wallet_options.index(x)] if x in wallet_labels else x,
+                                key="kucoin_wallet_select"
+                            )
+                            
+                            if selected != current_wallet:
+                                set_setting('kucoin.trading_wallet', selected)
+                                st.success(f"Wallet gesetzt: {selected}")
+                                st.rerun()
+                        else:
+                            st.caption("Keine MPC Wallets mit Balance gefunden")
+                    else:
+                        st.caption("Keine MPC Wallets gefunden")
             except Exception as e:
                 st.caption(f"Wallet-Fehler: {e}")
     
