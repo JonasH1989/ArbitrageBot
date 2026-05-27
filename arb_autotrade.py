@@ -68,6 +68,7 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / 'arb_autotrade.log'
 CONFIG_FILE = '/app/config/config.yaml'
 ACTIVE_FLAG_FILE = LOG_DIR / 'arb_active.flag'
+REDEPLOY_FLAG_FILE = LOG_DIR / '.just_redeployed.flag'  # Created by deploy script
 
 # Exchange API credentials
 # Load API keys from config.yaml - use same path as settings_sync (dashboard)
@@ -2094,9 +2095,18 @@ def main():
     log(f"Pair {TRADING_PAIR} enabled in config: {pair_enabled}")
 
     # Safety: If bot was just redeployed (flag file exists), start disabled
-    # This is done via a SEPARATE flag file, NOT by writing to config.yaml!
-    # The flag file is created by the deployment process, not by this bot code.
-    # NOTE: This bot no longer writes to config.yaml at startup.
+    # The flag file is created by the deployment script (see deploy_redeploy.sh)
+    if REDEPLOY_FLAG_FILE.exists():
+        try:
+            REDEPLOY_FLAG_FILE.unlink()  # Delete flag immediately
+            log(f"SAFETY: Redeploy detected, setting pair_enabled=False", "CONFIG")
+            set_pair_settings(TRADING_PAIR, enabled=False)
+            pair_enabled = False
+            log(f"SAFETY: Pair disabled after redeploy", "CONFIG")
+        except Exception as e:
+            log(f"SAFETY: Error handling redeploy flag: {e}", "WARNING")
+    else:
+        log(f"No redeploy flag found - keeping config value: {pair_enabled}", "CONFIG")
     
     while True:
         # Heartbeat log every 30s - shows bot is alive + Mem/CPU
