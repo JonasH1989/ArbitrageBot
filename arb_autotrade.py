@@ -60,6 +60,9 @@ from trade_logger import (
     get_trade_csv_path,
     LOG_DIR as TRADE_LOG_DIR,
     log_trade,  # Import the trade logging function
+    append_limit_row,
+    update_limit_row,
+    get_highest_ex2p_suffix,
 )
 
 from pathlib import Path
@@ -1570,6 +1573,7 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
             ex1_data=ex1_data,
             ex2_data=ex2_data,
             ex1_partial_fills=ex1_data.get('ex1_partial_fills'),  # Individual MEXC fills
+            ex2_partial_fills=ex2_data.get('ex2_partial_fills'),  # Individual limit fills
             limit_watch_status="WATCHING",
             strategy=strategy.upper(),
             spread_pct=spread_pct,
@@ -1586,6 +1590,29 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
         log(f"❌ log_trade FAILED: {e}", "ERROR")
         import traceback
         log(f"❌ Traceback: {traceback.format_exc()}", "ERROR")
+    log(f"📝 Trade logged: {trade_id}")
+    
+    # Append initial ex2p1 row (pending limit order)
+    try:
+        append_limit_row(
+            pair=TRADING_PAIR,
+            trade_id=trade_id,
+            exchange=ex2_data.get('exchange', ''),
+            order_id=ex2_data.get('order_id', ''),
+            side='sell',
+            qty_ordered=sell_qty,
+            qty_filled=0,
+            price_actual=0,
+            value_usdt=0,
+            fees=0,
+            create_ts=ex2_data.get('create_ts', ''),
+            ex2_status='PENDING',
+            limit_watch_status='WATCHING'
+        )
+        log(f"📝 Limit order row created: {trade_id}_ex2p1 (pending)")
+    except Exception as e:
+        log(f"⚠️ Failed to create limit order row: {e}", "WARNING")
+    
     log(f"📝 Trade logged: {trade_id}")
 
     # Determine if profit is actual (limit filled) or expected (limit pending)
@@ -1743,16 +1770,94 @@ def check_limit_order_fills():
                         log(f"   INFO: {trade_id}: aggregated {fill_count} partial fills => {total_qty} MPC")
 
 
+                # Determine order status for row update
                 is_filled = status == 'Done' or (not is_active and total_qty > 0) or (len(fills_data) > 0)
+                
                 if is_filled and total_qty > 0:
+                    # Case 1: Order FILLED - update existing ex2p1 row to FILLED
+                    # Find the highest existing ex2p row and update it
+                    existing_suffix = get_highest_ex2p_suffix(trade_id, TRADING_PAIR)
+                    if existing_suffix == 0:
+                        # No ex2p row exists - create first one (shouldn't happen normally)
+                        append_limit_row(
+                            pair=TRADING_PAIR,
+                            trade_id=trade_id,
+                            exchange='KUCOIN',
+                            order_id=ex2_order_id,
+                            side='sell',
+                            qty_ordered=ex2_price_expected,
+                            qty_filled=total_qty,
+                            price_actual=total_cost/total_qty if total_qty > 0 else 0,
+                            value_usdt=0,
+                            fees=total_fees,
+                            create_ts=str(data.get('createTime', '')),
+                            ex2_status='FILLED',
+                            limit_watch_status='FILLED'
+                        )
+                    else:
+                        # Update existing row with aggregated fill data
+                        update_limit_row(
+                            pair=TRADING_PAIR,
+                            trade_id=trade_id,
+                            suffix=existing_suffix,
+                            qty_filled=total_qty,
+                            price_actual=total_cost/total_qty if total_qty > 0 else 0,
+                            fees=total_fees,
+                            ex2_status='FILLED',
+                            limit_watch_status='FILLED'
+                        )
+                    
+                    # Also write individual fills as sub-rows if multiple fills
+                    if fills_data and len(fills_data) > 1:
+                        for i, fill in enumerate(fills_data):
+                            fill_qty = float(fill.get('size', 0) or 0)
+                            fill_price = float(fill.get('price', 0) or 0)
+                            fill_fee = float(fill.get('fee', 0) or 0)
+                            fill_ts = fill.get('time', '')
+                            
+                            append_limit_row(
+                                pair=TRADING_PAIR,
+                                trade_id=trade_id,
+                                exchange='KUCOIN',
+                                order_id=f"{ex2_order_id}_fill{i+1}",
+                                side='sell',
+                                qty_ordered=fill_qty,
+                                qty_filled=fill_qty,
+                                price_actual=fill_price,
+                                value_usdt=fill_qty * fill_price,
+                                fees=fill_fee,
+                                create_ts=fill_ts,
+                                ex2_status='FILLED',
+                                limit_watch_status='FILLED'
+                            )
+                    
                     update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
                                      qty_filled=total_qty,
                                      price_actual=total_cost/total_qty if total_qty > 0 else 0,
                                      fees=total_fees)
                     log(f"LIMIT FILLED: {trade_id} ({total_qty} MPC @ {total_cost/total_qty if total_qty > 0 else 0:.5f})")
+                
                 elif total_qty > 0 and is_active:
+                    # Case 3: Order PARTIALLY FILLED - update ex2p1 to PARTIAL
+                    existing_suffix = get_highest_ex2p_suffix(trade_id, TRADING_PAIR)
+                    if existing_suffix > 0:
+                        update_limit_row(
+                            pair=TRADING_PAIR,
+                            trade_id=trade_id,
+                            suffix=existing_suffix,
+                            qty_filled=total_qty,
+                            price_actual=total_cost/total_qty if total_qty > 0 else 0,
+                            fees=total_fees,
+                            ex2_status='PARTIAL',
+                            limit_watch_status='PARTIAL'
+                        )
+                    
                     update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=total_qty)
-                # else: order still pending (isActive=True, no fills yet) - do nothing, will be checked again next poll
+                
+                else:
+                    # Order still pending (isActive=True, no fills yet) - do nothing
+                    # Will be checked again next poll
+                    pass
 
             elif ex2_exchange == 'MEXC':
                 # Check MEXC order status via /api/v3/order endpoint
@@ -1779,12 +1884,57 @@ def check_limit_order_fills():
                 amount_filled = float(data.get('cummulativeQuoteQty', 0) or 0)
 
                 if status == 'FILLED' and qty_filled > 0:
+                    # Case 1: MEXC Order FILLED
+                    existing_suffix = get_highest_ex2p_suffix(trade_id, TRADING_PAIR)
+                    if existing_suffix == 0:
+                        append_limit_row(
+                            pair=TRADING_PAIR,
+                            trade_id=trade_id,
+                            exchange='MEXC',
+                            order_id=ex2_order_id,
+                            side='sell',
+                            qty_ordered=ex2_price_expected,
+                            qty_filled=qty_filled,
+                            price_actual=amount_filled/qty_filled if qty_filled > 0 else 0,
+                            value_usdt=0,
+                            fees=float(data.get('fee', 0) or 0),
+                            create_ts=str(data.get('createTime', '')),
+                            ex2_status='FILLED',
+                            limit_watch_status='FILLED'
+                        )
+                    else:
+                        update_limit_row(
+                            pair=TRADING_PAIR,
+                            trade_id=trade_id,
+                            suffix=existing_suffix,
+                            qty_filled=qty_filled,
+                            price_actual=amount_filled/qty_filled if qty_filled > 0 else 0,
+                            fees=float(data.get('fee', 0) or 0),
+                            ex2_status='FILLED',
+                            limit_watch_status='FILLED'
+                        )
+                    
                     update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
                                      qty_filled=qty_filled,
                                      price_actual=amount_filled/qty_filled if qty_filled > 0 else 0,
                                      fees=float(data.get('fee', 0) or 0))
                     log(f"LIMIT FILLED: {trade_id}")
+                
                 elif status == 'PARTIALLY_FILLED' and qty_filled > 0:
+                    # Case 3: MEXC Order PARTIALLY FILLED
+                    existing_suffix = get_highest_ex2p_suffix(trade_id, TRADING_PAIR)
+                    if existing_suffix > 0:
+                        update_limit_row(
+                            pair=TRADING_PAIR,
+                            trade_id=trade_id,
+                            suffix=existing_suffix,
+                            qty_filled=qty_filled,
+                            price_actual=amount_filled/qty_filled if qty_filled > 0 else 0,
+                            fees=float(data.get('fee', 0) or 0),
+                            ex2_status='PARTIAL',
+                            limit_watch_status='PARTIAL'
+                        )
+                    
                     update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=qty_filled)
 
         except Exception as e:

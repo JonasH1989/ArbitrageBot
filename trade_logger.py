@@ -643,8 +643,179 @@ def log_trade(
 
 
 # =============================================================================
-# UPDATE FUNCTIONS
+# LIMIT ORDER ROW FUNCTIONS
+# Handle ex2pN rows (individual limit orders)
 # =============================================================================
+
+def get_ex2p_rows(trade_id: str, pair: str) -> List[Dict]:
+    """Get all ex2pN rows for a trade."""
+    csv_path = get_trade_csv_path(pair)
+    if not csv_path.exists():
+        return []
+    
+    rows = []
+    with open(csv_path, 'r', newline='') as f:
+        reader = csv.DictReader(f, delimiter=';')
+        for row in reader:
+            tid = row.get('trade_id', '')
+            if tid.startswith(f"{trade_id}_ex2p"):
+                rows.append(row)
+    return rows
+
+def find_ex2p_by_order_id(trade_id: str, pair: str, order_id: str) -> Optional[Dict]:
+    """Find ex2p row by trade_id and order_id."""
+    rows = get_ex2p_rows(trade_id, pair)
+    for row in rows:
+        if row.get('ex2_order_id') == order_id:
+            return row
+    return None
+
+def get_highest_ex2p_suffix(trade_id: str, pair: str) -> int:
+    """Get the highest ex2pN suffix number for a trade."""
+    rows = get_ex2p_rows(trade_id, pair)
+    max_num = 0
+    for row in rows:
+        tid = row.get('trade_id', '')
+        if tid.startswith(f"{trade_id}_ex2p"):
+            try:
+                num = int(tid.split('_ex2p')[1])
+                if num > max_num:
+                    max_num = num
+            except:
+                pass
+    return max_num
+
+def append_limit_row(
+    pair: str,
+    trade_id: str,
+    exchange: str,
+    order_id: str,
+    side: str,
+    qty_ordered: float,
+    qty_filled: float = 0,
+    price_actual: float = 0,
+    value_usdt: float = 0,
+    fees: float = 0,
+    create_ts: str = "",
+    ex2_status: str = "PENDING",
+    limit_watch_status: str = "WATCHING"
+) -> bool:
+    """Append a new ex2pN row to the CSV."""
+    csv_path = get_trade_csv_path(pair)
+    if not csv_path.exists():
+        debug_log(f"APPEND_LIMIT_ROW: CSV not found for {pair}", "WARNING")
+        return False
+    
+    # Determine next suffix
+    suffix_num = get_highest_ex2p_suffix(trade_id, pair) + 1
+    new_row_id = f"{trade_id}_ex2p{suffix_num}"
+    
+    row = create_empty_row(new_row_id)
+    row["ex2"] = get_exchange_short_id(exchange)
+    row["ex2_order_id"] = order_id
+    row["ex2_type"] = "limit"
+    row["ex2_side"] = side
+    row["ex2_qty_ordered"] = qty_ordered
+    row["ex2_qty_filled"] = qty_filled
+    row["ex2_price_actual"] = price_actual
+    row["ex2_value_usdt"] = value_usdt
+    row["ex2_fees"] = fees
+    row["ex2_create_ts"] = create_ts
+    row["ex2_status"] = ex2_status
+    row["limit_watch_status"] = limit_watch_status
+    row["limit_last_check"] = datetime.now().isoformat()
+    
+    try:
+        with open(csv_path, 'a', newline='') as f:
+            writer = csv.writer(f, delimiter=';')
+            writer.writerow(row_to_list(row))
+        debug_log(f"APPEND_LIMIT_ROW: Created {new_row_id} order_id={order_id}")
+        return True
+    except Exception as e:
+        debug_log(f"APPEND_LIMIT_ROW: ERROR: {e}", "ERROR")
+        return False
+
+
+def update_limit_row(
+    pair: str,
+    trade_id: str,
+    order_id: str = None,
+    suffix: int = None,  # Or specify suffix directly
+    qty_filled: float = None,
+    price_actual: float = None,
+    fees: float = None,
+    ex2_status: str = None,
+    limit_watch_status: str = None,
+    new_order_id: str = None,  # For edit case - update order_id
+    new_price: float = None
+) -> bool:
+    """Update an existing ex2pN row.
+    
+    Args:
+        pair: Trading pair
+        trade_id: Trade ID
+        order_id: Order ID to find the row
+        suffix: Or specify suffix number directly (ex2p1, ex2p2...)
+        qty_filled: New filled quantity
+        price_actual: New actual price
+        fees: New fees
+        ex2_status: New status (PENDING, FILLED, CANCELLED)
+        limit_watch_status: New limit_watch_status
+        new_order_id: For edit - new order_id
+        new_price: For edit - new price
+    """
+    csv_path = get_trade_csv_path(pair)
+    if not csv_path.exists():
+        debug_log(f"UPDATE_LIMIT_ROW: CSV not found for {pair}", "WARNING")
+        return False
+    
+    rows = []
+    with open(csv_path, 'r', newline='') as f:
+        reader = csv.DictReader(f, delimiter=';')
+        fieldnames = reader.fieldnames
+        rows = list(reader)
+    
+    updated = False
+    for row in rows:
+        tid = row.get('trade_id', '')
+        # Match by suffix number or by order_id
+        match = False
+        if suffix:
+            match = tid == f"{trade_id}_ex2p{suffix}"
+        elif order_id:
+            match = tid.startswith(f"{trade_id}_ex2p") and row.get('ex2_order_id') == order_id
+        
+        if match:
+            if qty_filled is not None:
+                row["ex2_qty_filled"] = qty_filled
+            if price_actual is not None:
+                row["ex2_price_actual"] = price_actual
+            if fees is not None:
+                row["ex2_fees"] = fees
+            if ex2_status is not None:
+                row["ex2_status"] = ex2_status
+            if limit_watch_status is not None:
+                row["limit_watch_status"] = limit_watch_status
+            if new_order_id is not None:
+                row["ex2_order_id"] = new_order_id
+            if new_price is not None:
+                row["ex2_price_actual"] = new_price
+            row["limit_last_check"] = datetime.now().isoformat()
+            updated = True
+            debug_log(f"UPDATE_LIMIT_ROW: Updated {tid}")
+            break
+    
+    if updated:
+        with open(csv_path, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=';')
+            writer.writeheader()
+            writer.writerows(rows)
+        debug_log(f"UPDATE_LIMIT_ROW: Wrote back to CSV")
+    else:
+        debug_log(f"UPDATE_LIMIT_ROW: No matching row found for {trade_id}", "WARNING")
+    
+    return updated
+
 
 def update_limit_watch(
     trade_id: str,
@@ -656,7 +827,7 @@ def update_limit_watch(
     profit_mpc_actual: float = None
 ):
     """
-    Update limit order watch state for a trade.
+    Update limit order watch state for a trade (ex2sum row).
     """
     csv_path = get_trade_csv_path(pair)
     
