@@ -1671,6 +1671,8 @@ def check_limit_order_fills():
     for trade in pending:
         direction = trade.get('direction', '')
         ex2_exchange = trade.get('ex2', '')
+        # Normalize: CSV stores 'KCN'/'MXC', code checks 'KUCOIN'/'MEXC'
+        ex2_exchange_normalized = 'KUCOIN' if ex2_exchange == 'KCN' else ('MEXC' if ex2_exchange == 'MXC' else ex2_exchange)
         ex2_order_id = trade.get('ex2_order_id', '')
         trade_id = trade.get('trade_id', '')
         ex2_price_expected = to_float(trade.get('ex2_price_expected', 0))
@@ -1681,7 +1683,7 @@ def check_limit_order_fills():
         # Poll exchange for order status - ALWAYS check, no pre-filter skip
         # (limit orders may have filled hours ago regardless of current price)
         try:
-            if ex2_exchange == 'KUCOIN':
+            if ex2_exchange_normalized == 'KUCOIN':
                 # Check KuCoin order status
                 ts = str(int(time.time() * 1000))
                 path = f'/api/v1/orders/{ex2_order_id}'
@@ -1859,7 +1861,7 @@ def check_limit_order_fills():
                     # Will be checked again next poll
                     pass
 
-            elif ex2_exchange == 'MEXC':
+            elif ex2_exchange_normalized == 'MEXC':
                 # Check MEXC order status via /api/v3/order endpoint
                 # MEXC's executedQty is CUMULATIVE - no aggregation needed
                 ts = str(int(time.time() * 1000))
