@@ -29,11 +29,12 @@ except ImportError:
 # Import settings_sync for config access
 sys.path.insert(0, '/app')
 try:
-    from settings_sync import get_setting, set_setting, get_pair_settings, load_config, is_debug_enabled, get_log_level
+    from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, load_config, is_debug_enabled, get_log_level
 except ImportError:
     get_setting = None
     set_setting = None
     get_pair_settings = None
+    set_pair_settings = None
     load_config = None
     is_debug_enabled = lambda: False
 
