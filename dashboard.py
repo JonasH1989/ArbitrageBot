@@ -467,6 +467,42 @@ with st.sidebar:
             set_api_keys('kucoin', api_key=kucoin_key, api_secret=kucoin_secret, api_passphrase=kucoin_pass)
             st.success("Gespeichert!")
             st.rerun()
+        
+        # Wallet type selector - only show if API keys are set
+        if kucoin_key and kucoin_secret and kucoin_pass:
+            try:
+                kucoin_bal = get_kucoin_balances(kucoin_key, kucoin_secret, kucoin_pass)
+                if kucoin_bal.get('ok'):
+                    # Get all wallets for MPC to show options
+                    st.markdown("**Trading Wallet (MPC):**")
+                    
+                    # Get current setting
+                    current_wallet = get_setting('kucoin.trading_wallet', 'trade')
+                    
+                    # Build options from API response
+                    # KuCoin has: trade, main, margin, otc, pool
+                    wallet_options = ['trade', 'main', 'margin', 'otc', 'pool']
+                    wallet_labels = ['Trade Wallet', 'Main Wallet', 'Margin Wallet', 'OTC Wallet', 'Pool Wallet']
+                    
+                    # Find current index
+                    current_idx = 0
+                    if current_wallet in wallet_options:
+                        current_idx = wallet_options.index(current_wallet)
+                    
+                    selected = st.selectbox(
+                        "Wallet für MPC Trading",
+                        options=wallet_options,
+                        index=current_idx,
+                        format_func=lambda x: wallet_labels[wallet_options.index(x)] if x in wallet_labels else x,
+                        key="kucoin_wallet_select"
+                    )
+                    
+                    if selected != current_wallet:
+                        set_setting('kucoin.trading_wallet', selected)
+                        st.success(f"Wallet gesetzt: {selected}")
+                        st.rerun()
+            except Exception as e:
+                st.caption(f"Wallet-Fehler: {e}")
     
     with st.expander("MEXC", expanded=True):
         st.image("/app/static/mexc_icon.png", width=32)
