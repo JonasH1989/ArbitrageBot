@@ -537,7 +537,7 @@ with st.sidebar:
                     mpc_wallets = all_wallets.get('MPC', {})
                     
                     if mpc_wallets:
-                        st.markdown("**Trading Wallet (MPC):**")
+                        st.markdown("**Trading Wallet:**")
                         
                         # Build options with current balance info
                         wallet_options = []
@@ -561,7 +561,7 @@ with st.sidebar:
                                 current_idx = wallet_options.index(current_wallet)
                             
                             selected = st.selectbox(
-                                "Wallet für MPC Trading",
+                                "Wallet:",
                                 options=wallet_options,
                                 index=current_idx,
                                 format_func=lambda x: wallet_labels[wallet_options.index(x)] if x in wallet_labels else x,
@@ -589,6 +589,38 @@ with st.sidebar:
             set_api_keys('mexc', api_key=mexc_key, api_secret=mexc_secret)
             st.success("Gespeichert!")
             st.rerun()
+        
+        # MEXC Wallet selector (MEXC uses funding/trade wallets via API)
+        if mexc_key and mexc_secret:
+            try:
+                # MEXC has different wallet types - check via API
+                st.markdown("**Trading Wallet:**")
+                
+                # Get current setting
+                current_wallet = get_setting('mexc.trading_wallet', 'funding')
+                
+                # MEXC wallet options (via API they differentiate)
+                wallet_options = ['funding', 'spot', 'margin']
+                wallet_labels = ['Funding Wallet', 'Spot Wallet', 'Margin Wallet']
+                
+                current_idx = 0
+                if current_wallet in wallet_options:
+                    current_idx = wallet_options.index(current_wallet)
+                
+                selected = st.selectbox(
+                    "Wallet:",
+                    options=wallet_options,
+                    index=current_idx,
+                    format_func=lambda x: wallet_labels[wallet_options.index(x)],
+                    key="mexc_wallet_select"
+                )
+                
+                if selected != current_wallet:
+                    set_setting('mexc.trading_wallet', selected)
+                    st.success(f"Wallet gesetzt: {selected}")
+                    st.rerun()
+            except Exception as e:
+                st.caption(f"Wallet-Fehler: {e}")
     
     st.divider()
     
