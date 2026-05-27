@@ -156,16 +156,19 @@ def main():
         STOP_THRESHOLD = 0.5
         pair_enabled = False
     
+    # NOTE: pair_enabled is READ-ONLY from config!
+    # It can ONLY be changed by:
+    #   1. Dashboard (user toggles the checkbox)
+    #   2. Container restart (safety flag file)
+    # NO other code may write to this value!
+    # Safety override is done via SEPARATE flag file, NOT config.yaml!
+    
     log_decision("CONFIG LOADED",
         start_threshold=f"{START_THRESHOLD}%",
         stop_threshold=f"{STOP_THRESHOLD}%",
         pair_enabled=str(pair_enabled),
-        safety="Bot starts INACTIVE for safety"
+        safety="pair_enabled is READ ONLY from config - only Dashboard may change it"
     )
-    
-    # Override to inactive for safety
-    pair_enabled = False
-    log("INFO", "⚠️ Safety override: pair_enabled = False")
     
     state = "WAITING"
     last_status_log = 0

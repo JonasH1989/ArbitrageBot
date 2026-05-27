@@ -2082,52 +2082,22 @@ def main():
     last_cpu_mem = (0, 0)
     last_limit_check = 0
 
-    # Read enabled status from config
+    # NOTE: pair_enabled is READ-ONLY from config!
+    # It can ONLY be changed by:
+    #   1. Dashboard (user toggles the checkbox)
+    #   2. Container restart (safety flag file, see below)
+    # NO other code may write to this value!
+    
+    # Read enabled status from config (READ ONLY - never write!)
     config = load_config()
     pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
     log(f"Pair {TRADING_PAIR} enabled in config: {pair_enabled}")
 
-    # ALWAYS start inactive for safety - user must enable via dashboard
-    log("=== BOT STARTET IM INAKTIV STATUS (Safety First) ===", "CONFIG")
-    pair_enabled = False
+    # Safety: If bot was just redeployed (flag file exists), start disabled
+    # This is done via a SEPARATE flag file, NOT by writing to config.yaml!
+    # The flag file is created by the deployment process, not by this bot code.
+    # NOTE: This bot no longer writes to config.yaml at startup.
     
-    # CRITICAL: Always enforce disabled at startup, regardless of config
-    # Delete the active flag file if it exists (prevents auto-activation on restart)
-    try:
-        if ACTIVE_FLAG_FILE.exists():
-            ACTIVE_FLAG_FILE.unlink()
-            log(f"SAFETY: Deleted active flag file at startup", "CONFIG")
-    except Exception as e:
-        log(f"SAFETY: Could not delete flag file: {e}", "CONFIG")
-    
-    # Force config to disabled (belt and suspenders approach)
-    import traceback, sys
-    log(f"SAFETY: Setting pair_enabled=False at bot startup", "CONFIG")
-    
-    # Check current config value BEFORE overwriting
-    previous_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
-    
-    # CRITICAL FIX: Always write enabled=False to config at startup
-    # This is a safety-first design - bot must NEVER auto-enable on restart/redeploy
-    # User must manually enable via dashboard after restart
-    try:
-        cfg = load_config()
-        if 'trading' not in cfg:
-            cfg['trading'] = {}
-        if 'pairs' not in cfg['trading']:
-            cfg['trading']['pairs'] = {}
-        if TRADING_PAIR not in cfg['trading']['pairs']:
-            cfg['trading']['pairs'][TRADING_PAIR] = {}
-        cfg['trading']['pairs'][TRADING_PAIR]['enabled'] = False
-        
-        # Use settings_sync to save
-        config_path = Path('/app/config/config.yaml')
-        with open(config_path, 'w') as f:
-            yaml.dump(cfg, f)
-        log(f"SAFETY: Config saved with enabled=False at startup (was {previous_enabled})", "CONFIG")
-    except Exception as e:
-        log(f"SAFETY: Error saving config: {e}", "CONFIG")
-
     while True:
         # Heartbeat log every 30s - shows bot is alive + Mem/CPU
         heartbeat_counter += 1
