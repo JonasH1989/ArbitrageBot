@@ -44,12 +44,20 @@ Die Trade Log CSV hat **41 Spalten** und besteht pro Trade aus mindestens 4 Zeil
 ## ZEILEN-STRUKTUR PRO TRADE
 
 Ein Trade besteht aus:
-- **Row 2:** Main Trade (Zusammenfassung)
-- **Row 3-N:** ex1p1, ex1p2, ex1p3... (ein Row pro Market Fill)
-- **Row N+1:** ex2sum (Limit Order Zusammenfassung)
-- **Row N+2 bis M:** ex2p1, ex2p2, ex2p3... (ein Row pro Limit Fill)
+- **Row 2:** Main Trade (Market Order Zusammenfassung) *
+- **Row 3:** ex1p1 (erster Market Fill) *
+- **Row 4:** ex1p2 (zweiter Market Fill) - nur wenn mehrere Fills
+- **Row 5:** ex2sum (Limit Order Zusammenfassung) *
+- **Row 6:** ex2p1 (erster Limit Fill) *
+- **Row 7:** ex2p2 (zweiter Limit Fill) - nur wenn mehrere Teil-Fills
+
+* = Diese Zeile existiert immer, da jeder Trade aus mindestens einem Teiltrade besteht.
 
 **Anzahl der Zeilen variiert** je nach Anzahl der Teil-Fills:
+- 1 Market Fill + 1 Limit Fill = 4 Zeilen (Row 2-5)
+- 2 Market Fills + 1 Limit Fill = 5 Zeilen (Row 2-6)
+- 1 Market Fill + 2 Limit Fills = 5 Zeilen (Row 2-6)
+- usw.
 - 1 Market Fill → nur ex1p1
 - 2 Market Fills → ex1p1 + ex1p2
 - 3 Market Fills → ex1p1 + ex1p2 + ex1p3 usw.
