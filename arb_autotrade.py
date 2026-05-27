@@ -418,6 +418,33 @@ def start_http_log_server(port: int = 8503):
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
+    @app.route('/api/kucoin/wallets/<coin>', methods=['GET'])
+    def get_kucoin_wallets_for_coin(coin):
+        """Get available wallets for a specific coin - for UI dropdown."""
+        try:
+            all_wallets = get_kucoin_all_wallets()
+            coin_wallets = all_wallets.get(coin.upper(), {})
+            
+            # Format for UI dropdown
+            options = []
+            for wt, data in coin_wallets.items():
+                if data['total'] > 0:
+                    options.append({
+                        'type': wt,
+                        'free': data['free'],
+                        'locked': data['locked'],
+                        'total': data['total']
+                    })
+            
+            return jsonify({
+                'status': 'ok',
+                'coin': coin.upper(),
+                'options': options,
+                'current': get_setting('kucoin.trading_wallet', 'trade') if get_setting else 'trade'
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
     @app.route('/clear', methods=['POST'])
     def clear_logs():
         global HTTP_LOGS
