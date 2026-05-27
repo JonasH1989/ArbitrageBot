@@ -68,7 +68,6 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / 'arb_autotrade.log'
 CONFIG_FILE = '/app/config/config.yaml'
 ACTIVE_FLAG_FILE = LOG_DIR / 'arb_active.flag'
-REDEPLOY_FLAG_FILE = LOG_DIR / '.just_redeployed.flag'
 
 # Exchange API credentials
 # Load API keys from config.yaml - use same path as settings_sync (dashboard)
@@ -2094,34 +2093,13 @@ def main():
     pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
     log(f"Pair {TRADING_PAIR} enabled in config: {pair_enabled}")
 
-    # Safety: If bot was just redeployed (flag file exists), start disabled
-    # Also check config.yaml modification time as backup
-    if REDEPLOY_FLAG_FILE.exists():
-        try:
-            REDEPLOY_FLAG_FILE.unlink()  # Delete flag immediately
-            log(f"SAFETY: Redeploy flag detected, setting pair_enabled=False", "CONFIG")
-            set_pair_settings(TRADING_PAIR, enabled=False)
-            pair_enabled = False
-            log(f"SAFETY: Pair disabled after redeploy", "CONFIG")
-        except Exception as e:
-            log(f"SAFETY: Error handling redeploy flag: {e}", "WARNING")
-    else:
-        # Also check config.yaml modification time as backup detection
-        try:
-            config_path = Path('/app/config/config.yaml')
-            if config_path.exists():
-                mtime = config_path.stat().st_mtime
-                age_seconds = time.time() - mtime
-                if age_seconds < 60:
-                    log(f"SAFETY: Config is {age_seconds:.1f}s old (likely redeploy), setting pair_enabled=False", "CONFIG")
-                    set_pair_settings(TRADING_PAIR, enabled=False)
-                    pair_enabled = False
-                else:
-                    log(f"Config age: {age_seconds:.1f}s - no redeploy detected", "CONFIG")
-            else:
-                log(f"SAFETY: Config file not found at {config_path}", "WARNING")
-        except Exception as e:
-            log(f"SAFETY: Error checking config age: {e}", "WARNING")
+    # SAFETY: On every startup, bot starts DISABLED
+    # User must manually enable via Dashboard after redeploy
+    # This is the proven approach that works reliably
+    log(f"SAFETY: Setting pair_enabled=False on startup (bot must be enabled via Dashboard)", "CONFIG")
+    set_pair_settings(TRADING_PAIR, enabled=False)
+    pair_enabled = False
+    log(f"SAFETY: Bot started in disabled state", "CONFIG")
     
     while True:
         # Heartbeat log every 30s - shows bot is alive + Mem/CPU
