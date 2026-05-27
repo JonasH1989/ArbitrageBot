@@ -1670,7 +1670,7 @@ def check_limit_order_fills():
 
     for trade in pending:
         direction = trade.get('direction', '')
-        ex2_exchange = trade.get('ex2_exchange', '')
+        ex2_exchange = trade.get('ex2', '')
         ex2_order_id = trade.get('ex2_order_id', '')
         trade_id = trade.get('trade_id', '')
         ex2_price_expected = to_float(trade.get('ex2_price_expected', 0))
