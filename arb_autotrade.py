@@ -374,6 +374,50 @@ def start_http_log_server(port: int = 8503):
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
+    @app.route('/api/kucoin/wallets', methods=['GET'])
+    def get_kucoin_wallets():
+        """Get all KuCoin wallets with balances for wallet configuration."""
+        try:
+            all_wallets = get_kucoin_all_wallets()
+            current_wallet = 'trade'
+            if get_setting:
+                current_wallet = get_setting('kucoin.trading_wallet', 'trade')
+            
+            return jsonify({
+                'status': 'ok',
+                'current_wallet': current_wallet,
+                'wallets': all_wallets
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    @app.route('/api/kucoin/wallet', methods=['GET'])
+    def get_kucoin_wallet_setting():
+        """Get current KuCoin trading wallet setting."""
+        try:
+            wallet = 'trade'
+            if get_setting:
+                wallet = get_setting('kucoin.trading_wallet', 'trade')
+            return jsonify({'status': 'ok', 'wallet': wallet})
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    @app.route('/api/kucoin/wallet', methods=['POST'])
+    def set_kucoin_wallet_setting():
+        """Set KuCoin trading wallet type."""
+        try:
+            data = request.get_json()
+            wallet_type = data.get('wallet', 'trade')
+            valid_wallets = ['trade', 'main', 'margin', 'otc', 'pool', 'market']
+            if wallet_type not in valid_wallets:
+                return jsonify({'status': 'error', 'message': f'Invalid wallet type. Valid: {valid_wallets}'}), 400
+            
+            if set_setting:
+                set_setting('kucoin.trading_wallet', wallet_type)
+            return jsonify({'status': 'ok', 'wallet': wallet_type})
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
     @app.route('/clear', methods=['POST'])
     def clear_logs():
         global HTTP_LOGS
@@ -554,9 +598,21 @@ def get_mexc_balances() -> dict:
         log(f"Error getting MEXC balances: {e}", "ERROR")
         return {}
 
-def get_kucoin_balances() -> dict:
-    """Get ALL KuCoin account balances with free and locked amounts."""
+def get_kucoin_balances(wallet_type: str = None) -> dict:
+    """Get KuCoin account balances.
+    
+    Args:
+        wallet_type: Specific wallet type to filter ('trade', 'main', 'margin', 'otc', 'pool').
+                     If None, uses setting 'kucoin.trading_wallet' or defaults to 'trade'.
+    """
     try:
+        # Resolve wallet type from setting if not provided
+        if wallet_type is None:
+            if get_setting:
+                wallet_type = get_setting('kucoin.trading_wallet', 'trade')
+            if not wallet_type:
+                wallet_type = 'trade'
+        
         ts = str(int(time.time() * 1000))
         path = '/api/v1/accounts'
         method = 'GET'
@@ -580,7 +636,8 @@ def get_kucoin_balances() -> dict:
                 available = float(acc.get('available', 0))
                 total = float(acc.get('balance', 0))
                 locked = total - available
-                if acc_type == 'trade' and total > 0:
+                # Filter by wallet type if specified
+                if acc_type == wallet_type and total > 0:
                     balances[currency] = {'free': available, 'locked': locked, 'total': total}
         else:
             log(f"KuCoin API error: {data}")
@@ -588,6 +645,49 @@ def get_kucoin_balances() -> dict:
         return balances
     except Exception as e:
         log(f"Error getting KuCoin balances: {e}")
+        return {}
+
+
+def get_kucoin_all_wallets() -> dict:
+    """Get ALL KuCoin account balances from ALL wallet types for wallet configuration.
+    
+    Returns dict: {currency: {wallet_type: {free, locked, total}, ...}, ...}
+    """
+    try:
+        ts = str(int(time.time() * 1000))
+        path = '/api/v1/accounts'
+        method = 'GET'
+        sig = kucoin_sig(KUCOIN_SECRET, ts, method, path)
+
+        headers = {
+            'KC-API-KEY': KUCOIN_KEY,
+            'KC-API-SIGN': sig,
+            'KC-API-TIMESTAMP': ts,
+            'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+            'KC-API-KEY-VERSION': '2'
+        }
+        resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
+        data = resp.json()
+
+
+        all_wallets = {}  # {currency: {wallet_type: {free, locked, total}, ...}}
+        if data.get('code') == '200000' and 'data' in data:
+            for acc in data['data']:
+                currency = acc.get('currency', '')
+                acc_type = acc.get('type', '')
+                available = float(acc.get('available', 0))
+                total = float(acc.get('balance', 0))
+                locked = total - available
+                if currency not in all_wallets:
+                    all_wallets[currency] = {}
+                all_wallets[currency][acc_type] = {
+                    'free': available,
+                    'locked': locked,
+                    'total': total
+                }
+        return all_wallets
+    except Exception as e:
+        log(f"Error getting KuCoin all wallets: {e}")
         return {}
 
 def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_price: float) -> tuple:
