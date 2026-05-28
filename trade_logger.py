@@ -845,29 +845,51 @@ def update_limit_watch(
         fieldnames = reader.fieldnames
         rows = list(reader)
     
-    # Find and update trade (look for _ex2sum row)
+    # Find and update trade (look for _ex2sum row AND main trade row)
     updated = False
-    for row in rows:
-        if row.get("trade_id") == f"{trade_id}_ex2sum":
-            row["limit_watch_status"] = new_status
-            row["limit_last_check"] = datetime.now().isoformat()
+    main_row = None  # Row 1 (main trade) for ex1 values
+    ex2sum_row = None  # Reference to ex2sum row
+    ex2sum_idx = None  # Index of ex2sum row in rows list
+    
+    for i, row in enumerate(rows):
+        tid = row.get("trade_id", "")
+        if tid == trade_id:
+            main_row = row  # Row 1 (main trade)
+        elif tid == f"{trade_id}_ex2sum":
+            ex2sum_row = row
+            ex2sum_idx = i
+    
+    if ex2sum_row is not None:
+        # Update ex2sum row
+        ex2sum_row["limit_watch_status"] = new_status
+        ex2sum_row["limit_last_check"] = datetime.now().isoformat()
+        
+        if qty_filled is not None:
+            ex2sum_row["ex2_qty_filled"] = qty_filled
+        if price_actual is not None:
+            ex2sum_row["ex2_price_actual"] = price_actual
+        if fees is not None:
+            ex2sum_row["ex2_fees"] = fees
+        if profit_mpc_actual is not None:
+            ex2sum_row["profit_mpc_actual"] = profit_mpc_actual
+        
+        # When limit_watch_status is FILLED, also set ex2_status and calculate profit_usdt_actual
+        if new_status == 'FILLED':
+            ex2sum_row["ex2_status"] = 'FILLED'
             
-            if qty_filled is not None:
-                row["ex2_qty_filled"] = qty_filled
-            if price_actual is not None:
-                row["ex2_price_actual"] = price_actual
-            if fees is not None:
-                row["ex2_fees"] = fees
-            if profit_mpc_actual is not None:
-                row["profit_mpc_actual"] = profit_mpc_actual
-            
-            # When limit_watch_status is FILLED, also set ex2_status to FILLED
-            if new_status == 'FILLED':
-                row["ex2_status"] = 'FILLED'
-            
-            updated = True
-            debug_log(f"UPDATE_LIMIT_WATCH: Updated {trade_id}_ex2sum status={new_status}")
-            break
+            # Calculate profit_usdt_actual = ex2_value_usdt - ex1_value_usdt - ex1_fees - ex2_fees
+            if main_row is not None:
+                ex1_value_usdt = to_float(main_row.get('ex1_value_usdt', 0) or 0)
+                ex1_fees = to_float(main_row.get('ex1_fees', 0) or 0)
+                ex2_value_usdt = to_float(ex2sum_row.get('ex2_value_usdt', 0) or 0)
+                ex2_fees = to_float(ex2sum_row.get('ex2_fees', 0) or 0)
+                profit_usdt_actual = ex2_value_usdt - ex1_value_usdt - ex1_fees - ex2_fees
+                ex2sum_row["profit_usdt_actual"] = profit_usdt_actual
+                debug_log(f"UPDATE_LIMIT_WATCH: profit_usdt_actual={profit_usdt_actual:.4f} (ex2={ex2_value_usdt:.4f} - ex1={ex1_value_usdt:.4f} - ex1_fees={ex1_fees:.4f} - ex2_fees={ex2_fees:.4f})")
+        
+        rows[ex2sum_idx] = ex2sum_row
+        updated = True
+        debug_log(f"UPDATE_LIMIT_WATCH: Updated {trade_id}_ex2sum status={new_status}")
     
     # Write back
     if updated:
