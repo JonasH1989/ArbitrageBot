@@ -273,8 +273,3 @@ def is_debug_enabled() -> bool:
 def get_all_settings() -> Dict[str, Any]:
     """Get all settings as a flat dict"""
     return load_config()
-
-def get_config_change_log():
-    """Get the config change log for debugging"""
-    with _config_lock:
-        return list(_config_change_log)
