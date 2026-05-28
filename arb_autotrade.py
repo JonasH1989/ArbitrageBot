@@ -1258,7 +1258,7 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                     # IMPORTANT: myTrades returns ALL recent trades for symbol, not just our order
                     # So we need expanding time windows to capture all fills
                     
-                    seen_times = set()
+                    seen_trade_ids = set()  # Deduplicate by tradeId, not timestamp!
                     best_match = []
                     
                     # Try progressively larger time windows until we have enough
@@ -1266,10 +1266,11 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                         matching = []
                         for trade in trades:
                             trade_time = int(trade.get('time', 0))
+                            trade_id = trade.get('id', '') or trade.get('tradeId', '')
                             if abs(trade_time - transact_time) <= window_ms:
                                 qty = float(trade.get('qty', 0))
-                                if qty > 0 and trade_time not in seen_times:
-                                    seen_times.add(trade_time)
+                                if qty > 0 and trade_id not in seen_trade_ids:
+                                    seen_trade_ids.add(trade_id)
                                     matching.append(trade)
                         
                         total_qty = sum(float(t.get('qty', 0)) for t in matching)
