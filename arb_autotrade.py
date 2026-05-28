@@ -530,6 +530,39 @@ def start_http_log_server(port: int = 8503):
         HTTP_LOGS = []
         return jsonify({'status': 'cleared'})
 
+    @app.route('/debug/mexc/order/<order_id>', methods=['GET'])
+    def debug_mexc_order(order_id):
+        """Debug: Query MEXC order directly by ID"""
+        try:
+            ts = str(int(time.time() * 1000))
+            params = f'symbol={COIN_SYMBOL_MEXC}&orderId={order_id}&timestamp={ts}'
+            sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
+            url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
+            headers = {'X-MEXC-APIKEY': MEXC_KEY}
+            resp = requests.get(url, headers=headers, timeout=10)
+            return jsonify({'status': resp.status_code, 'order': resp.json()})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/debug/mexc/trades', methods=['GET'])
+    def debug_mexc_trades():
+        """Debug: Query MEXC myTrades for MPCUSDT"""
+        try:
+            ts = str(int(time.time() * 1000))
+            params = f'symbol={COIN_SYMBOL_MEXC}&timestamp={ts}'
+            sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
+            url = f'https://api.mexc.com/api/v3/myTrades?{params}&signature={sig}'
+            headers = {'X-MEXC-APIKEY': MEXC_KEY}
+            resp = requests.get(url, headers=headers, timeout=10)
+            trades = resp.json()
+            if isinstance(trades, list):
+                # Filter for MPCUSDT trades
+                mpc_trades = [t for t in trades if t.get('symbol') == 'MPCUSDT']
+                return jsonify({'status': resp.status_code, 'total_trades': len(trades), 'mpc_trades': len(mpc_trades), 'trades': mpc_trades[-10:]})
+            return jsonify({'status': resp.status_code, 'data': trades})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     @app.route('/trades/<pair>', methods=['GET'])
     def get_trades_api(pair):
         """Get trades from CSV for a trading pair"""
