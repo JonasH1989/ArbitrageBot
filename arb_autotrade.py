@@ -2042,10 +2042,112 @@ def check_limit_order_fills():
                     continue
 
                 if not isinstance(data, dict):
-                    # "order does not exist" or other non-dict response = order was cancelled/never filled
-                    log(f"⚠️ KuCoin order {ex2_order_id}: API returns {type(data).__name__}, falling back to fills API")
-                    data = {'isActive': True, 'dealSize': 0}  # Treat as active/pending until fills API confirms
-
+                    # "order does not exist" = order was cancelled by user or exchange
+                    # Check fills API for any partial fills before marking cancelled
+                    log(f"⚠️ KuCoin order {ex2_order_id}: not found, checking fills for partial...")
+                    
+                    # Try fills API to get any partial fill data
+                    try:
+                        fills_path = f'/api/v1/fills?orderId={ex2_order_id}'
+                        fills_sig = kucoin_sig(KUCOIN_SECRET, ts, 'GET', fills_path)
+                        fills_headers = {
+                            'KC-API-KEY': KUCOIN_KEY,
+                            'KC-API-SIGN': fills_sig,
+                            'KC-API-TIMESTAMP': ts,
+                            'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+                            'KC-API-KEY-VERSION': '2'
+                        }
+                        resp_fills = requests.get(f'https://api.kucoin.com{fills_path}', headers=fills_headers, timeout=10)
+                        try:
+                            fills_raw = resp_fills.json()
+                            if isinstance(fills_raw, dict) and resp_fills.status_code == 200:
+                                data_field = fills_raw.get('data', {})
+                                if isinstance(data_field, dict):
+                                    fills_data = data_field.get('items', []) or []
+                                elif isinstance(data_field, list):
+                                    fills_data = data_field
+                                else:
+                                    fills_data = []
+                            else:
+                                fills_data = []
+                        except:
+                            fills_data = []
+                    except:
+                        fills_data = []
+                    
+                    # Aggregate fills if any
+                    if fills_data:
+                        total_qty = 0.0
+                        total_cost = 0.0
+                        total_fees = 0.0
+                        for fill in fills_data:
+                            qty = float(fill.get('size', 0) or 0)
+                            price = float(fill.get('price', 0) or 0)
+                            fee = float(fill.get('fee', 0) or 0)
+                            total_qty += qty
+                            total_cost += qty * price
+                            total_fees += fee
+                        log(f"   Found {len(fills_data)} partial fill(s): {total_qty} MPC")
+                    else:
+                        total_qty = 0.0
+                        total_cost = 0.0
+                        total_fees = 0.0
+                    
+                    # Mark the ex2pN row as CANCELLED
+                    update_limit_watch(trade_id, TRADING_PAIR, 'CANCELLED', qty_filled=total_qty)
+                    log(f"LIMIT ORDER CANCELLED: {trade_id} (partial_fill={total_qty})")
+                    
+                    # Now find replacement order: query open orders
+                    try:
+                        open_path = f'/api/v1/orders?symbol=MPC-USDT&status=ACTIVE'
+                        open_sig = kucoin_sig(KUCOIN_SECRET, ts, 'GET', open_path)
+                        open_headers = {
+                            'KC-API-KEY': KUCOIN_KEY,
+                            'KC-API-SIGN': open_sig,
+                            'KC-API-TIMESTAMP': ts,
+                            'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+                            'KC-API-KEY-VERSION': '2'
+                        }
+                        resp_open = requests.get(f'https://api.kucoin.com{open_path}', headers=open_headers, timeout=10)
+                        try:
+                            open_raw = resp_open.json()
+                            if isinstance(open_raw, dict) and resp_open.status_code == 200:
+                                open_data = open_raw.get('data', [])
+                                if isinstance(open_data, list) and len(open_data) > 0:
+                                    # Find replacement order (most recent active order)
+                                    # Sort by createTime descending, take most recent
+                                    open_data.sort(key=lambda x: int(x.get('createTime', 0)), reverse=True)
+                                    replacement = open_data[0]
+                                    new_order_id = replacement.get('id', '')
+                                    new_qty = float(replacement.get('size', 0) or 0)
+                                    new_price = float(replacement.get('price', 0) or 0)
+                                    new_create_ts = str(replacement.get('createTime', ''))
+                                    
+                                    if new_order_id:
+                                        # Get next suffix
+                                        next_suffix = get_highest_ex2p_suffix(trade_id, TRADING_PAIR) + 1
+                                        append_limit_row(
+                                            pair=TRADING_PAIR,
+                                            trade_id=trade_id,
+                                            exchange='KUCOIN',
+                                            order_id=new_order_id,
+                                            side='sell',
+                                            qty_filled=0,
+                                            price_actual=new_price,
+                                            value_usdt=0,
+                                            fees=0,
+                                            create_ts=new_create_ts,
+                                            ex2_status='PENDING',
+                                            limit_watch_status='PENDING'
+                                        )
+                                        log(f"REPLACEMENT ORDER FOUND: {trade_id}_ex2p{next_suffix} => orderId={new_order_id}, qty={new_qty}, price={new_price}")
+                        except:
+                            pass
+                    except:
+                        pass
+                    
+                    continue  # Skip to next trade
+                
                 status = data.get('status', '')
                 deal_size = float(data.get('dealSize', 0) or 0)
                 is_active = data.get('isActive', True)
@@ -2275,6 +2377,60 @@ def check_limit_order_fills():
                         )
                     
                     update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=qty_filled)
+                
+                elif status == 'CANCELLED' or (not isinstance(data, dict)):
+                    # MEXC Order CANCELLED (by user on exchange, or price edit creates new order)
+                    # Mark current ex2pN as CANCELLED
+                    log(f"⚠️ MEXC order {ex2_order_id}: status={status}, checking for replacement orders...")
+                    
+                    update_limit_watch(trade_id, TRADING_PAIR, 'CANCELLED', qty_filled=qty_filled)
+                    log(f"LIMIT ORDER CANCELLED: {trade_id}")
+                    
+                    # Find replacement order: query open orders
+                    try:
+                        ts = str(int(time.time() * 1000))
+                        open_params = f'symbol={COIN_SYMBOL_MEXC}&timestamp={ts}'
+                        open_sig = hmac.new(MEXC_SECRET.encode('utf-8'), open_params.encode('utf-8'), hashlib.sha256).hexdigest()
+                        open_url = f'https://api.mexc.com/api/v3/openOrders?{open_params}&signature={open_sig}'
+                        open_resp = requests.get(open_url, headers={'X-MEXC-APIKEY': MEXC_KEY}, timeout=10)
+                        
+                        if open_resp.status_code == 200:
+                            try:
+                                open_data = open_resp.json()
+                                if isinstance(open_data, list) and len(open_data) > 0:
+                                    # Find replacement order (most recent by time)
+                                    open_data.sort(key=lambda x: int(x.get('createTime', 0)), reverse=True)
+                                    replacement = open_data[0]
+                                    new_order_id = replacement.get('orderId', '')
+                                    new_qty = float(replacement.get('origQty', 0) or 0)
+                                    new_price = float(replacement.get('price', 0) or 0)
+                                    new_create_ts = str(replacement.get('createTime', ''))
+                                    
+                                    if new_order_id:
+                                        next_suffix = get_highest_ex2p_suffix(trade_id, TRADING_PAIR) + 1
+                                        append_limit_row(
+                                            pair=TRADING_PAIR,
+                                            trade_id=trade_id,
+                                            exchange='MEXC',
+                                            order_id=new_order_id,
+                                            side='sell',
+                                            qty_filled=0,
+                                            price_actual=new_price,
+                                            value_usdt=0,
+                                            fees=0,
+                                            create_ts=new_create_ts,
+                                            ex2_status='PENDING',
+                                            limit_watch_status='PENDING'
+                                        )
+                                        log(f"REPLACEMENT ORDER FOUND: {trade_id}_ex2p{next_suffix} => orderId={new_order_id}")
+                            except Exception as e:
+                                log(f"⚠️ MEXC replacement parse error: {e}")
+                    except Exception as e:
+                        log(f"⚠️ MEXC replacement order query failed: {e}")
+                
+                else:
+                    # Order still PENDING (status='NEW' or 'PARTIALLY_FILLED' with 0 fills)
+                    pass
 
         except Exception as e:
             log(f"⚠️ Error checking order {ex2_order_id}: {e}")
