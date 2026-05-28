@@ -389,7 +389,8 @@ def row_to_list(row: dict) -> list:
     USDT values use 4 decimals.
     """
     # Define column-specific decimal precision
-    MPC_QTY_COLS = {'ex1_qty_ordered', 'ex1_qty_filled', 'ex2_qty_ordered', 'ex2_qty_filled'}
+    MPC_QTY_COLS = {'ex1_qty_ordered', 'ex1_qty_filled', 'ex2_qty_ordered', 'ex2_qty_filled',
+                    'profit_mpc_expected', 'profit_mpc_actual'}
     PRICE_COLS = {'ex1_price_expected', 'ex1_price_actual', 'ex2_price_expected', 'ex2_price_actual'}
     USDT_COLS = {'ex1_value_usdt', 'ex1_fees', 'ex2_value_usdt', 'ex2_fees', 
                  'profit_usdt_expected', 'profit_usdt_actual'}
