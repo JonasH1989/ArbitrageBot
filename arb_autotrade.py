@@ -2286,6 +2286,7 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
                     }]
                     
                     try:
+                        # First try: fills API with orderId filter
                         fills_path = f'/api/v1/fills?orderId={order_id}'
                         ts = str(int(time.time() * 1000))
                         fills_sig = kucoin_sig(KUCOIN_SECRET, ts, 'GET', fills_path)
@@ -2297,26 +2298,55 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
                             'KC-API-KEY-VERSION': '2'
                         }
                         resp_fills = requests.get(f'https://api.kucoin.com{fills_path}', headers=fills_headers, timeout=10)
+                        fills_data = []
                         if resp_fills.status_code == 200:
                             fills_raw = resp_fills.json()
                             if fills_raw.get('code') == '200000':
-                                fills_data = fills_raw.get('data', {}).get('items', []) or []
-                                if fills_data and len(fills_data) > 1:
-                                    # Multiple fills - use individual fills
-                                    ex1_partial_fills = []
-                                    for fill in fills_data:
-                                        qty = float(fill.get('size', 0) or 0)
-                                        fill_price = float(fill.get('price', 0) or 0)
-                                        fill_fee = float(fill.get('fee', 0) or 0)
-                                        ex1_partial_fills.append({
-                                            'qty_filled': qty,
-                                            'price_actual': fill_price,
-                                            'value_usdt': qty * fill_price,
-                                            'fees': fill_fee,
-                                            'create_ts': int(fill.get('createdAt', 0) or 0)
-                                        })
-                                    total_fill_qty = sum(f['qty_filled'] for f in ex1_partial_fills)
-                                    log(f"   KuCoin {len(ex1_partial_fills)} individual fills from API: total={total_fill_qty}")
+                                fills_items = fills_raw.get('data', {}).get('items', []) or []
+                                if fills_items:
+                                    fills_data = fills_items
+                        
+                        # Second try: if orderId returned nothing, try time-based query
+                        if not fills_data:
+                            order_time = int(order_data.get('createdAt', 0) or 0)
+                            if order_time > 0:
+                                start_ts = max(0, order_time - 5000)  # 5 seconds before
+                                end_ts = order_time + 10000  # 10 seconds after
+                                fills_path2 = f'/api/v1/fills?symbol={COIN_SYMBOL}&startTime={start_ts}&endTime={end_ts}&side=buy'
+                                ts2 = str(int(time.time() * 1000))
+                                fills_sig2 = kucoin_sig(KUCOIN_SECRET, ts2, 'GET', fills_path2)
+                                resp_fills2 = requests.get(f'https://api.kucoin.com{fills_path2}', headers={
+                                    'KC-API-KEY': KUCOIN_KEY,
+                                    'KC-API-SIGN': fills_sig2,
+                                    'KC-API-TIMESTAMP': ts2,
+                                    'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+                                    'KC-API-KEY-VERSION': '2'
+                                }, timeout=10)
+                                if resp_fills2.status_code == 200:
+                                    fills_raw2 = resp_fills2.json()
+                                    if fills_raw2.get('code') == '200000':
+                                        fills_data = fills_raw2.get('data', {}).get('items', []) or []
+                        
+                        if fills_data and len(fills_data) > 1:
+                            # Multiple fills - use individual fills
+                            ex1_partial_fills = []
+                            for fill in fills_data:
+                                qty = float(fill.get('size', 0) or 0)
+                                fill_price = float(fill.get('price', 0) or 0)
+                                fill_fee = float(fill.get('fee', 0) or 0)
+                                fill_time = int(fill.get('createdAt', 0) or 0)
+                                # Skip if qty is 0 or time is way off
+                                if qty > 0 and fill_time > 0:
+                                    ex1_partial_fills.append({
+                                        'qty_filled': qty,
+                                        'price_actual': fill_price,
+                                        'value_usdt': qty * fill_price,
+                                        'fees': fill_fee,
+                                        'create_ts': fill_time
+                                    })
+                            if ex1_partial_fills:
+                                total_fill_qty = sum(f['qty_filled'] for f in ex1_partial_fills)
+                                log(f"   KuCoin {len(ex1_partial_fills)} individual fills from API: total={total_fill_qty}")
                     except Exception as e:
                         log(f"   KuCoin fills API error (using aggregated): {e}", "DEBUG")
                     
@@ -2343,16 +2373,24 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
     
     # Timeout - return estimated data based on original quantity
     log(f"   KuCoin polling timeout for order {order_id}, using fallback")
+    fee_est = orig_qty * fallback_price * KUCOIN_FEE_TAKER
     return {
         'status': 'TIMEOUT',
         'quantity': orig_qty,
         'amount': orig_qty * fallback_price,
-        'fees': orig_qty * fallback_price * KUCOIN_FEE_TAKER,  # ESTIMATED - timeout fallback
+        'fees': fee_est,  # ESTIMATED - timeout fallback
         'price': fallback_price,
         'dealSize': orig_qty,
         'dealFunds': orig_qty * fallback_price,
-        'fee': orig_qty * fallback_price * KUCOIN_FEE_TAKER,  # ESTIMATED - timeout fallback
-        'orderId': order_id
+        'fee': fee_est,  # ESTIMATED - timeout fallback
+        'orderId': order_id,
+        'ex1_partial_fills': [{
+            'qty_filled': orig_qty,
+            'price_actual': fallback_price,
+            'value_usdt': orig_qty * fallback_price,
+            'fees': fee_est,
+            'create_ts': 0  # Unknown - timeout
+        }]
     }
 
 
