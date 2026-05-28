@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.config_manager import get_config
 from bot.spread_analyzer import SpreadAnalyzer
 from bot.main_bot import get_bot, start_bot, stop_bot
+from bot.trade_logger import get_trades, get_trade_summary, get_pending_limit_orders
 
 
 # Page config
@@ -267,6 +268,44 @@ def main_dashboard():
         if bot:
             total_checks = bot.analyzer.stats['total_checks']
         st.metric("Total Checks", f"{total_checks:,}")
+    
+    # Trade Statistics
+    st.subheader("📊 Trade Statistics")
+    
+    trades_col1, trades_col2, trades_col3, trades_col4 = st.columns(4)
+    
+    all_trades = get_trades('MPC-USDT', limit=10000)
+    
+    # Count unique trade IDs (exclude sub-rows like _ex2sum, _ex1p1, _ex2p1 etc.)
+    trade_ids = set()
+    for t in all_trades:
+        tid = t.get('trade_id', '')
+        # Only count main trade rows (no _ex2sum, _ex1pN, _ex2pN suffixes)
+        if tid and not any(suffix in tid for suffix in ['_ex2sum', '_ex1p', '_ex2p', '_ex1sum']):
+            trade_ids.add(tid)
+    
+    total_trades = len(trade_ids)
+    
+    # Count pending trades
+    pending_trades = get_pending_limit_orders('MPC-USDT')
+    pending_count = len(pending_trades)
+    
+    # Calculate profits from summary
+    summary = get_trade_summary('MPC-USDT')
+    total_profit_usdt = summary.get('total_profit_usdt', 0)
+    total_profit_mpc = summary.get('total_profit_mpc', 0)
+    
+    with trades_col1:
+        st.metric("Total Trades", f"{total_trades}")
+    
+    with trades_col2:
+        st.metric("Pending", f"{pending_count}")
+    
+    with trades_col3:
+        st.metric("Profit USDT", f"{total_profit_usdt:.4f}")
+    
+    with trades_col4:
+        st.metric("Profit MPC", f"{total_profit_mpc:.4f}")
     
     # Price comparison
     st.subheader("💰 Price Comparison")
