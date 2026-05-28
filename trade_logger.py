@@ -354,14 +354,23 @@ def harmonize_order(response: dict, exchange: str, side: str, order_type: str, p
 # =============================================================================
 
 
-def fmt(value) -> str:
-    """Format a numeric value with comma as decimal separator."""
+def fmt(value, decimals=None) -> str:
+    """Format a numeric value with comma as decimal separator.
+    
+    Args:
+        value: The numeric value to format
+        decimals: Number of decimal places (None = use default formatting)
+    """
     if value is None or value == "":
         return ""
     if isinstance(value, str):
         return value
-    # It's a number - format with comma
-    return str(value).replace('.', ',')
+    # It's a number
+    if decimals is not None:
+        formatted = f"{float(value):.{decimals}f}"
+    else:
+        formatted = str(float(value))
+    return formatted.replace('.', ',')
 
 
 def create_empty_row(trade_id: str) -> dict:
@@ -373,13 +382,31 @@ def create_empty_row(trade_id: str) -> dict:
 
 
 def row_to_list(row: dict) -> list:
-    """Convert row dict to list in column order, with comma decimals"""
+    """Convert row dict to list in column order, with comma decimals.
+    
+    MPC qty columns use 2 decimal places (exchange precision).
+    Price columns use 6 decimals.
+    USDT values use 4 decimals.
+    """
+    # Define column-specific decimal precision
+    MPC_QTY_COLS = {'ex1_qty_ordered', 'ex1_qty_filled', 'ex2_qty_ordered', 'ex2_qty_filled'}
+    PRICE_COLS = {'ex1_price_expected', 'ex1_price_actual', 'ex2_price_expected', 'ex2_price_actual'}
+    USDT_COLS = {'ex1_value_usdt', 'ex1_fees', 'ex2_value_usdt', 'ex2_fees', 
+                 'profit_usdt_expected', 'profit_usdt_actual'}
+    
     result = []
     for col in UNIFIED_COLUMNS:
         val = row.get(col, "")
         # Only convert numeric values (int/float) to comma format
         if isinstance(val, (int, float)) and not isinstance(val, bool):
-            val = fmt(val)
+            if col in MPC_QTY_COLS:
+                val = fmt(val, decimals=2)
+            elif col in PRICE_COLS:
+                val = fmt(val, decimals=6)
+            elif col in USDT_COLS:
+                val = fmt(val, decimals=4)
+            else:
+                val = fmt(val)
         result.append(str(val) if val is not None else "")
     return result
 
