@@ -263,17 +263,7 @@ def main_dashboard():
             )
         st.metric("Current Spread", f"{current_spread:.3f}%")
     
-    with col4:
-        total_checks = 0
-        if bot:
-            total_checks = bot.analyzer.stats['total_checks']
-        st.metric("Total Checks", f"{total_checks:,}")
-    
-    # Trade Statistics
-    st.subheader("📊 Trade Statistics")
-    
-    trades_col1, trades_col2, trades_col3, trades_col4 = st.columns(4)
-    
+    # Trade stats replace "Total Checks" tile
     all_trades = get_trades('MPC-USDT', limit=10000)
     
     # Count unique trade IDs (exclude sub-rows like _ex2sum, _ex1p1, _ex2p1 etc.)
@@ -295,17 +285,9 @@ def main_dashboard():
     total_profit_usdt = summary.get('total_profit_usdt', 0)
     total_profit_mpc = summary.get('total_profit_mpc', 0)
     
-    with trades_col1:
-        st.metric("Total Trades", f"{total_trades}")
-    
-    with trades_col2:
-        st.metric("Pending", f"{pending_count}")
-    
-    with trades_col3:
-        st.metric("Profit USDT", f"{total_profit_usdt:.4f}")
-    
-    with trades_col4:
-        st.metric("Profit MPC", f"{total_profit_mpc:.4f}")
+    st.metric("Trades", f"{total_trades} ({pending_count} pending)")
+    st.metric("Gewinn USDT", f"{total_profit_usdt:.4f}")
+    st.caption(f"MPC: {total_profit_mpc:.4f}")
     
     # Price comparison
     st.subheader("💰 Price Comparison")
