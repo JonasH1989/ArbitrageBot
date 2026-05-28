@@ -263,31 +263,31 @@ def main_dashboard():
             )
         st.metric("Current Spread", f"{current_spread:.3f}%")
     
-    # Trade stats replace "Total Checks" tile
-    all_trades = get_trades('MPC-USDT', limit=10000)
-    
-    # Count unique trade IDs (exclude sub-rows like _ex2sum, _ex1p1, _ex2p1 etc.)
-    trade_ids = set()
-    for t in all_trades:
-        tid = t.get('trade_id', '')
-        # Only count main trade rows (no _ex2sum, _ex1pN, _ex2pN suffixes)
-        if tid and not any(suffix in tid for suffix in ['_ex2sum', '_ex1p', '_ex2p', '_ex1sum']):
-            trade_ids.add(tid)
-    
-    total_trades = len(trade_ids)
-    
-    # Count pending trades
-    pending_trades = get_pending_limit_orders('MPC-USDT')
-    pending_count = len(pending_trades)
-    
-    # Calculate profits from summary
-    summary = get_trade_summary('MPC-USDT')
-    total_profit_usdt = summary.get('total_profit_usdt', 0)
-    total_profit_mpc = summary.get('total_profit_mpc', 0)
-    
-    st.metric("Trades", f"{total_trades} ({pending_count} pending)")
-    st.metric("Gewinn USDT", f"{total_profit_usdt:.4f}")
-    st.caption(f"MPC: {total_profit_mpc:.4f}")
+    with col4:
+        # Trade stats instead of Total Checks
+        all_trades = get_trades('MPC-USDT', limit=10000)
+        
+        # Count unique trade IDs (exclude sub-rows like _ex2sum, _ex1p1, _ex2p1 etc.)
+        trade_ids = set()
+        for t in all_trades:
+            tid = t.get('trade_id', '')
+            # Only count main trade rows (no _ex2sum, _ex1pN, _ex2pN suffixes)
+            if tid and not any(suffix in tid for suffix in ['_ex2sum', '_ex1p', '_ex2p', '_ex1sum']):
+                trade_ids.add(tid)
+        
+        total_trades = len(trade_ids)
+        
+        # Count pending trades
+        pending_trades = get_pending_limit_orders('MPC-USDT')
+        pending_count = len(pending_trades)
+        
+        # Calculate profits from summary
+        summary = get_trade_summary('MPC-USDT')
+        total_profit_usdt = summary.get('total_profit_usdt', 0)
+        total_profit_mpc = summary.get('total_profit_mpc', 0)
+        
+        st.metric("Trades", f"{total_trades} ({pending_count} P)")
+        st.metric("Gewinn USDT", f"{total_profit_usdt:.4f}")
     
     # Price comparison
     st.subheader("💰 Price Comparison")
