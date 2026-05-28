@@ -1025,17 +1025,43 @@ else:
                             resp = requests.get('http://localhost:8505/trades/summary/MPC-USDT', timeout=5)
                             if resp.status_code == 200:
                                 data = resp.json()
-                                st.metric("Trades gesamt", data.get('total_trades', 0))
-                                st.metric("Trades offen", data.get('pending_limit_orders', 0))
-                                st.metric("Win Rate", f"{data.get('win_rate', '0%')}")
+                                summary = data.get('summary', {})
+                                
+                                # Count unique trade IDs
+                                all_trades_resp = requests.get('http://localhost:8505/trades/MPC-USDT', timeout=5)
+                                total_trades = 0
+                                if all_trades_resp.status_code == 200:
+                                    trades_data = all_trades_resp.json()
+                                    trade_ids = set()
+                                    for t in trades_data:
+                                        tid = t.get('trade_id', '')
+                                        # Exclude sub-rows
+                                        if tid and not any(s in tid for s in ['_ex2sum', '_ex1p', '_ex2p']):
+                                            trade_ids.add(tid)
+                                    total_trades = len(trade_ids)
+                                
+                                # Get pending count
+                                pending_resp = requests.get('http://localhost:8505/trades/pending', timeout=5)
+                                pending_count = 0
+                                if pending_resp.status_code == 200:
+                                    pending_count = pending_resp.json().get('count', 0)
+                                
+                                st.metric("Trades gesamt", total_trades)
+                                st.metric("Trades offen", pending_count)
+                                
+                                # Profit from summary
+                                profit_usdt = summary.get('total_profit_usdt', 0)
+                                profit_mpc = summary.get('total_profit_mpc', 0)
+                                st.metric("Gewinn USDT", f"{profit_usdt:.4f}")
+                                st.caption(f"MPC: {profit_mpc:.4f}")
                             else:
                                 st.metric("Trades gesamt", "N/A")
                                 st.metric("Trades offen", "N/A")
-                                st.metric("Win Rate", "N/A")
-                        except:
+                                st.metric("Gewinn USDT", "N/A")
+                        except Exception as e:
                             st.metric("Trades gesamt", "N/A")
                             st.metric("Trades offen", "N/A")
-                            st.metric("Win Rate", "N/A")
+                            st.metric("Gewinn USDT", f"Error: {e}")
                     
                     st.markdown("### 📈 MPC Akkumulation")
                     
