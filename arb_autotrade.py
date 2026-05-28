@@ -99,7 +99,86 @@ KUCOIN_FEE_MAKER = 0.001   # 0.1% maker fee
 # ==============================================================================
 COIN_SYMBOL = "MPC-USDT"      # KuCoin format (e.g., BTC-USDT, ETH-USDT)
 COIN_SYMBOL_MEXC = "MPCUSDT"  # MEXC format (e.g., BTCUSDT, ETHUSDT)
-KUCOIN_MIN_QTY = 85           # Minimum quantity per order (will be adjusted per coin)
+# KuCoin symbol info (fetched dynamically from API)
+_kucoin_symbol_cache = None
+
+def get_kucoin_symbol_info(symbol=None):
+    """Fetch KuCoin symbol info including min order sizes from API.
+    
+    Returns dict with:
+      - baseMinSize: min quantity in base currency (e.g. MPC)
+      - quoteMinSize: min quantity in quote currency (e.g. USDT)
+      - minFunds: min order value in quote currency
+      - baseIncrement: quantity precision
+    
+    Caches result for 1 hour to avoid excessive API calls.
+    """
+    global _kucoin_symbol_cache
+    import time
+    
+    # Check cache (valid for 1 hour)
+    if _kucoin_symbol_cache and _kucoin_symbol_cache.get('_cached_at', 0) > time.time() - 3600:
+        return _kucoin_symbol_cache
+    
+    symbol = symbol or COIN_SYMBOL
+    try:
+        ts = str(int(time.time() * 1000))
+        path = f'/api/v1/symbols/{symbol}'
+        sig = kucoin_sig(KUCOIN_SECRET, ts, 'GET', path)
+        headers = {
+            'KC-API-KEY': KUCOIN_KEY,
+            'KC-API-SIGN': sig,
+            'KC-API-TIMESTAMP': ts,
+            'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+            'KC-API-KEY-VERSION': '2'
+        }
+        resp = requests.get(f'https://api.kucoin.com{path}', headers=headers, timeout=10)
+        data = resp.json()
+        if data.get('code') == '200000':
+            info = data.get('data', {})
+            info['_cached_at'] = time.time()
+            _kucoin_symbol_cache = info
+            log(f"KuCoin symbol info: baseMin={info.get('baseMinSize')}, minFunds={info.get('minFunds')}, increment={info.get('baseIncrement')}")
+            return info
+        else:
+            log(f"KuCoin symbol API error: {data.get('msg', 'unknown')}", "WARNING")
+            return None
+    except Exception as e:
+        log(f"Failed to fetch KuCoin symbol info: {e}", "WARNING")
+        return None
+
+
+def get_kucoin_min_qty(price: float) -> int:
+    """Calculate minimum KuCoin order quantity based on current price.
+    
+    Uses KuCoin's minFunds ($0.10 for MPC) or baseMinSize (10 MPC), whichever is higher.
+    Also ensures quantity is on proper increment (1 for KuCoin).
+    
+    Args:
+        price: Current MPC-USDT price for USDT value calculation
+    
+    Returns:
+        Minimum quantity as integer
+    """
+    info = get_kucoin_symbol_info()
+    if not info:
+        log(f"KuCoin symbol info unavailable, using fallback minQty=10", "WARNING")
+        return 10
+    
+    min_funds = float(info.get('minFunds', 0.1))  # Default $0.10
+    base_min = float(info.get('baseMinSize', 10))  # Default 10 MPC
+    increment = float(info.get('baseIncrement', 1))  # Default 1 (whole numbers)
+    
+    # Calculate min qty based on min funds
+    min_from_funds = min_funds / price if price > 0 else base_min
+    
+    # Take the higher of min funds-based qty or baseMinSize
+    min_qty = max(min_from_funds, base_min)
+    
+    # Round to proper increment (KuCoin requires whole numbers for MPC)
+    min_qty = max(increment, round(min_qty / increment) * increment)
+    
+    return int(min_qty)
 
 # Exchange precision (decimal places) - adjust per coin as needed
 MEXC_PRICE_PRECISION = 5
@@ -759,11 +838,12 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
         # Check if we have enough for the requested qty
         if usdt_needed > 0.01 and (mexc_usdt < usdt_needed or coin_available_kucoin < qty):
             # Not enough for full qty - check if we can trade with reduced qty
-            if max_tradable >= KUCOIN_MIN_QTY:
+            min_kucoin_qty = get_kucoin_min_qty(buy_price)
+            if max_tradable >= min_kucoin_qty:
                 # We can still trade, just with reduced qty
                 return True, "", max_tradable
             else:
-                return False, f"Insufficient balance for min order ({max_tradable:.1f} < {KUCOIN_MIN_QTY})", max_tradable
+                return False, f"Insufficient balance for min order ({max_tradable:.1f} < {min_kucoin_qty})", max_tradable
 
     elif direction in ['K->M', 'K→M']:
         # Buying on KuCoin, selling on MEXC
@@ -794,10 +874,10 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
         
         # Check if we have enough for the requested qty
         if usdt_needed > 0.01 and (kucoin_usdt < usdt_needed or coin_available_mexc < qty):
-            if max_tradable >= KUCOIN_MIN_QTY:
+            if max_tradable >= get_kucoin_min_qty(buy_price):
                 return True, "", max_tradable
             else:
-                return False, f"Insufficient balance for min order ({max_tradable:.1f} < {KUCOIN_MIN_QTY})", max_tradable
+                return False, f"Insufficient balance for min order ({max_tradable:.1f} < {get_kucoin_min_qty(buy_price)})", max_tradable
 
     return True, "", qty
 
@@ -2481,9 +2561,9 @@ def main():
         # Get real orderbook levels
         ob_data = get_orderbook_levels()
 
-        # Calculate minimum trade quantity
-        mexc_min_qty = round((MEXC_MIN_USDT + 0.1) / m['ask']) if m['ask'] > 0 else 85
-        kucoin_min_qty = KUCOIN_MIN_QTY
+        # Calculate minimum trade quantity (dynamically from exchange APIs)
+        mexc_min_qty = round((MEXC_MIN_USDT + 0.1) / m['ask']) if m['ask'] > 0 else 10
+        kucoin_min_qty = get_kucoin_min_qty(k['bid']) if k['bid'] > 0 else 10
         min_trade_qty = max(mexc_min_qty, kucoin_min_qty)
 
         # Find best tradeable spread using BIDIRECTIONAL VOLUME ACCUMULATION
@@ -2516,12 +2596,12 @@ def main():
 
         if not ob_data:
             # Fallback when orderbook fetch fails
-            vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 86
-            vol_for_kucoin = max(KUCOIN_MIN_QTY, vol_for_mexc)
+            vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 10
+            vol_for_kucoin = max(get_kucoin_min_qty(k['bid']), vol_for_mexc)
         else:
             # Always define these for logging
-            vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 86
-            vol_for_kucoin = max(KUCOIN_MIN_QTY, vol_for_mexc)
+            vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 10
+            vol_for_kucoin = max(get_kucoin_min_qty(k['bid']), vol_for_mexc)
 
 
         # Log every 30 seconds
@@ -2624,7 +2704,7 @@ def main():
                 
                 # Balance OK - proceed with trade (possibly with reduced qty)
                 # Override volume with max_tradable if needed
-                if max_tradable < check_qty and max_tradable >= KUCOIN_MIN_QTY:
+                if max_tradable < check_qty and max_tradable >= get_kucoin_min_qty(best_trade.get('buy', 0.017)):
                     log(f"⚠️ Reduced trade qty: {check_qty:.0f} → {math.floor(max_tradable):.0f} (wallet limit)", "BALANCE")
                     if best_trade:
                         best_trade['vol'] = math.floor(max_tradable)
@@ -2745,7 +2825,7 @@ def main():
                 continue
             
             # Override volume with max_tradable if wallet is limiting
-            if max_tradable < check_qty and max_tradable >= KUCOIN_MIN_QTY:
+            if max_tradable < check_qty and max_tradable >= get_kucoin_min_qty(best_trade.get('buy', 0.017)):
                 log(f"⚠️ Reduced trade qty: {check_qty:.0f} → {math.floor(max_tradable):.0f} (wallet limit)", "BALANCE")
                 best_trade['vol'] = math.floor(max_tradable)
             
