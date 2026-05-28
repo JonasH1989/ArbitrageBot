@@ -542,9 +542,9 @@ def log_trade(
     
     debug_log(f"LOG_TRADE: ex2 qty_ordered={ex2_qty_ordered}, qty_filled={ex2_qty_filled}")
     
-    # Calculate actual profits
-    profit_mpc_actual = ex1_qty_filled - ex2_qty_filled if ex1_qty_filled > 0 else 0
-    # profit_usdt_actual would need actual values from filled trades
+    # Note: profit_mpc_actual and profit_usdt_actual are calculated in update_limit_watch()
+    # when the limit order is actually FILLED. At this point ex2 is not yet filled.
+    # Initial values are 0 - will be updated later.
     
     # ==========================================================================
     # BUILD ROWS
@@ -913,19 +913,27 @@ def update_limit_watch(
                         debug_log(f"UPDATE_LIMIT_WATCH: fallback create_ts from ex2p1: {ts}")
                     break
         
-        # When limit_watch_status is FILLED, also set ex2_status and calculate profit_usdt_actual
+        # When limit_watch_status is FILLED, also set ex2_status and calculate profits
         if new_status == 'FILLED':
             ex2sum_row["ex2_status"] = 'FILLED'
             
-            # Calculate profit_usdt_actual = ex2_value_usdt - ex1_value_usdt - ex1_fees - ex2_fees
+            # Calculate actual profits
             if main_row is not None:
+                # profit_usdt_actual = ex2_value - ex1_value - ex1_fees - ex2_fees
                 ex1_value_usdt = to_float(main_row.get('ex1_value_usdt', 0) or 0)
                 ex1_fees = to_float(main_row.get('ex1_fees', 0) or 0)
                 ex2_value_usdt = to_float(ex2sum_row.get('ex2_value_usdt', 0) or 0)
                 ex2_fees = to_float(ex2sum_row.get('ex2_fees', 0) or 0)
                 profit_usdt_actual = ex2_value_usdt - ex1_value_usdt - ex1_fees - ex2_fees
                 ex2sum_row["profit_usdt_actual"] = profit_usdt_actual
-                debug_log(f"UPDATE_LIMIT_WATCH: profit_usdt_actual={profit_usdt_actual:.4f} (ex2={ex2_value_usdt:.4f} - ex1={ex1_value_usdt:.4f} - ex1_fees={ex1_fees:.4f} - ex2_fees={ex2_fees:.4f})")
+                
+                # profit_mpc_actual = ex1_qty_filled - ex2_qty_filled
+                ex1_qty_filled = to_float(main_row.get('ex1_qty_filled', 0) or 0)
+                ex2_qty_filled = to_float(ex2sum_row.get('ex2_qty_filled', 0) or 0)
+                profit_mpc_actual = ex1_qty_filled - ex2_qty_filled
+                ex2sum_row["profit_mpc_actual"] = profit_mpc_actual
+                
+                debug_log(f"UPDATE_LIMIT_WATCH: FILLED - profit_usdt={profit_usdt_actual:.4f}, profit_mpc={profit_mpc_actual:.2f}")
         
         rows[ex2sum_idx] = ex2sum_row
         updated = True
