@@ -1784,8 +1784,9 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
         coin = COIN_SYMBOL.split('-')[0]
         log(f"Strategy=COINS: USDT spent={usdt_to_sell:.4f}, calculating {coin} to sell @ ${sell_price:.6f}")
     else:
-        # USDT strategy: sell same quantity as bought
-        sell_qty = ex1_data['qty_filled']
+        # USDT strategy: sell same quantity as ordered (qty), not what was filled
+        # CRITICAL FIX: use planned qty, not ex1_data['qty_filled'] (which may be less due to partial fills)
+        sell_qty = qty
 
     # Round to integer for KuCoin (KuCoin requires whole numbers, increment=1)
     # Also ensure minimum of 10 MPC for KuCoin
