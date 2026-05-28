@@ -1932,7 +1932,7 @@ def check_limit_order_fills():
                             qty_ordered=ex2_price_expected,
                             qty_filled=total_qty,
                             price_actual=total_cost/total_qty if total_qty > 0 else 0,
-                            value_usdt=0,
+                            value_usdt=total_cost,
                             fees=total_fees,
                             create_ts=str(data.get('createTime', '')),
                             ex2_status='FILLED',
@@ -1946,6 +1946,7 @@ def check_limit_order_fills():
                             suffix=existing_suffix,
                             qty_filled=total_qty,
                             price_actual=total_cost/total_qty if total_qty > 0 else 0,
+                            value_usdt=total_cost,
                             fees=total_fees,
                             ex2_status='FILLED',
                             limit_watch_status='FILLED'
@@ -2040,7 +2041,7 @@ def check_limit_order_fills():
                             qty_ordered=ex2_price_expected,
                             qty_filled=qty_filled,
                             price_actual=amount_filled/qty_filled if qty_filled > 0 else 0,
-                            value_usdt=0,
+                            value_usdt=amount_filled,
                             fees=float(data.get('fee', 0) or 0),
                             create_ts=str(data.get('createTime', '')),
                             ex2_status='FILLED',
@@ -2053,6 +2054,7 @@ def check_limit_order_fills():
                             suffix=existing_suffix,
                             qty_filled=qty_filled,
                             price_actual=amount_filled/qty_filled if qty_filled > 0 else 0,
+                            value_usdt=amount_filled,
                             fees=float(data.get('fee', 0) or 0),
                             ex2_status='FILLED',
                             limit_watch_status='FILLED'

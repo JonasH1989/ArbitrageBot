@@ -743,6 +743,7 @@ def update_limit_row(
     suffix: int = None,  # Or specify suffix directly
     qty_filled: float = None,
     price_actual: float = None,
+    value_usdt: float = None,
     fees: float = None,
     ex2_status: str = None,
     limit_watch_status: str = None,
@@ -790,6 +791,8 @@ def update_limit_row(
                 row["ex2_qty_filled"] = qty_filled
             if price_actual is not None:
                 row["ex2_price_actual"] = price_actual
+            if value_usdt is not None:
+                row["ex2_value_usdt"] = value_usdt
             if fees is not None:
                 row["ex2_fees"] = fees
             if ex2_status is not None:
@@ -857,6 +860,10 @@ def update_limit_watch(
                 row["ex2_fees"] = fees
             if profit_mpc_actual is not None:
                 row["profit_mpc_actual"] = profit_mpc_actual
+            
+            # When limit_watch_status is FILLED, also set ex2_status to FILLED
+            if new_status == 'FILLED':
+                row["ex2_status"] = 'FILLED'
             
             updated = True
             debug_log(f"UPDATE_LIMIT_WATCH: Updated {trade_id}_ex2sum status={new_status}")
