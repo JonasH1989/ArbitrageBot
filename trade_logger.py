@@ -827,7 +827,8 @@ def update_limit_watch(
     qty_filled: float = None,
     price_actual: float = None,
     fees: float = None,
-    profit_mpc_actual: float = None
+    profit_mpc_actual: float = None,
+    create_ts: str = None  # Exchange order creation timestamp
 ):
     """
     Update limit order watch state for a trade (ex2sum row).
@@ -872,6 +873,17 @@ def update_limit_watch(
             ex2sum_row["ex2_fees"] = fees
         if profit_mpc_actual is not None:
             ex2sum_row["profit_mpc_actual"] = profit_mpc_actual
+        if create_ts is not None:
+            ex2sum_row["ex2_create_ts"] = create_ts
+        elif not ex2sum_row.get("ex2_create_ts"):
+            # Fallback: try to get create_ts from existing ex2p1 row
+            for row in rows:
+                if row.get("trade_id") == f"{trade_id}_ex2p1":
+                    ts = row.get("ex2_create_ts", "")
+                    if ts:
+                        ex2sum_row["ex2_create_ts"] = ts
+                        debug_log(f"UPDATE_LIMIT_WATCH: fallback create_ts from ex2p1: {ts}")
+                    break
         
         # When limit_watch_status is FILLED, also set ex2_status and calculate profit_usdt_actual
         if new_status == 'FILLED':

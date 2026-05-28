@@ -1979,7 +1979,8 @@ def check_limit_order_fills():
                     update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
                                      qty_filled=total_qty,
                                      price_actual=total_cost/total_qty if total_qty > 0 else 0,
-                                     fees=total_fees)
+                                     fees=total_fees,
+                                     create_ts=str(data.get('createdAt', '')))
                     log(f"LIMIT FILLED: {trade_id} ({total_qty} MPC @ {total_cost/total_qty if total_qty > 0 else 0:.5f})")
                 
                 elif total_qty > 0 and is_active:
@@ -2063,7 +2064,8 @@ def check_limit_order_fills():
                     update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
                                      qty_filled=qty_filled,
                                      price_actual=amount_filled/qty_filled if qty_filled > 0 else 0,
-                                     fees=float(data.get('fee', 0) or 0))
+                                     fees=float(data.get('fee', 0) or 0),
+                                     create_ts=str(data.get('createTime', '')))
                     log(f"LIMIT FILLED: {trade_id}")
                 
                 elif status == 'PARTIALLY_FILLED' and qty_filled > 0:
