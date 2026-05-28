@@ -1306,7 +1306,8 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                     'fees': 0,
                     'price': '0',
                     'executedQty': '0',
-                    'cummulativeQuoteQty': '0'
+                    'cummulativeQuoteQty': '0',
+                    'ex1_partial_fills': []
                 }
             
             # Order is not canceled - check if it has executed qty
@@ -1325,7 +1326,14 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                     'fees': fee_estimate,  # Estimated - order API has no fee field
                     'price': str(price),
                     'executedQty': str(qty),
-                    'cummulativeQuoteQty': str(quote)
+                    'cummulativeQuoteQty': str(quote),
+                    'ex1_partial_fills': [{
+                        'qty_filled': qty,
+                        'price_actual': price,
+                        'value_usdt': quote,
+                        'fees': fee_estimate,
+                        'create_ts': transact_time  # Approximate - order API doesn't return fill time
+                    }]
                 }
     except Exception as e:
         pass  # Silently continue to fallback
@@ -1360,7 +1368,14 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                             'fees': fee_estimate,  # Estimated - public API has no fee field
                             'price': str(price),
                             'executedQty': str(qty),
-                            'cummulativeQuoteQty': str(quote_qty)
+                            'cummulativeQuoteQty': str(quote_qty),
+                            'ex1_partial_fills': [{
+                                'qty_filled': qty,
+                                'price_actual': price,
+                                'value_usdt': quote_qty,
+                                'fees': fee_estimate,
+                                'create_ts': trade_time
+                            }]
                         }
     except:
         pass
@@ -1378,7 +1393,14 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
         'fees': fee_est,  # ESTIMATED - all APIs failed, this is a fallback!
         'price': str(fallback_price),
         'executedQty': str(orig_qty),
-        'cummulativeQuoteQty': str(orig_qty * fallback_price)
+        'cummulativeQuoteQty': str(orig_qty * fallback_price),
+        'ex1_partial_fills': [{
+            'qty_filled': orig_qty,
+            'price_actual': fallback_price,
+            'value_usdt': orig_qty * fallback_price,
+            'fees': fee_est,
+            'create_ts': transact_time
+        }]
     }
 
 def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, buy_price, sell_price, strategy='usdt', spread_pct=0.0):
@@ -2253,6 +2275,51 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
                 if (status == 'Done' or (not is_active and deal_size > 0)) and deal_size > 0:
                     price = deal_funds / deal_size if deal_size > 0 else fallback_price
                     log(f"   Found KuCoin fill: qty={deal_size}, value=${deal_funds:.4f}, fee=${fee:.4f}")
+                    
+                    # Try to get individual fills from KuCoin fills API
+                    ex1_partial_fills = [{
+                        'qty_filled': deal_size,
+                        'price_actual': price,
+                        'value_usdt': deal_funds,
+                        'fees': fee,
+                        'create_ts': int(order_data.get('createdAt', 0) or 0)
+                    }]
+                    
+                    try:
+                        fills_path = f'/api/v1/fills?orderId={order_id}'
+                        ts = str(int(time.time() * 1000))
+                        fills_sig = kucoin_sig(KUCOIN_SECRET, ts, 'GET', fills_path)
+                        fills_headers = {
+                            'KC-API-KEY': KUCOIN_KEY,
+                            'KC-API-SIGN': fills_sig,
+                            'KC-API-TIMESTAMP': ts,
+                            'KC-API-PASSPHRASE': kucoin_passphrase_enc(KUCOIN_SECRET, KUCOIN_PASSPHRASE),
+                            'KC-API-KEY-VERSION': '2'
+                        }
+                        resp_fills = requests.get(f'https://api.kucoin.com{fills_path}', headers=fills_headers, timeout=10)
+                        if resp_fills.status_code == 200:
+                            fills_raw = resp_fills.json()
+                            if fills_raw.get('code') == '200000':
+                                fills_data = fills_raw.get('data', {}).get('items', []) or []
+                                if fills_data and len(fills_data) > 1:
+                                    # Multiple fills - use individual fills
+                                    ex1_partial_fills = []
+                                    for fill in fills_data:
+                                        qty = float(fill.get('size', 0) or 0)
+                                        fill_price = float(fill.get('price', 0) or 0)
+                                        fill_fee = float(fill.get('fee', 0) or 0)
+                                        ex1_partial_fills.append({
+                                            'qty_filled': qty,
+                                            'price_actual': fill_price,
+                                            'value_usdt': qty * fill_price,
+                                            'fees': fill_fee,
+                                            'create_ts': int(fill.get('createdAt', 0) or 0)
+                                        })
+                                    total_fill_qty = sum(f['qty_filled'] for f in ex1_partial_fills)
+                                    log(f"   KuCoin {len(ex1_partial_fills)} individual fills from API: total={total_fill_qty}")
+                    except Exception as e:
+                        log(f"   KuCoin fills API error (using aggregated): {e}", "DEBUG")
+                    
                     return {
                         'status': 'FILLED',
                         'quantity': deal_size,
@@ -2263,14 +2330,7 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
                         'dealFunds': deal_funds,
                         'fee': fee,
                         'orderId': order_id,
-                        # Individual fills for log_trade(ex1_partial_fills)
-                        'ex1_partial_fills': [{
-                            'qty_filled': deal_size,
-                            'price_actual': price,
-                            'value_usdt': deal_funds,
-                            'fees': fee,
-                            'create_ts': int(order_data.get('createdAt', 0) or 0)
-                        }]
+                        'ex1_partial_fills': ex1_partial_fills
                     }
                 elif status == 'Active' or is_active:
                     # Order still filling, keep polling
