@@ -1222,19 +1222,33 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                 if isinstance(trades, list) and trades:
                     # Collect ALL trades matching our order by timestamp (multi-fill support!)
                     # MEXC market orders often execute as multiple partial fills
-                    # DEDUPLICATE by timestamp to avoid duplicate fills
+                    # IMPORTANT: myTrades returns ALL recent trades for symbol, not just our order
+                    # So we need expanding time windows to capture all fills
+                    
                     seen_times = set()
-                    matching_trades = []
-                    for trade in trades:
-                        trade_time = int(trade.get('time', 0))
-                        if abs(trade_time - transact_time) <= time_window:
-                            qty = float(trade.get('qty', 0))
-                            if qty > 0:
-                                # Skip if we already saw this timestamp
-                                if trade_time in seen_times:
-                                    continue
-                                seen_times.add(trade_time)
-                                matching_trades.append(trade)
+                    best_match = []
+                    
+                    # Try progressively larger time windows until we have enough
+                    for window_ms in [2000, 5000, 10000, 30000]:
+                        matching = []
+                        for trade in trades:
+                            trade_time = int(trade.get('time', 0))
+                            if abs(trade_time - transact_time) <= window_ms:
+                                qty = float(trade.get('qty', 0))
+                                if qty > 0 and trade_time not in seen_times:
+                                    seen_times.add(trade_time)
+                                    matching.append(trade)
+                        
+                        total_qty = sum(float(t.get('qty', 0)) for t in matching)
+                        log(f"   Window {window_ms}ms: found {len(matching)} trades, total qty={total_qty:.2f}")
+                        
+                        # If we found at least 1 trade, don't expand further (keep earliest)
+                        if matching:
+                            best_match = matching
+                            break
+                    
+                    if best_match:
+                        matching_trades = best_match
                     
                     if matching_trades:
                         # Aggregate ALL fills for this order
@@ -1249,28 +1263,33 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
                             log(f"      Fill {i+1}: qty={t.get('qty')}, price={t.get('price')}, value=${float(t.get('quoteQty', 0)):.4f}")
                         log(f"   TOTAL: qty={total_qty:.4f}, avg_price={avg_price:.6f}, value=${total_value:.4f}, fees=${total_fee:.6f}")
                         
-                        return {
-                            'status': 'Filled',
-                            'orderId': order_id,  # Preserve original order ID
-                            'quantity': str(total_qty),
-                            'amount': str(total_value),
-                            'fees': total_fee,  # REAL fee from API, not estimated!
-                            'price': str(avg_price),  # Weighted average price!
-                            'executedQty': str(total_qty),
-                            'cummulativeQuoteQty': str(total_value),
-                            'fills_count': len(matching_trades),  # Debug info
-                            # Individual fills for log_trade(ex1_partial_fills) - structured dict format
-                            'ex1_partial_fills': [
-                                {
-                                    'qty_filled': float(t.get('qty', 0)),
-                                    'price_actual': float(t.get('price', 0)),
-                                    'value_usdt': float(t.get('quoteQty', 0)),
-                                    'fees': float(t.get('fee', 0) or 0),
-                                    'create_ts': t.get('time', 0)
-                                }
-                                for t in matching_trades
-                            ]
-                        }
+                        # If found qty is significantly less than ordered, continue to METHOD 2
+                        if total_qty < orig_qty * 0.99:
+                            log(f"   ⚠️ Filled qty ({total_qty:.2f}) < ordered ({orig_qty:.2f}), continuing to METHOD 2...")
+                            # DON'T return yet - fall through to METHOD 2 to try to find remaining fills
+                        else:
+                            return {
+                                'status': 'Filled',
+                                'orderId': order_id,  # Preserve original order ID
+                                'quantity': str(total_qty),
+                                'amount': str(total_value),
+                                'fees': total_fee,  # REAL fee from API, not estimated!
+                                'price': str(avg_price),  # Weighted average price!
+                                'executedQty': str(total_qty),
+                                'cummulativeQuoteQty': str(total_value),
+                                'fills_count': len(matching_trades),  # Debug i
+                                # Individual fills for log_trade(ex1_partial_fills) - structured dict format
+                                'ex1_partial_fills': [
+                                    {
+                                        'qty_filled': float(t.get('qty', 0)),
+                                        'price_actual': float(t.get('price', 0)),
+                                        'value_usdt': float(t.get('quoteQty', 0)),
+                                        'fees': float(t.get('fee', 0) or 0),
+                                        'create_ts': t.get('time', 0)
+                                    }
+                                    for t in matching_trades
+                                ]
+                            }
         except Exception as e:
             pass  # Silently continue to next method
 
@@ -1278,8 +1297,9 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
 
     # ========================================================================
     # METHOD 2: Try private order status API (SECONDARY)
+    # Only reached if METHOD 1 found insufficient fills
     # ========================================================================
-    log(f"   Private API returned no trades, trying order status...")
+    log(f"   Private API returned no trades or insufficient fills, trying order status...")
 
     try:
         ts = str(int(time.time() * 1000))
