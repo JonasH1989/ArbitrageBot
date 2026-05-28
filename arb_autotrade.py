@@ -1680,20 +1680,52 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     # ========================================================================
     # STEP 4: Calculate expected profit and log trade
     # ========================================================================
+    # Use EXPECTED values for profit calculation (not actual fills)
+    # Logic: sell_side_value - buy_side_value - fees
+    # Direction determines which side is buy/sell:
+    #   - MEXC->KUCOIN: ex1=MEXC (buy), ex2=KUCOIN (sell)
+    #   - KUCOIN->MEXC: ex1=KUCOIN (buy), ex2=MEXC (sell)
+    # 
+    # For expected profit we use:
+    #   - buy_side: ex1_data['qty_filled'] * market_price_expected
+    #   - sell_side: sell_qty * sell_price
+    #   - fees: estimated based on fee tiers (taker ~0.1%, maker ~0.02%)
+    
+    buy_qty = ex1_data['qty_filled']
+    buy_price = market_price_expected  # Expected price, not actual filled price
+    sell_price_expected = sell_price
+    
+    # Buy side value (expected)
+    buy_value_expected = buy_qty * buy_price
+    
+    # Sell side value (expected) - use planned sell_qty and expected price
+    sell_value_expected = sell_qty * sell_price_expected
+    
+    # Estimate fees:
+    # - Taker fee (market order): ~0.1% of buy_value
+    # - Maker fee (limit order): ~0.02% of sell_value
+    fee_taker_estimated = buy_value_expected * 0.001  # 0.1% taker
+    fee_maker_estimated = sell_value_expected * 0.0002  # 0.02% maker
+    total_fees_estimated = fee_taker_estimated + fee_maker_estimated
+    
+    # Expected profit = sell - buy - fees
+    profit_usdt_expected = sell_value_expected - buy_value_expected - total_fees_estimated
+    profit_mpc_expected = (sell_value_expected - buy_value_expected - total_fees_estimated) / sell_price_expected if sell_price_expected > 0 else 0
+    
+    # Also calculate actual profit from filled values (for comparison)
     cost = ex1_data['value_usdt']
-    # Revenue: use ACTUAL filled value if available, otherwise EXPECTED based on sell_price
     actual_revenue = ex2_data['value_usdt']
     if actual_revenue > 0:
         revenue = actual_revenue
     else:
-        # Limit sell not filled yet - use expected revenue
-        expected_sell_value = sell_qty * sell_price
-        revenue = expected_sell_value
+        revenue = sell_value_expected  # Use expected if not filled yet
     gross_profit = revenue - cost
-    fee_taker = ex1_data['fees']
-    fee_maker = ex2_data.get('fees', 0)
-    net_profit = gross_profit - fee_taker - fee_maker
-    mpc_gain = net_profit / sell_price if sell_price > 0 else 0
+    fee_taker = ex1_data['fees']  # Actual taker fee from market order
+    fee_maker = ex2_data.get('fees', 0)  # Actual maker fee from limit (if filled)
+    net_profit_actual = gross_profit - fee_taker - fee_maker
+    
+    log(f"   Expected profit: buy={buy_value_expected:.4f} sell={sell_value_expected:.4f} fees~{total_fees_estimated:.4f} => {profit_usdt_expected:.4f} USDT")
+    log(f"   Actual profit: cost={cost:.4f} revenue={revenue:.4f} fees={fee_taker+fee_maker:.4f} => {net_profit_actual:.4f} USDT")
 
     # Log trade with harmonized data
     log(f"INFO: Calling log_trade() - SUCCESS case for direction={dir_str}")
@@ -1712,8 +1744,8 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
             spread_pct=spread_pct,
             market_price_expected=market_price_expected,
             limit_price_expected=limit_price_expected,
-            profit_usdt_expected=net_profit,
-            profit_mpc_expected=mpc_gain,
+            profit_usdt_expected=profit_usdt_expected,
+            profit_mpc_expected=profit_mpc_expected,
             error_code=error_code,
             error_message=error_message
         )
