@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.config_manager import get_config
 from bot.spread_analyzer import SpreadAnalyzer
 from bot.main_bot import get_bot, start_bot, stop_bot
-from bot.trade_logger import get_trades, get_trade_summary, get_pending_limit_orders
+from trade_logger import get_trades, get_trade_summary, get_pending_limit_orders
 
 
 # Page config
