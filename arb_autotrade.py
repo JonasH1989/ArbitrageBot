@@ -29,7 +29,7 @@ except ImportError:
 # Import settings_sync for config access
 sys.path.insert(0, '/app')
 try:
-    from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, load_config, is_debug_enabled, get_log_level
+    from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, load_config, is_debug_enabled, get_log_level, get_config_change_log
 except ImportError:
     get_setting = None
     set_setting = None
@@ -397,6 +397,18 @@ def start_http_log_server(port: int = 8503):
             'active_flag': ACTIVE_FLAG_FILE.exists(),
             'config_hash': last_config_hash
         })
+
+    @app.route('/config/changelog', methods=['GET'])
+    def get_config_changelog():
+        """Get config change log - shows who/what changed settings"""
+        try:
+            changes = get_config_change_log()
+            return jsonify({
+                'count': len(changes),
+                'changes': changes[-50:]  # Last 50 changes
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)})
 
     @app.route('/health', methods=['GET'])
     def get_health():
