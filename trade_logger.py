@@ -860,6 +860,11 @@ def update_limit_watch(
 ):
     """
     Update limit order watch state for a trade (ex2sum row).
+    
+    When new_status is CANCELLED:
+    - Sets limit_watch_status to CANCELLED on the ex2pN row
+    - Sets ex2_qty_filled=0 on that row (cancelled orders don't count)
+    - Does NOT cancel _ex2sum - it stays WATCHING/PENDING
     """
     csv_path = get_trade_csv_path(pair)
     
@@ -889,9 +894,34 @@ def update_limit_watch(
             ex2sum_idx = i
     
     if ex2sum_row is not None:
-        # Update ex2sum row
-        ex2sum_row["limit_watch_status"] = new_status
         ex2sum_row["limit_last_check"] = datetime.now().isoformat()
+        
+        # When limit_watch_status is CANCELLED, also handle the ex2pN row
+        if new_status == 'CANCELLED':
+            # Find the pending ex2pN row to cancel
+            for row in rows:
+                tid = row.get("trade_id", "")
+                if tid.startswith(f"{trade_id}_ex2p") and row.get("limit_watch_status") == "PENDING":
+                    row["limit_watch_status"] = "CANCELLED"
+                    row["ex2_qty_filled"] = 0  # Cancelled = no contribution to sums
+                    row["ex2_status"] = "CANCELLED"
+                    row["limit_last_check"] = datetime.now().isoformat()
+                    debug_log(f"UPDATE_LIMIT_WATCH: Cancelled {tid}")
+                    break
+            # Do NOT update ex2sum - stays WATCHING until replacement order fills
+            # Write back and return early
+            if updated or True:  # We found and updated a row
+                with open(csv_path, 'w', newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=';')
+                    writer.writeheader()
+                    writer.writerows(rows)
+            return True
+        
+        # For FILLED and other statuses, update ex2sum row
+        if new_status == 'FILLED':
+            ex2sum_row["limit_watch_status"] = 'FILLED'
+            ex2sum_row["ex2_status"] = 'FILLED'
+            # Calculate actual profits
         
         if qty_filled is not None:
             ex2sum_row["ex2_qty_filled"] = qty_filled
