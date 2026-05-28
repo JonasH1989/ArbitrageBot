@@ -899,22 +899,26 @@ def update_limit_watch(
         # When limit_watch_status is CANCELLED, also handle the ex2pN row
         if new_status == 'CANCELLED':
             # Find the pending ex2pN row to cancel
+            # IMPORTANT: If order has partial fills (qty_filled > 0 from exchange), keep that value!
+            # Only set to 0 if no fills happened before cancellation
             for row in rows:
                 tid = row.get("trade_id", "")
                 if tid.startswith(f"{trade_id}_ex2p") and row.get("limit_watch_status") == "PENDING":
                     row["limit_watch_status"] = "CANCELLED"
-                    row["ex2_qty_filled"] = 0  # Cancelled = no contribution to sums
+                    # Only set qty_filled=0 if no partial fill was recorded
+                    # If exchange reported partial fills (via qty_filled param), keep it
+                    if qty_filled is not None and qty_filled > 0:
+                        row["ex2_qty_filled"] = qty_filled
                     row["ex2_status"] = "CANCELLED"
                     row["limit_last_check"] = datetime.now().isoformat()
-                    debug_log(f"UPDATE_LIMIT_WATCH: Cancelled {tid}")
+                    debug_log(f"UPDATE_LIMIT_WATCH: Cancelled {tid}, partial_fill={qty_filled}")
                     break
             # Do NOT update ex2sum - stays WATCHING until replacement order fills
             # Write back and return early
-            if updated or True:  # We found and updated a row
-                with open(csv_path, 'w', newline='') as f:
-                    writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=';')
-                    writer.writeheader()
-                    writer.writerows(rows)
+            with open(csv_path, 'w', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=';')
+                writer.writeheader()
+                writer.writerows(rows)
             return True
         
         # For FILLED and other statuses, update ex2sum row
