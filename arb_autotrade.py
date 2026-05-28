@@ -1790,7 +1790,10 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     
     # Expected profit = sell - buy - fees
     profit_usdt_expected = sell_value_expected - buy_value_expected - total_fees_estimated
-    profit_mpc_expected = (sell_value_expected - buy_value_expected - total_fees_estimated) / sell_price_expected if sell_price_expected > 0 else 0
+    # profit_mpc_expected = MPC balance change: bought qty - sell qty (as per Doku)
+    buy_qty_filled = ex1_data['qty_filled']
+    sell_qty_planned = sell_qty
+    profit_mpc_expected = buy_qty_filled - sell_qty_planned
     
     # Also calculate actual profit from filled values (for comparison)
     cost = ex1_data['value_usdt']
