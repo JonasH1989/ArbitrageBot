@@ -149,7 +149,7 @@ class TradeLoggerService:
                     trade_id = main_row['trade_id']
                     
                     # 1. Check limit order status (if WATCHING)
-                    if ex2sum_row and ex2sum_row.get('limit_watch_status') == 'WATCHING':
+                    if ex2sum_row and ex2sum_row.get('ex2_status') == 'OPEN':
                         result = self._check_limit_order(main_row, ex2sum_row, limit_fill_rows)
                         if result:
                             self._apply_limit_update(rows, block, result)
@@ -458,7 +458,7 @@ class TradeLoggerService:
         
         # Update ex2sum row
         ex2sum_row['ex2_status'] = new_status
-        ex2sum_row['limit_watch_status'] = new_status
+        ex2sum_row['ex2_status'] = new_status
         ex2sum_row['limit_last_check'] = datetime.now().isoformat()
         
         if qty_filled > 0:
@@ -552,7 +552,7 @@ class TradeLoggerService:
             fill_row['ex2_value_usdt'] = float(fill.get('funds', 0) or fill.get('quoteQty', 0) or 0)
             fill_row['ex2_fees'] = float(fill.get('fee', 0) or fill.get('commission', 0) or 0)
             fill_row['ex2_status'] = 'FILLED'
-            fill_row['limit_watch_status'] = 'FILLED'
+            fill_row['ex2_status'] = 'FILLED'
             
             # Insert after ex2sum + existing fills
             insert_pos = ex2sum_idx + 1 + existing_count + i
@@ -664,8 +664,8 @@ class TradeLoggerService:
         # Count main trades only (no suffixes)
         main_trades = [t for t in trades if not any(s in t.get('trade_id', '') for s in ['_ex1p', '_ex2p', '_ex2sum'])]
         total_trades = len(main_trades)
-        completed_trades = len([t for t in main_trades if t.get('limit_watch_status') == 'FILLED'])
-        pending_limit = len([t for t in main_trades if t.get('limit_watch_status') == 'WATCHING'])
+        completed_trades = len([t for t in main_trades if t.get('ex2_status') == 'FILLED'])
+        pending_limit = len([t for t in main_trades if t.get('ex2_status') == 'OPEN'])
         
         total_profit_usdt = sum(to_float(t.get('profit_usdt_actual', 0) or 0) for t in main_trades)
         total_profit_mpc = sum(to_float(t.get('profit_mpc_actual', 0) or 0) for t in main_trades)
