@@ -185,6 +185,19 @@ UNIFIED_COLUMNS = [
     # Col 32: ex2_status
     # ex2_status: "FILLED" when all fills complete
     "ex2_status",
+    
+    # Col 33-37: Profit tracking
+    # Col 33: profit_usdt_expected
+    "profit_usdt_expected",
+    # Col 34: profit_mpc_expected
+    "profit_mpc_expected",
+    # Col 35: profit_usdt_actual
+    "profit_usdt_actual",
+    # Col 36: profit_mpc_actual
+    "profit_mpc_actual",
+    # Col 37: limit_last_check - Last time limit order was checked
+    "limit_last_check",
+    
     # Col 38: error_code
     "error_code",
     # Col 39: error_message
