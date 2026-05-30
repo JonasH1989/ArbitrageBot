@@ -612,13 +612,18 @@ def log_trade(
     ex2sum_row["ex2_qty_filled"] = ex2_qty_filled
     ex2sum_row["ex2_price_expected"] = ex2_price_expected
     ex2sum_row["ex2_price_actual"] = ex2_price_actual
+    # Calculate actual profit from fill data (if available)
+    profit_mpc_actual_calc = ex1_qty_filled - ex2_qty_filled
+    profit_usdt_actual_calc = ex2_value_usdt - ex1_value_usdt - ex1_fees - ex2_fees
+    
     ex2sum_row["ex2_value_usdt"] = ex2_value_usdt
     ex2sum_row["ex2_fees"] = ex2_fees
     ex2sum_row["ex2_create_ts"] = ex2_create_ts
     ex2sum_row["ex2_status"] = "FILLED" if ex2_qty_filled >= ex2_qty_ordered else "OPEN"
     ex2sum_row["profit_usdt_expected"] = profit_usdt_expected
     ex2sum_row["profit_mpc_expected"] = profit_mpc_expected
-    ex2sum_row["profit_mpc_actual"] = profit_mpc_actual
+    ex2sum_row["profit_usdt_actual"] = profit_usdt_actual_calc
+    ex2sum_row["profit_mpc_actual"] = profit_mpc_actual_calc
     ex2sum_row["limit_last_check"] = datetime.now().isoformat()
     ex2sum_row["raw_ex2_response"] = raw_ex2_response
     ex2sum_row["raw_ex2_response_ts"] = raw_ex2_response_ts
