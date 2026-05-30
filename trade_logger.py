@@ -111,101 +111,93 @@ def get_exchange_short_id(exchange_name: str) -> str:
     return exchange_name[:3].upper()
 
 # =============================================================================
-# UNIFIED COLUMNS (41 columns - A to AP)
+# UNIFIED COLUMNS (43 columns - Col 2-44 in XLSX)
+# Col 1 = COMMENT (Hilfsfeld, nicht in CSV)
+# Col 2-44 = 43 DB-Spalten
 # =============================================================================
 UNIFIED_COLUMNS = [
-    # A: trade_id - Unique ID (DDHHMMSSms hex)
+    # Col 1: trade_id - Unique ID (DDHHMMSSms hex)
     "trade_id",
-    # B: internal_ts - When BOT initiated the trade (ISO format)
+    # Col 2: internal_ts - When BOT initiated the trade (ISO format)
     "internal_ts",
-    # C: direction - "KCN->MXC" or "MXC->KCN"
+    # Col 3: direction - "KCN->MXC" or "MXC->KCN"
     "direction",
-    # D: pair - Trading pair e.g. "MPC-USDT"
+    # Col 4: pair - Trading pair e.g. "MPC-USDT"
     "pair",
-    # E: strategy - "USDT" or "COINS"
+    # Col 5: strategy - "USDT" or "COINS"
     "strategy",
-    # F: spread_pct - Spread in % when trade was triggered (3 decimals)
+    # Col 6: spread_pct - Spread in % when trade was triggered
     "spread_pct",
     
-    # G-J: ex1 basic info (Market order)
-    # G: ex1 - Exchange short_id
+    # Col 7-19: ex1 (Market order)
+    # Col 7: ex1 - Exchange short_id
     "ex1",
-    # H: ex1_order_id
+    # Col 8: ex1_order_id
     "ex1_order_id",
-    # I: ex1_type - "market" (hardcoded)
+    # Col 9: ex1_type - "market" (hardcoded)
     "ex1_type",
-    # J: ex1_side - "buy" or "sell"
+    # Col 10: ex1_side - "buy" or "sell"
     "ex1_side",
-    # K: ex1_qty_ordered - From bot when placing order
+    # Col 11: ex1_qty_ordered
     "ex1_qty_ordered",
-    # L: ex1_qty_filled - Sum of all partial fills
+    # Col 12: ex1_qty_filled - Sum of all partial fills
     "ex1_qty_filled",
-    # M: ex1_price_expected - From orderbook scan
+    # Col 13: ex1_price_expected
     "ex1_price_expected",
-    # N: ex1_price_actual - Weighted avg of all fills
+    # Col 14: ex1_price_actual - Weighted avg of all fills
     "ex1_price_actual",
-    # O: ex1_value_usdt - Sum of all fill values
+    # Col 15: ex1_value_usdt - Sum of all fill values
     "ex1_value_usdt",
-    # P: ex1_fees - Sum of all fees
+    # Col 16: ex1_fees - Sum of all fees
     "ex1_fees",
-    # Q: ex1_create_ts - From first API response
+    # Col 17: ex1_create_ts - When order was created on exchange
     "ex1_create_ts",
-    # R: ex1_status - "FILLED" when all partials complete
+    # Col 18: ex1_fill_ts - When fill(s) actually happened (NEW!)
+    "ex1_fill_ts",
+    # Col 19: ex1_status
     "ex1_status",
     
-    # S-AJ: ex2 (Limit order) - only in _ex2sum row and _ex2pN rows
-    # S: ex2 - Exchange short_id
+    # Col 20-32: ex2 (Limit order)
+    # Col 20: ex2 - Exchange short_id
     "ex2",
-    # T: ex2_order_id
+    # Col 21: ex2_order_id
     "ex2_order_id",
-    # U: ex2_type - "limit" (hardcoded)
+    # Col 22: ex2_type - "limit" (hardcoded)
     "ex2_type",
-    # V: ex2_side - "buy" or "sell"
+    # Col 23: ex2_side - "buy" or "sell"
     "ex2_side",
-    # W: ex2_qty_ordered - From bot when placing order
+    # Col 24: ex2_qty_ordered
     "ex2_qty_ordered",
-    # X: ex2_qty_filled - Sum of partial fills
+    # Col 25: ex2_qty_filled - Sum of partial fills
     "ex2_qty_filled",
-    # Y: ex2_price_expected
+    # Col 26: ex2_price_expected
     "ex2_price_expected",
-    # Z: ex2_price_actual - Weighted avg
+    # Col 27: ex2_price_actual - Weighted avg
     "ex2_price_actual",
-    # AA: ex2_value_usdt
+    # Col 28: ex2_value_usdt
     "ex2_value_usdt",
-    # AB: ex2_fees
+    # Col 29: ex2_fees
     "ex2_fees",
-    # AC: ex2_create_ts
+    # Col 30: ex2_create_ts - When order was created on exchange
     "ex2_create_ts",
-    # AD: ex2_status
+    # Col 31: ex2_fill_ts - When fill(s) actually happened (NEW!)
+    "ex2_fill_ts",
+    # Col 32: ex2_status
+    # ex2_status: "FILLED" when all fills complete
     "ex2_status",
-    
-    # AE-AH: Profit (only in _ex2sum row)
-    # AE: profit_usdt_expected
-    "profit_usdt_expected",
-    # AF: profit_mpc_expected
-    "profit_mpc_expected",
-    # AG: profit_usdt_actual
-    "profit_usdt_actual",
-    # AH: profit_mpc_actual
-    "profit_mpc_actual",
-    
-    # AI-AJ: Limit watch
-    # AI: limit_watch_status
-    "limit_watch_status",
-    # AJ: limit_last_check
-    "limit_last_check",
-    
-    # AK-AL: Errors (can be in Row 1 or _ex2sum)
-    # AK: error_code
+    # Col 38: error_code
     "error_code",
-    # AL: error_message
+    # Col 39: error_message
     "error_message",
     
-    # AM: raw_ex1_response
+    # Col 40-43: Raw responses (Col 41-44 in XLSX, aber Col 1 ist COMMENT)
+    # Col 40: raw_ex1_response
     "raw_ex1_response",
-    # AN: raw_ex2_response
+    # Col 41: raw_ex1_response_ts
+    "raw_ex1_response_ts",
+    # Col 42: raw_ex2_response
     "raw_ex2_response",
-    # AO: raw_ex2_response_ts
+    # Col 43: raw_ex2_response_ts
     "raw_ex2_response_ts",
 ]
 
@@ -424,7 +416,6 @@ def log_trade(
     ex2_data: Dict,         # Harmonized data from limit exchange (may be partial)
     ex1_partial_fills: List[Dict] = None,  # List of individual fill data
     ex2_partial_fills: List[Dict] = None,  # List of individual limit fill data
-    limit_watch_status: str = "WATCHING",
     strategy: str = "USDT",
     spread_pct: float = 0.0,
     market_price_expected: float = 0.0,
@@ -451,7 +442,6 @@ def log_trade(
         ex2_data: Harmonized data from limit exchange
         ex1_partial_fills: List of individual fill dicts from polling
         ex2_partial_fills: List of individual limit fill dicts
-        limit_watch_status: Initial status of limit order
         strategy: "USDT" or "COINS"
         spread_pct: Spread in % (3 decimals)
         market_price_expected: Expected price at initiation
@@ -589,12 +579,21 @@ def log_trade(
         row_n["ex1_value_usdt"] = fill.get('value_usdt', 0)
         row_n["ex1_fees"] = fill.get('fees', 0)
         row_n["ex1_create_ts"] = fill.get('create_ts', ex1_create_ts)  # Fallback
+        row_n["ex1_fill_ts"] = fill.get('fill_ts', ex1_create_ts)  # When fill happened
         # Convert Unix ms to readable format for partial fills too
         if row_n["ex1_create_ts"]:
             try:
                 ts_val = int(row_n["ex1_create_ts"])
                 if ts_val > 0:
                     row_n["ex1_create_ts"] = datetime.fromtimestamp(ts_val / 1000).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            except:
+                pass  # Keep as-is if conversion fails
+        # Also convert fill_ts
+        if row_n["ex1_fill_ts"]:
+            try:
+                ts_val = int(row_n["ex1_fill_ts"])
+                if ts_val > 0:
+                    row_n["ex1_fill_ts"] = datetime.fromtimestamp(ts_val / 1000).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
             except:
                 pass  # Keep as-is if conversion fails
         row_n["ex1_status"] = "FILLED"
@@ -616,11 +615,10 @@ def log_trade(
     ex2sum_row["ex2_value_usdt"] = ex2_value_usdt
     ex2sum_row["ex2_fees"] = ex2_fees
     ex2sum_row["ex2_create_ts"] = ex2_create_ts
-    ex2sum_row["ex2_status"] = "FILLED" if ex2_qty_filled >= ex2_qty_ordered else "PARTIAL"
+    ex2sum_row["ex2_status"] = "FILLED" if ex2_qty_filled >= ex2_qty_ordered else "OPEN"
     ex2sum_row["profit_usdt_expected"] = profit_usdt_expected
     ex2sum_row["profit_mpc_expected"] = profit_mpc_expected
     ex2sum_row["profit_mpc_actual"] = profit_mpc_actual
-    ex2sum_row["limit_watch_status"] = limit_watch_status
     ex2sum_row["limit_last_check"] = datetime.now().isoformat()
     ex2sum_row["raw_ex2_response"] = raw_ex2_response
     ex2sum_row["raw_ex2_response_ts"] = raw_ex2_response_ts
@@ -639,6 +637,7 @@ def log_trade(
         row_n["ex2_value_usdt"] = fill.get('value_usdt', 0)
         row_n["ex2_fees"] = fill.get('fees', 0)
         row_n["ex2_create_ts"] = fill.get('create_ts', ex2_create_ts)
+        row_n["ex2_fill_ts"] = fill.get('fill_ts', ex2_create_ts)  # When fill happened
         # Convert Unix ms to readable format for partial fills too
         if row_n["ex2_create_ts"]:
             try:
@@ -647,8 +646,15 @@ def log_trade(
                     row_n["ex2_create_ts"] = datetime.fromtimestamp(ts_val / 1000).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
             except:
                 pass  # Keep as-is if conversion fails
+        # Also convert fill_ts
+        if row_n["ex2_fill_ts"]:
+            try:
+                ts_val = int(row_n["ex2_fill_ts"])
+                if ts_val > 0:
+                    row_n["ex2_fill_ts"] = datetime.fromtimestamp(ts_val / 1000).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            except:
+                pass  # Keep as-is if conversion fails
         row_n["ex2_status"] = "FILLED"
-        row_n["limit_watch_status"] = "FILLED"
         rows_to_write.append(row_n)
         debug_trade_write(trade_id, f"ex2p{i+1}", row_n)
     
@@ -725,8 +731,8 @@ def append_limit_row(
     value_usdt: float = 0,
     fees: float = 0,
     create_ts: str = "",
-    ex2_status: str = "PENDING",
-    limit_watch_status: str = "WATCHING"
+    fill_ts: str = "",
+    ex2_status: str = "OPEN",
 ) -> bool:
     """Append a new ex2pN row to the CSV."""
     csv_path = get_trade_csv_path(pair)
@@ -749,8 +755,8 @@ def append_limit_row(
     row["ex2_value_usdt"] = value_usdt
     row["ex2_fees"] = fees
     row["ex2_create_ts"] = create_ts
+    row["ex2_fill_ts"] = fill_ts
     row["ex2_status"] = ex2_status
-    row["limit_watch_status"] = limit_watch_status
     row["limit_last_check"] = datetime.now().isoformat()
     
     try:
@@ -774,7 +780,6 @@ def update_limit_row(
     value_usdt: float = None,
     fees: float = None,
     ex2_status: str = None,
-    limit_watch_status: str = None,
     new_order_id: str = None,  # For edit case - update order_id
     new_price: float = None
 ) -> bool:
@@ -788,8 +793,7 @@ def update_limit_row(
         qty_filled: New filled quantity
         price_actual: New actual price
         fees: New fees
-        ex2_status: New status (PENDING, FILLED, CANCELLED)
-        limit_watch_status: New limit_watch_status
+        ex2_status: New status (OPEN, FILLED, CANCELLED)
         new_order_id: For edit - new order_id
         new_price: For edit - new price
     """
@@ -825,8 +829,6 @@ def update_limit_row(
                 row["ex2_fees"] = fees
             if ex2_status is not None:
                 row["ex2_status"] = ex2_status
-            if limit_watch_status is not None:
-                row["limit_watch_status"] = limit_watch_status
             if new_order_id is not None:
                 row["ex2_order_id"] = new_order_id
             if new_price is not None:
@@ -862,9 +864,8 @@ def update_limit_watch(
     Update limit order watch state for a trade (ex2sum row).
     
     When new_status is CANCELLED:
-    - Sets limit_watch_status to CANCELLED on the ex2pN row
-    - Sets ex2_qty_filled=0 on that row (cancelled orders don't count)
-    - Does NOT cancel _ex2sum - it stays WATCHING/PENDING
+    - Sets ex2_status to CANCELLED on the ex2pN row
+    - Does NOT cancel _ex2sum - it stays OPEN
     """
     csv_path = get_trade_csv_path(pair)
     
@@ -896,15 +897,15 @@ def update_limit_watch(
     if ex2sum_row is not None:
         ex2sum_row["limit_last_check"] = datetime.now().isoformat()
         
-        # When limit_watch_status is CANCELLED, also handle the ex2pN row
+        # When new_status is CANCELLED, also handle the ex2pN row
         if new_status == 'CANCELLED':
             # Find the pending ex2pN row to cancel
             # IMPORTANT: If order has partial fills (qty_filled > 0 from exchange), keep that value!
             # Only set to 0 if no fills happened before cancellation
             for row in rows:
                 tid = row.get("trade_id", "")
-                if tid.startswith(f"{trade_id}_ex2p") and row.get("limit_watch_status") == "PENDING":
-                    row["limit_watch_status"] = "CANCELLED"
+                if tid.startswith(f"{trade_id}_ex2p") and row.get("ex2_status") == "OPEN":
+                    row["ex2_status"] = "CANCELLED"
                     # Only set qty_filled=0 if no partial fill was recorded
                     # If exchange reported partial fills (via qty_filled param), keep it
                     if qty_filled is not None and qty_filled > 0:
@@ -913,7 +914,7 @@ def update_limit_watch(
                     row["limit_last_check"] = datetime.now().isoformat()
                     debug_log(f"UPDATE_LIMIT_WATCH: Cancelled {tid}, partial_fill={qty_filled}")
                     break
-            # Do NOT update ex2sum - stays WATCHING until replacement order fills
+            # Do NOT update ex2sum - stays OPEN until replacement order fills
             # Write back and return early
             with open(csv_path, 'w', newline='') as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=';')
@@ -923,7 +924,6 @@ def update_limit_watch(
         
         # For FILLED and other statuses, update ex2sum row
         if new_status == 'FILLED':
-            ex2sum_row["limit_watch_status"] = 'FILLED'
             ex2sum_row["ex2_status"] = 'FILLED'
             # Calculate actual profits
         
@@ -947,7 +947,7 @@ def update_limit_watch(
                         debug_log(f"UPDATE_LIMIT_WATCH: fallback create_ts from ex2p1: {ts}")
                     break
         
-        # When limit_watch_status is FILLED, also set ex2_status and calculate profits
+        # When new_status is FILLED, also set ex2_status and calculate profits
         if new_status == 'FILLED':
             ex2sum_row["ex2_status"] = 'FILLED'
             
@@ -1020,14 +1020,14 @@ def get_pending_limit_orders(pair: str = None) -> List[Dict]:
     if pair:
         trades = get_trades(pair, limit=1000)
         for trade in trades:
-            if trade.get("limit_watch_status") == "WATCHING":
+            if trade.get("ex2_status") == "OPEN":
                 pending.append(trade)
     else:
         for csv_file in LOG_DIR.glob("*_trades.csv"):
             pair_name = csv_file.stem.replace("_trades", "")
             trades = get_trades(pair_name, limit=1000)
             for trade in trades:
-                if trade.get("limit_watch_status") == "WATCHING":
+                if trade.get("ex2_status") == "OPEN":
                     pending.append(trade)
     
     return pending
@@ -1053,7 +1053,7 @@ def get_trade_summary(pair: str) -> Dict:
     total_profit_usdt = sum(float(t.get("profit_usdt_actual", 0) or 0) for t in main_trades)
     
     # Count FILLED limit orders
-    filled_count = len([t for t in main_trades if t.get("limit_watch_status") == "FILLED"])
+    filled_count = len([t for t in main_trades if t.get("ex2_status") == "FILLED"])
     win_rate = f"{filled_count / len(main_trades) * 100:.0f}%" if main_trades else "0%"
     
     return {
