@@ -195,8 +195,6 @@ UNIFIED_COLUMNS = [
     "profit_usdt_actual",
     # Col 36: profit_mpc_actual
     "profit_mpc_actual",
-    # Col 37: limit_last_check - Last time limit order was checked
-    "limit_last_check",
     
     # Col 38: error_code
     "error_code",
@@ -637,7 +635,6 @@ def log_trade(
     ex2sum_row["profit_mpc_expected"] = profit_mpc_expected
     ex2sum_row["profit_usdt_actual"] = profit_usdt_actual_calc
     ex2sum_row["profit_mpc_actual"] = profit_mpc_actual_calc
-    ex2sum_row["limit_last_check"] = datetime.now().isoformat()
     ex2sum_row["raw_ex2_response"] = raw_ex2_response
     ex2sum_row["raw_ex2_response_ts"] = raw_ex2_response_ts
     
@@ -775,7 +772,6 @@ def append_limit_row(
     row["ex2_create_ts"] = create_ts
     row["ex2_fill_ts"] = fill_ts
     row["ex2_status"] = ex2_status
-    row["limit_last_check"] = datetime.now().isoformat()
     
     try:
         with open(csv_path, 'a', newline='') as f:
@@ -851,7 +847,6 @@ def update_limit_row(
                 row["ex2_order_id"] = new_order_id
             if new_price is not None:
                 row["ex2_price_actual"] = new_price
-            row["limit_last_check"] = datetime.now().isoformat()
             updated = True
             debug_log(f"UPDATE_LIMIT_ROW: Updated {tid}")
             break
@@ -913,7 +908,6 @@ def update_limit_watch(
             ex2sum_idx = i
     
     if ex2sum_row is not None:
-        ex2sum_row["limit_last_check"] = datetime.now().isoformat()
         
         # When new_status is CANCELLED, also handle the ex2pN row
         if new_status == 'CANCELLED':
@@ -929,7 +923,6 @@ def update_limit_watch(
                     if qty_filled is not None and qty_filled > 0:
                         row["ex2_qty_filled"] = qty_filled
                     row["ex2_status"] = "CANCELLED"
-                    row["limit_last_check"] = datetime.now().isoformat()
                     debug_log(f"UPDATE_LIMIT_WATCH: Cancelled {tid}, partial_fill={qty_filled}")
                     break
             # Do NOT update ex2sum - stays OPEN until replacement order fills
