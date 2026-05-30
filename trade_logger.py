@@ -40,7 +40,7 @@ def debug_log(message: str, level: str = "INFO"):
     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
     log_line = f"[{ts}] [{level}] {message}"
     print(log_line, file=sys.stderr)
-    
+
     # Also write to main bot log file (same as log() function)
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -48,7 +48,7 @@ def debug_log(message: str, level: str = "INFO"):
             f.write(log_line + "\n")
     except Exception as e:
         print(f"DEBUG: Could not write to log file: {e}", file=sys.stderr)
-    
+
     # Also write to debug file
     try:
         with open(DEBUG_LOG_FILE, 'a') as f:
@@ -84,30 +84,30 @@ def get_exchange_config() -> Dict:
 
 def get_exchange_short_id(exchange_name: str) -> str:
     """Get short_id for an exchange (e.g. 'KUCOIN' -> 'KCN')
-    
+
     Falls back to hardcoded values if not in config:
     - KUCOIN -> KCN
     - MEXC -> MXC
     """
     config = get_exchange_config()
     exchange_lower = exchange_name.lower()
-    
+
     # Check config first
     if exchange_lower in config:
         short = config[exchange_lower].get('short_id')
         if short:
             return short
-    
+
     # Hardcoded fallback - these should match TRADE_LOG_STRUCTURE.md
     fallback_map = {
         'kucoin': 'KCN',
         'mexc': 'MXC',
         'binance': 'BNC',
     }
-    
+
     if exchange_lower in fallback_map:
         return fallback_map[exchange_lower]
-    
+
     return exchange_name[:3].upper()
 
 # =============================================================================
@@ -128,7 +128,7 @@ UNIFIED_COLUMNS = [
     "strategy",
     # Col 6: spread_pct - Spread in % when trade was triggered
     "spread_pct",
-    
+
     # Col 7-19: ex1 (Market order)
     # Col 7: ex1 - Exchange short_id
     "ex1",
@@ -156,7 +156,7 @@ UNIFIED_COLUMNS = [
     "ex1_fill_ts",
     # Col 19: ex1_status
     "ex1_status",
-    
+
     # Col 20-32: ex2 (Limit order)
     # Col 20: ex2 - Exchange short_id
     "ex2",
@@ -185,7 +185,7 @@ UNIFIED_COLUMNS = [
     # Col 32: ex2_status
     # ex2_status: "FILLED" when all fills complete
     "ex2_status",
-    
+
     # Col 33-37: Profit tracking
     # Col 33: profit_usdt_expected
     "profit_usdt_expected",
@@ -195,12 +195,14 @@ UNIFIED_COLUMNS = [
     "profit_usdt_actual",
     # Col 36: profit_mpc_actual
     "profit_mpc_actual",
-    
+    # Col 37: limit_last_check - Last time limit order was checked
+    "limit_last_check",
+
     # Col 38: error_code
     "error_code",
     # Col 39: error_message
     "error_message",
-    
+
     # Col 40-43: Raw responses (Col 41-44 in XLSX, aber Col 1 ist COMMENT)
     # Col 40: raw_ex1_response
     "raw_ex1_response",
@@ -231,9 +233,9 @@ def init_pair_csv(pair: str) -> Path:
     """Initialize CSV file for a trading pair if it doesn't exist"""
     ensure_log_dir()
     csv_path = get_trade_csv_path(pair)
-    
+
     print(f"DEBUG init_pair_csv: pair={pair}, csv_path={csv_path}, exists={csv_path.exists()}")
-    
+
     if not csv_path.exists():
         with open(csv_path, 'w', newline='') as f:
             writer = csv.writer(f, delimiter=';')
@@ -242,16 +244,16 @@ def init_pair_csv(pair: str) -> Path:
         print(f"DEBUG init_pair_csv: CSV file created at {csv_path}")
     else:
         print(f"DEBUG init_pair_csv: CSV already exists at {csv_path}")
-    
+
     return csv_path
 
 
 def generate_trade_id() -> str:
     """
     Generate unique trade ID in format: DDHHMMSSms (hex)
-    
+
     Example: 0c1500372b (10 chars)
-    
+
     Contains: DD (day) + HH (hour) + MM (minute) + SS (second) + ms (milliseconds)
     """
     now = datetime.now()
@@ -260,7 +262,7 @@ def generate_trade_id() -> str:
     mm = now.strftime("%M")
     ss = now.strftime("%S")
     ms = now.strftime("%f")[:2]
-    
+
     return f"{int(dd):02x}{int(hh):x}{int(mm):x}{int(ss):x}{int(ms):02x}"
 
 
@@ -275,7 +277,7 @@ def harmonize_kucoin_order(response: dict, side: str, order_type: str, pair: str
     deal_size = float(response.get('dealSize', 0) or 0)
     deal_funds = float(response.get('dealFunds', 0) or 0)
     price_actual = deal_funds / deal_size if deal_size > 0 else 0
-    
+
     status_map = {
         "Done": "FILLED",
         "Active": "OPEN",
@@ -283,7 +285,7 @@ def harmonize_kucoin_order(response: dict, side: str, order_type: str, pair: str
     }
     raw_status = response.get('status', '')
     unified_status = status_map.get(raw_status, raw_status)
-    
+
     return {
         "exchange": "KUCOIN",
         "order_id": response.get('orderId', ''),
@@ -315,7 +317,7 @@ def harmonize_mexc_order(response: dict, side: str, order_type: str, pair: str) 
         value_usdt = float(response.get('dealAmount', 0) or 0)
         qty_ordered = float(response.get('quantity', 0) or 0)
         price_actual = float(response.get('price', 0) or 0)
-    
+
     status_map = {
         "Filled": "FILLED",
         "PartiallyFilled": "PARTIAL",
@@ -324,7 +326,7 @@ def harmonize_mexc_order(response: dict, side: str, order_type: str, pair: str) 
     }
     raw_status = response.get('status', '')
     unified_status = status_map.get(raw_status, raw_status)
-    
+
     return {
         "exchange": "MEXC",
         "order_id": response.get('orderId', ''),
@@ -359,7 +361,7 @@ def harmonize_order(response: dict, exchange: str, side: str, order_type: str, p
 
 def fmt(value, decimals=None) -> str:
     """Format a numeric value with comma as decimal separator.
-    
+
     Args:
         value: The numeric value to format
         decimals: Number of decimal places (None = use default formatting)
@@ -386,7 +388,7 @@ def create_empty_row(trade_id: str) -> dict:
 
 def row_to_list(row: dict) -> list:
     """Convert row dict to list in column order, with comma decimals.
-    
+
     MPC qty columns use 2 decimal places (exchange precision).
     Price columns use 6 decimals.
     USDT values use 4 decimals.
@@ -395,9 +397,9 @@ def row_to_list(row: dict) -> list:
     MPC_QTY_COLS = {'ex1_qty_ordered', 'ex1_qty_filled', 'ex2_qty_ordered', 'ex2_qty_filled',
                     'profit_mpc_expected', 'profit_mpc_actual'}
     PRICE_COLS = {'ex1_price_expected', 'ex1_price_actual', 'ex2_price_expected', 'ex2_price_actual'}
-    USDT_COLS = {'ex1_value_usdt', 'ex1_fees', 'ex2_value_usdt', 'ex2_fees', 
+    USDT_COLS = {'ex1_value_usdt', 'ex1_fees', 'ex2_value_usdt', 'ex2_fees',
                  'profit_usdt_expected', 'profit_usdt_actual'}
-    
+
     result = []
     for col in UNIFIED_COLUMNS:
         val = row.get(col, "")
@@ -438,13 +440,13 @@ def log_trade(
 ) -> str:
     """
     Log a complete trade to the pair-specific CSV.
-    
+
     Writes MULTIPLE rows per trade:
     - Row 1: Main trade (summaries)
     - Row 2+: ex1p1, ex1p2... (Market partial fills)
     - ex2sum row: Limit order summary
     - ex2p1, ex2p2... (Limit partial fills)
-    
+
     Args:
         pair: Trading pair e.g. "MPC-USDT"
         internal_ts: Internal timestamp after successful balance check
@@ -461,97 +463,97 @@ def log_trade(
         profit_mpc_expected: Expected MPC profit
         error_code: Error code if trade had errors
         error_message: Error message if trade had errors
-    
+
     Returns:
         trade_id: Generated trade ID
     """
     trade_id = generate_trade_id()
     debug_log(f"LOG_TRADE: Starting for trade_id={trade_id}")
-    
+
     print(f"DEBUG log_trade ENTRY: trade_id={trade_id}, pair={pair}")
-    
+
     # Initialize defaults
     if ex1_partial_fills is None:
         ex1_partial_fills = []
     if ex2_partial_fills is None:
         ex2_partial_fills = []
-    
+
     # Normalize pair for filename
     csv_path = init_pair_csv(pair)
     debug_log(f"LOG_TRADE: CSV path={csv_path}")
     print(f"DEBUG log_trade: After init_pair_csv, csv_path={csv_path}")
-    
+
     # Prepare ex1 data
     ex1_exchange = get_exchange_short_id(ex1_data.get("exchange", ""))
     ex1_order_id = ex1_data.get("order_id", "")
     ex1_qty_ordered = ex1_data.get("qty_ordered", 0)
-    
+
     # Convert Unix ms timestamp to readable format
     ex1_ts_raw = ex1_data.get("create_ts", 0)
     if ex1_ts_raw and int(ex1_ts_raw) > 0:
         ex1_create_ts = datetime.fromtimestamp(int(ex1_ts_raw) / 1000).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
     else:
         ex1_create_ts = ""
-    
+
     raw_ex1_response = json.dumps(ex1_data.get("raw_response", {}))
-    
+
     # Calculate ex1 summaries from partial fills
     ex1_qty_filled = sum(f.get('qty_filled', 0) for f in ex1_partial_fills) if ex1_partial_fills else ex1_data.get('qty_filled', 0)
     ex1_value_usdt = sum(f.get('value_usdt', 0) for f in ex1_partial_fills) if ex1_partial_fills else ex1_data.get('value_usdt', 0)
     ex1_fees = sum(f.get('fees', 0) for f in ex1_partial_fills) if ex1_partial_fills else ex1_data.get('fees', 0)
-    
+
     # Calculate weighted average price
     if ex1_qty_filled > 0:
         ex1_price_actual = ex1_value_usdt / ex1_qty_filled
     else:
         ex1_price_actual = 0
-    
+
     # Set price_expected from caller
     ex1_price_expected = market_price_expected if market_price_expected > 0 else ex1_data.get('price_expected', 0)
-    
+
     # Determine ex1_status
     ex1_status = "FILLED" if ex1_qty_filled >= ex1_qty_ordered else "PARTIAL"
-    
+
     debug_log(f"LOG_TRADE: ex1 qty_ordered={ex1_qty_ordered}, qty_filled={ex1_qty_filled}, status={ex1_status}")
-    
+
     # Prepare ex2 data
     ex2_exchange = get_exchange_short_id(ex2_data.get("exchange", ""))
     ex2_order_id = ex2_data.get("order_id", "")
     ex2_qty_ordered = ex2_data.get("qty_ordered", 0)
-    
+
     # Convert Unix ms timestamp to readable format
     ex2_ts_raw = ex2_data.get("create_ts", 0)
     if ex2_ts_raw and int(ex2_ts_raw) > 0:
         ex2_create_ts = datetime.fromtimestamp(int(ex2_ts_raw) / 1000).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
     else:
         ex2_create_ts = ""
-    
+
     raw_ex2_response = json.dumps(ex2_data.get("raw_response", {}))
     raw_ex2_response_ts = datetime.now().isoformat() if ex2_data.get("raw_response") else ""
-    
+
     # Calculate ex2 summaries from partial fills
     ex2_qty_filled = sum(f.get('qty_filled', 0) for f in ex2_partial_fills) if ex2_partial_fills else ex2_data.get('qty_filled', 0)
     ex2_value_usdt = sum(f.get('value_usdt', 0) for f in ex2_partial_fills) if ex2_partial_fills else ex2_data.get('value_usdt', 0)
     ex2_fees = sum(f.get('fees', 0) for f in ex2_partial_fills) if ex2_partial_fills else ex2_data.get('fees', 0)
-    
+
     if ex2_qty_filled > 0:
         ex2_price_actual = ex2_value_usdt / ex2_qty_filled
     else:
         ex2_price_actual = 0
-    
+
     ex2_price_expected = limit_price_expected if limit_price_expected > 0 else ex2_data.get('price_expected', 0)
-    
+
     debug_log(f"LOG_TRADE: ex2 qty_ordered={ex2_qty_ordered}, qty_filled={ex2_qty_filled}")
-    
+
     # Note: profit_mpc_actual and profit_usdt_actual are calculated in update_limit_watch()
     # when the limit order is actually FILLED. At this point ex2 is not yet filled.
     # Initial values are 0 - will be updated later.
-    
+
     # ==========================================================================
     # BUILD ROWS
     # ==========================================================================
     rows_to_write = []
-    
+
     # --------------------------------------------------------------------------
     # ROW 1: Main trade (summaries)
     # --------------------------------------------------------------------------
@@ -576,10 +578,10 @@ def log_trade(
     row1["error_code"] = error_code or ""
     row1["error_message"] = error_message or ""
     row1["raw_ex1_response"] = raw_ex1_response
-    
+
     rows_to_write.append(row1)
     debug_trade_write(trade_id, 1, row1)
-    
+
     # --------------------------------------------------------------------------
     # ROWS 2+: ex1 partial fills (ex1p1, ex1p2...)
     # --------------------------------------------------------------------------
@@ -610,7 +612,7 @@ def log_trade(
         row_n["ex1_status"] = "FILLED"
         rows_to_write.append(row_n)
         debug_trade_write(trade_id, f"ex1p{i+1}", row_n)
-    
+
     # --------------------------------------------------------------------------
     # ex2sum row: Limit order summary
     # --------------------------------------------------------------------------
@@ -626,7 +628,7 @@ def log_trade(
     # Calculate actual profit from fill data (if available)
     profit_mpc_actual_calc = ex1_qty_filled - ex2_qty_filled
     profit_usdt_actual_calc = ex2_value_usdt - ex1_value_usdt - ex1_fees - ex2_fees
-    
+
     ex2sum_row["ex2_value_usdt"] = ex2_value_usdt
     ex2sum_row["ex2_fees"] = ex2_fees
     ex2sum_row["ex2_create_ts"] = ex2_create_ts
@@ -635,12 +637,13 @@ def log_trade(
     ex2sum_row["profit_mpc_expected"] = profit_mpc_expected
     ex2sum_row["profit_usdt_actual"] = profit_usdt_actual_calc
     ex2sum_row["profit_mpc_actual"] = profit_mpc_actual_calc
+    ex2sum_row["limit_last_check"] = datetime.now().isoformat()
     ex2sum_row["raw_ex2_response"] = raw_ex2_response
     ex2sum_row["raw_ex2_response_ts"] = raw_ex2_response_ts
-    
+
     rows_to_write.append(ex2sum_row)
     debug_trade_write(trade_id, "ex2sum", ex2sum_row)
-    
+
     # --------------------------------------------------------------------------
     # ex2p1, ex2p2... rows: Individual limit fills
     # --------------------------------------------------------------------------
@@ -672,12 +675,12 @@ def log_trade(
         row_n["ex2_status"] = "FILLED"
         rows_to_write.append(row_n)
         debug_trade_write(trade_id, f"ex2p{i+1}", row_n)
-    
+
     # ==========================================================================
     # WRITE ALL ROWS TO CSV
     # ==========================================================================
     debug_log(f"LOG_TRADE: Writing {len(rows_to_write)} rows for {trade_id}")
-    
+
     try:
         with open(csv_path, 'a', newline='') as f:
             writer = csv.writer(f, delimiter=';')
@@ -687,7 +690,7 @@ def log_trade(
     except Exception as e:
         debug_log(f"LOG_TRADE: ERROR writing to CSV: {e}", "ERROR")
         raise
-    
+
     return trade_id
 
 
@@ -701,7 +704,7 @@ def get_ex2p_rows(trade_id: str, pair: str) -> List[Dict]:
     csv_path = get_trade_csv_path(pair)
     if not csv_path.exists():
         return []
-    
+
     rows = []
     with open(csv_path, 'r', newline='') as f:
         reader = csv.DictReader(f, delimiter=';')
@@ -754,11 +757,11 @@ def append_limit_row(
     if not csv_path.exists():
         debug_log(f"APPEND_LIMIT_ROW: CSV not found for {pair}", "WARNING")
         return False
-    
+
     # Determine next suffix
     suffix_num = get_highest_ex2p_suffix(trade_id, pair) + 1
     new_row_id = f"{trade_id}_ex2p{suffix_num}"
-    
+
     row = create_empty_row(new_row_id)
     row["ex2"] = get_exchange_short_id(exchange)
     row["ex2_order_id"] = order_id
@@ -772,7 +775,7 @@ def append_limit_row(
     row["ex2_create_ts"] = create_ts
     row["ex2_fill_ts"] = fill_ts
     row["ex2_status"] = ex2_status
-    
+
     try:
         with open(csv_path, 'a', newline='') as f:
             writer = csv.writer(f, delimiter=';')
@@ -798,7 +801,7 @@ def update_limit_row(
     new_price: float = None
 ) -> bool:
     """Update an existing ex2pN row.
-    
+
     Args:
         pair: Trading pair
         trade_id: Trade ID
@@ -815,13 +818,13 @@ def update_limit_row(
     if not csv_path.exists():
         debug_log(f"UPDATE_LIMIT_ROW: CSV not found for {pair}", "WARNING")
         return False
-    
+
     rows = []
     with open(csv_path, 'r', newline='') as f:
         reader = csv.DictReader(f, delimiter=';')
         fieldnames = reader.fieldnames
         rows = list(reader)
-    
+
     updated = False
     for row in rows:
         tid = row.get('trade_id', '')
@@ -831,7 +834,7 @@ def update_limit_row(
             match = tid == f"{trade_id}_ex2p{suffix}"
         elif order_id:
             match = tid.startswith(f"{trade_id}_ex2p") and row.get('ex2_order_id') == order_id
-        
+
         if match:
             if qty_filled is not None:
                 row["ex2_qty_filled"] = qty_filled
@@ -850,7 +853,7 @@ def update_limit_row(
             updated = True
             debug_log(f"UPDATE_LIMIT_ROW: Updated {tid}")
             break
-    
+
     if updated:
         with open(csv_path, 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=';')
@@ -859,7 +862,7 @@ def update_limit_row(
         debug_log(f"UPDATE_LIMIT_ROW: Wrote back to CSV")
     else:
         debug_log(f"UPDATE_LIMIT_ROW: No matching row found for {trade_id}", "WARNING")
-    
+
     return updated
 
 
@@ -875,30 +878,30 @@ def update_limit_watch(
 ):
     """
     Update limit order watch state for a trade (ex2sum row).
-    
+
     When new_status is CANCELLED:
     - Sets ex2_status to CANCELLED on the ex2pN row
     - Does NOT cancel _ex2sum - it stays OPEN
     """
     csv_path = get_trade_csv_path(pair)
-    
+
     if not csv_path.exists():
         debug_log(f"UPDATE_LIMIT_WATCH: CSV not found for {pair}", "WARNING")
         return False
-    
+
     # Read all rows
     rows = []
     with open(csv_path, 'r', newline='') as f:
         reader = csv.DictReader(f, delimiter=';')
         fieldnames = reader.fieldnames
         rows = list(reader)
-    
+
     # Find and update trade (look for _ex2sum row AND main trade row)
     updated = False
     main_row = None  # Row 1 (main trade) for ex1 values
     ex2sum_row = None  # Reference to ex2sum row
     ex2sum_idx = None  # Index of ex2sum row in rows list
-    
+
     for i, row in enumerate(rows):
         tid = row.get("trade_id", "")
         if tid == trade_id:
@@ -906,9 +909,9 @@ def update_limit_watch(
         elif tid == f"{trade_id}_ex2sum":
             ex2sum_row = row
             ex2sum_idx = i
-    
+
     if ex2sum_row is not None:
-        
+
         # When new_status is CANCELLED, also handle the ex2pN row
         if new_status == 'CANCELLED':
             # Find the pending ex2pN row to cancel
@@ -932,12 +935,12 @@ def update_limit_watch(
                 writer.writeheader()
                 writer.writerows(rows)
             return True
-        
+
         # For FILLED and other statuses, update ex2sum row
         if new_status == 'FILLED':
             ex2sum_row["ex2_status"] = 'FILLED'
             # Calculate actual profits
-        
+
         if qty_filled is not None:
             ex2sum_row["ex2_qty_filled"] = qty_filled
         if price_actual is not None:
@@ -957,11 +960,11 @@ def update_limit_watch(
                         ex2sum_row["ex2_create_ts"] = ts
                         debug_log(f"UPDATE_LIMIT_WATCH: fallback create_ts from ex2p1: {ts}")
                     break
-        
+
         # When new_status is FILLED, also set ex2_status and calculate profits
         if new_status == 'FILLED':
             ex2sum_row["ex2_status"] = 'FILLED'
-            
+
             # Calculate actual profits
             if main_row is not None:
                 # profit_usdt_actual = ex2_value - ex1_value - ex1_fees - ex2_fees
@@ -971,19 +974,19 @@ def update_limit_watch(
                 ex2_fees = to_float(ex2sum_row.get('ex2_fees', 0) or 0)
                 profit_usdt_actual = ex2_value_usdt - ex1_value_usdt - ex1_fees - ex2_fees
                 ex2sum_row["profit_usdt_actual"] = profit_usdt_actual
-                
+
                 # profit_mpc_actual = ex1_qty_filled - ex2_qty_filled
                 ex1_qty_filled = to_float(main_row.get('ex1_qty_filled', 0) or 0)
                 ex2_qty_filled = to_float(ex2sum_row.get('ex2_qty_filled', 0) or 0)
                 profit_mpc_actual = ex1_qty_filled - ex2_qty_filled
                 ex2sum_row["profit_mpc_actual"] = profit_mpc_actual
-                
+
                 debug_log(f"UPDATE_LIMIT_WATCH: FILLED - profit_usdt={profit_usdt_actual:.4f}, profit_mpc={profit_mpc_actual:.2f}")
-        
+
         rows[ex2sum_idx] = ex2sum_row
         updated = True
         debug_log(f"UPDATE_LIMIT_WATCH: Updated {trade_id}_ex2sum status={new_status}")
-    
+
     # Write back
     if updated:
         with open(csv_path, 'w', newline='') as f:
@@ -993,7 +996,7 @@ def update_limit_watch(
         debug_log(f"UPDATE_LIMIT_WATCH: Wrote back to CSV")
     else:
         debug_log(f"UPDATE_LIMIT_WATCH: {trade_id}_ex2sum not found", "WARNING")
-    
+
     return updated
 
 
@@ -1004,30 +1007,30 @@ def update_limit_watch(
 def get_trades(pair: str, limit: int = 100) -> List[Dict]:
     """Get all trades for a trading pair (newest first)"""
     csv_path = get_trade_csv_path(pair)
-    
+
     if not csv_path.exists():
         return []
-    
+
     trades = []
     with open(csv_path, 'r', newline='') as f:
         reader = csv.DictReader(f, delimiter=';')
         rows = list(reader)
-    
+
     # Reverse to get newest first
     rows = rows[::-1]
-    
+
     for i, row in enumerate(rows):
         if i >= limit:
             break
         trades.append(row)
-    
+
     return trades
 
 
 def get_pending_limit_orders(pair: str = None) -> List[Dict]:
     """Get all trades with pending limit orders."""
     pending = []
-    
+
     if pair:
         trades = get_trades(pair, limit=1000)
         for trade in trades:
@@ -1040,14 +1043,14 @@ def get_pending_limit_orders(pair: str = None) -> List[Dict]:
             for trade in trades:
                 if trade.get("ex2_status") == "OPEN":
                     pending.append(trade)
-    
+
     return pending
 
 
 def get_trade_summary(pair: str) -> Dict:
     """Get summary statistics for a trading pair"""
     trades = get_trades(pair, limit=10000)
-    
+
     if not trades:
         return {
             "pair": pair,
@@ -1056,17 +1059,17 @@ def get_trade_summary(pair: str) -> Dict:
             "total_profit_usdt": 0,
             "win_rate": "0%",
         }
-    
+
     # Filter to main trades only (trade_id without suffix)
     main_trades = [t for t in trades if not t.get("trade_id", "").endswith(("ex1p1", "ex1p2", "ex2p1", "ex2p2", "ex2sum"))]
-    
+
     total_profit_mpc = sum(float(t.get("profit_mpc_actual", 0) or 0) for t in main_trades)
     total_profit_usdt = sum(float(t.get("profit_usdt_actual", 0) or 0) for t in main_trades)
-    
+
     # Count FILLED limit orders
     filled_count = len([t for t in main_trades if t.get("ex2_status") == "FILLED"])
     win_rate = f"{filled_count / len(main_trades) * 100:.0f}%" if main_trades else "0%"
-    
+
     return {
         "pair": pair,
         "total_trades": len(main_trades),
