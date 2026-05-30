@@ -1,157 +1,123 @@
 # MPC Arbitrage Bot
 
-**Phase 1: Orderbook Analyzer** - Read-only analysis of spreads between KuCoin and MEXC
-
-## Features
-
-### Security
-- 🔐 Admin registration with mandatory 2FA (TOTP)
-- 🔒 Single-user system (no additional registrations after first admin)
-- 📊 All activity logged
-
-### Analysis
-- 📡 Real-time orderbook monitoring (KuCoin + MEXC)
-- 📈 Spread calculation and visualization
-- 📊 Statistics: average, min, max spreads
-- 🔔 Opportunity detection with hysteresis
-
-### Configuration
-- 🎚️ Start/Stop thresholds (0-50% adjustable)
-- ⏱️ Hysteresis: Start > threshold, Stop < threshold
-- 📝 Configurable via YAML file
+**Live Arbitrage Trading** zwischen KuCoin und MEXC für MPC-USDT
 
 ## Quick Start
 
-### Local Development
-
 ```bash
-# Clone and setup
-cd trading/arbitrage-bot
-./start.sh
+# Projekt-Verzeichnis
+cd /home/openclaw/.openclaw/workspace/trading/arbitrage-bot
 
-# Terminal 1: Start the bot
-source venv/bin/activate
-python -m bot.main_bot
+# Bot aktivieren
+touch /home/openclaw/.openclaw/logs/arb_active.flag
 
-# Terminal 2: Start dashboard
-source venv/bin/activate
-streamlit run dashboard/app.py
+# Logs beobachten
+tail -f /home/openclaw/.openclaw/logs/arb_autotrade.log
 ```
 
-### Docker (Recommended for Production)
+## Aktueller Stand (Phase 3 ✅)
 
-```bash
-# Build and run
-docker-compose up -d
+- **Live Trading** aktiv mit automatischer Arbitrage
+- **Strategy:** Coin-Gewinn (MPC akkumulieren)
+- **Thresholds:** Start 2.0%, Stop 0.9%
+- **Trade Logging:** 43-Spalten CSV (`docs/TRADE_LOG_STRUCTURE.md`)
 
-# View logs
-docker-compose logs -f
+## Projekt-Dokumentation
 
-# Stop
-docker-compose down
-```
+| Dokument | Beschreibung |
+|----------|--------------|
+| `PROJECT.md` | **Hauptdokumentation** - Architektur, Deployment, Status |
+| `docs/TRADE_LOG_STRUCTURE.md` | CSV Schema (43 Spalten) |
+| `docs/API_CSV_MAPPING.md` | API → CSV Feld-Mapping |
+| `docs/TRADE_FLOWS.md` | Alle 8 Trade-Fälle erklärt |
+| `docs/READONLY_API_ACCESS.md` | API Endpoints |
 
-### Coolify Deployment
-
-1. Push to your Git repository
-2. Connect repository to Coolify
-3. Add Docker Compose file
-4. Deploy!
-
-## Architecture
+## Architektur
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     MPC Arbitrage Bot                       │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐     │
-│  │   KuCoin    │  │    MEXC     │  │   Dashboard     │     │
-│  │  Orderbook  │  │  Orderbook  │  │   (Streamlit)   │     │
-│  │   Reader    │  │   Reader    │  │                 │     │
-│  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘     │
-│         │                │                   │              │
-│         └────────────────┼──────────────────┘              │
-│                          │                                   │
-│                   ┌───────▼───────┐                          │
-│                   │  Spread       │                          │
-│                   │  Analyzer     │                          │
-│                   │  + Stats      │                          │
-│                   │  + Opp. Det. │                          │
-│                   └───────────────┘                          │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│                    Arbitrage Bot                      │
+├──────────────────────────────────────────────────────┤
+│  KuCoin ←→ MEXC Arbitrage                           │
+│  • Market Order (ex1) auf einer Börse                │
+│  • Limit Order (ex2) auf anderer Börse               │
+│  • Multi-Row Trade Logging (43 Spalten)             │
+│  • Limit Order Watcher (pollen bis Fill)             │
+│                                                       │
+│  Dashboard: http://192.168.113.14:8501              │
+│  API:      http://192.168.113.14:18888               │
+└──────────────────────────────────────────────────────┘
 ```
 
-## Configuration
+## Trade CSV Struktur
 
-Edit `config/config.yaml`:
+**Datei:** `MPCUSDT_trades.csv` (43 Spalten, Semikolon-getrennt)
 
-```yaml
-trading:
-  pair: "MPC-USDT"
-  thresholds:
-    start: 2.0   # Start arbitrage when spread > 2%
-    stop: 1.0    # Stop arbitrage when spread < 1%
-  mode: "test"   # test or live
-
-# API Keys (for Phase 2+)
-kucoin:
-  api_key: "your-key"
-  api_secret: "your-secret"
-  api_passphrase: "your-passphrase"
-
-mexc:
-  api_key: "your-key"
-  api_secret: "your-secret"
+```
+Row 1:        Header
+Row 2:        Main Trade Zusammenfassung
+Row 3-N:      ex1 Fill Zeilen (_ex1p1, _ex1p2, ...)
+Row N+1:      ex2sum Zusammenfassung
+Row N+2-M:    ex2 Fill Zeilen (_ex2p1, _ex2p2, ...)
 ```
 
-## Phases
+**Wichtigste Felder:**
+- `ex1_status` (Col 19): OPEN, FILLED, PARTIAL
+- `ex2_status` (Col 32): OPEN, FILLED, PARTIAL, CANCELLED
+- `profit_mpc_actual` (Col 36): Tatsächlicher MPC Gewinn/Verlust
 
-### Phase 1: Orderbook Analysis (Current) ✅
-- Read-only orderbook monitoring
-- Spread analysis and statistics
-- Dashboard visualization
-- **No trading**
+## CSV Format (43 Spalten)
 
-### Phase 2: Mini-Test Orders (Planned)
-- Execute small real orders
-- Validate algorithm
-- Fine-tune thresholds
+| Bereich | Spalten | Beschreibung |
+|---------|---------|--------------|
+| Trade Info | 1-6 | trade_id, internal_ts, direction, pair, strategy, spread_pct |
+| ex1 (Market) | 7-19 | Order + Status + **ex1_fill_ts** |
+| ex2 (Limit) | 20-32 | Order + Status + **ex2_fill_ts** |
+| Profit | 33-36 | USDT/MPC expected/actual |
+| Meta | 37-43 | Fehler + Raw Responses |
 
-### Phase 3: Live Trading (Planned)
-- Full arbitrage execution
-- Automatic mode
-- Profit/loss tracking
+**NEU (2026-05-30):**
+- `ex1_fill_ts` (Col 18) - Wann Market Fill passierte
+- `ex2_fill_ts` (Col 31) - Wann Limit Fill passierte
+- `limit_watch_status` ENTFERNT → jetzt `ex2_status`
 
-## API Keys Required
+## API Keys
 
-### KuCoin
-1. Go to [KuCoin API](https://www.kucoin.com/account/api)
-2. Create API Key with "Trade" permission
-3. Copy Key, Secret, and Passphrase
+| Börse | Key Typ | verwendet für |
+|-------|---------|--------------|
+| MEXC | Trading Key | myTrades, Order Status |
+| KuCoin | Trading Key | Orders, Fills |
 
-### MEXC
-1. Go to [MEXC API](https://www.mexc.com/account/api)
-2. Create API Key with "Spot Trading" permission
-3. Copy Key and Secret
+**Siehe:** `docs/READONLY_API_ACCESS.md`
+
+## Deployment (Coolify)
+
+1. Git push zu `JonasH1989/ArbitrageBot`
+2. Coolify deployed automatisch
+3. Container startet mit Docker Compose
 
 ## Troubleshooting
 
-### Bot not connecting
-- Check internet connection
-- Verify API keys are correct
-- Check if exchanges are operational
+```bash
+# Bot läuft?
+ps aux | grep arb_autotrade
 
-### Dashboard not loading
-- Ensure port 8501 is not in use
-- Check if bot is running
+# Logs?
+tail -100 /home/openclaw/.openclaw/logs/arb_autotrade.log
 
-### "No opportunities found"
-- This is normal in Phase 1 (read-only)
-- Spread thresholds may need adjustment
-- MPC may have low volatility
+# CSV prüfen?
+head -1 /home/openclaw/.openclaw/logs/MPCUSDT_trades.csv
+wc -l /home/openclaw/.openclaw/logs/MPCUSDT_trades.csv
+```
 
-## License
+## Changelog
 
-Private - For Jonas Hillmann use only
+| Datum | Änderung |
+|-------|----------|
+| 2026-05-30 | 43-Spalten Format: ex1_fill_ts, ex2_fill_ts, kein limit_watch_status |
+| 2026-05-15 | MEXC Multi-Fill Support |
+| 2026-04-23 | Harmonized Logging eingeführt |
+
+---
+
+*Siehe auch: `PROJECT.md` für detaillierte Dokumentation*
