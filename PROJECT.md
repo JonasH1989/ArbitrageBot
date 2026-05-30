@@ -9,14 +9,10 @@
 - **Repo:** https://github.com/JonasH1989/ArbitrageBot.git
 - **Branch:** main
 
-## Git Workflow
+## Schnellstart
 ```bash
 cd /home/openclaw/.openclaw/workspace/trading/arbitrage-bot
 git pull
-# Änderungen machen
-git add .
-git commit -m "Beschreibung"
-git push
 ```
 
 ---
@@ -30,51 +26,50 @@ git push
 - Deaktivierung via: `rm /home/openclaw/.openclaw/logs/arb_active.flag`
 
 **Thresholds:**
-- Start: 1.0% Spread
-- Stop: 0.5% Spread
+- Start: 2.0% Spread
+- Stop: 0.9% Spread
 
 ### Trade Logger (trade_logger.py)
 - Harmonisiert Daten von verschiedenen Börsen in ein einheitliches Format
-- Eine CSV-Datei pro Trading Pair
-- Alle Trades werden append-only geloggt
-
-**UNIFIED_COLUMNS Schema:**
-```
-trade_id, internal_ts, direction, pair,
-ex1_exchange, ex1_order_id, ex1_type, ex1_side, ex1_qty_ordered, ex1_qty_filled,
-ex1_price_avg, ex1_value_usdt, ex1_fees, ex1_create_ts, ex1_status,
-ex2_exchange, ex2_order_id, ex2_type, ex2_side, ex2_qty_ordered, ex2_qty_filled,
-ex2_price_avg, ex2_value_usdt, ex2_fees, ex2_create_ts, ex2_status,
-limit_watch_status, limit_last_check,
-raw_ex1_response, raw_ex2_response, updated_at
-```
+- Eine CSV-Datei pro Trading Pair (append-only)
+- Multi-Row Pattern: Main Row + ex1pN Fill Rows + ex2sum Row + ex2pN Fill Rows
 
 ### Dashboard (dashboard.py)
 - Streamlit-basierte Web-UI
-- Zeigt Preise, Spreads, Portfolio und Trade-History
 - Zugriff: http://localhost:8501
 
 ---
 
-## Harmonization Layer
+## CSV Struktur (43 Spalten)
 
-### Problem
-Unterschiedliche Börsen liefern unterschiedliche Datenstrukturen:
-- KuCoin: `dealSize`, `dealFunds`, `fee`, `createTime`
-- MEXC: `quantity`, `amount`, `fees`, `createTime`
+**Schema:** `docs/TRADE_LOG_STRUCTURE.md` (Quelle der Wahrheit)
 
-### Lösung
-**harmonize_kucoin_order()** und **harmonize_mexc_order()** normalisieren die Responses in unified fields:
+| Bereich | Spalten | Felder |
+|---------|---------|--------|
+| Trade Info | 1-6 | trade_id, internal_ts, direction, pair, strategy, spread_pct |
+| ex1 (Market) | 7-19 | ex1, order_id, type, side, qty_ordered/filled, price_expected/actual, value_usdt, fees, create_ts, **fill_ts**, status |
+| ex2 (Limit) | 20-32 | ex2, order_id, type, side, qty_ordered/filled, price_expected/actual, value_usdt, fees, create_ts, **fill_ts**, status |
+| Profit | 33-36 | profit_usdt/mpc_expected/actual |
+| Meta | 37-39 | limit_last_check, error_code, error_message |
+| Raw | 40-43 | raw_ex1/ex2_response, raw_ex1/ex2_response_ts |
 
-| Unified Field | KuCoin Response | MEXC Response |
-|---------------|-----------------|---------------|
-| exchange | "KUCOIN" | "MEXC" |
-| order_id | `orderId` | `orderId` |
-| qty_filled | `dealSize` | `quantity` |
-| value_usdt | `dealFunds` | `amount` |
-| fees | `fee` | `fees` |
-| create_ts | `createTime` (ms) | `createTime` (ms) |
-| status | "FILLED"/"OPEN" | "Filled"/"New" |
+### ex1/ex2 Status Mapping
+
+**MEXC:**
+| API Status | CSV Status |
+|------------|-----------|
+| NEW | OPEN |
+| FILLED | FILLED |
+| PARTIALLY_FILLED | PARTIAL |
+| PARTIALLY_CANCELED | PARTIAL |
+| CANCELED | CANCELLED |
+
+**KuCoin:**
+| isActive | cancelExist | dealSize | CSV Status |
+|---------|------------|----------|------------|
+| false | false | > 0 | FILLED |
+| true | false | 0 | OPEN |
+| false | true | 0 | CANCELLED |
 
 ---
 
@@ -83,56 +78,55 @@ Unterschiedliche Börsen liefern unterschiedliche Datenstrukturen:
 ### Log Dateien
 ```
 /home/openclaw/.openclaw/logs/
-├── arb_autotrade.log           # Bot Log (print statements)
+├── arb_autotrade.log           # Bot Log
+├── arb_autotrade_debug.log     # Debug Log
 ├── arb_active.flag             # Aktivierung Flag
-├── MPC-USDT_trades.csv         # Trade Log für MPC Pair
-├── BTC-USDT_trades.csv         # Trade Log für BTC Pair (falls aktiv)
-└── exports/                     # Exportierte CSV Dateien
+├── MPCUSDT_trades.csv          # Trade Log (43 Spalten!)
+└── trade_logger_debug.log       # Logger Debug
 ```
 
-### Trade Log CSV Format
-Jede Zeile = ein Trade mit vollständigen Daten von beiden Börsen.
-
-**Direction Encoding:**
-- `K->M` = Buy KuCoin (market), Sell MEXC (limit)
-- `M->K` = Buy MEXC (market), Sell KuCoin (limit)
-
-**limit_watch_status Werte:**
-- `WATCHING` = Limit Order offen, wird auf Fill geprüft
-- `FILLED` = Limit Order vollständig gefüllt
-- `PARTIAL` = Limit Order teilweise gefüllt
-- `CANCELLED` = Limit Order abgebrochen
-- `EXPIRED` = Limit Order abgelaufen
+### CSV Pfad
+```python
+from trade_logger import get_trade_csv_path
+csv_path = get_trade_csv_path("MPC-USDT")
+# → /app/logs/MPCUSDT_trades.csv
+```
 
 ---
 
 ## Limit Order Watcher
 
-Der Bot polled regelmäßig (alle 10 Sekunden) offene Limit Orders:
-1. Liest alle Trades mit `limit_watch_status = WATCHING`
-2. Fragt Order-Status bei der jeweiligen Börse ab
-3. Updated `limit_watch_status` basierend auf Response
-4. Speichert Fill-Daten (qty_filled, price_avg, fees)
+Der Bot polled regelmäßig offene Limit Orders:
+1. Liest Trades mit `ex2_status = OPEN`
+2. Fragt Order-Status bei Börse ab
+3. Updated `ex2_status` + `ex2_qty_filled`
+4. Bei Fill: Berechnet profit_mpc_actual
+
+---
+
+## API Dokumentation
+
+| Dokument | Beschreibung |
+|----------|--------------|
+| `docs/TRADE_LOG_STRUCTURE.md` | CSV Schema (43 Spalten) |
+| `docs/API_CSV_MAPPING.md` | API → CSV Feld-Mapping |
+| `docs/TRADE_FLOWS.md` | Alle 8 Trade-Fälle erklärt |
+| `docs/EXCHANGE_NOTES.md` | Börsen-spezifische Notes |
+| `docs/READONLY_API_ACCESS.md` | API Endpoints |
 
 ---
 
 ## Docker Deployment
 
-### Dashboard Container
+### Bauen
 ```bash
-docker build -f Dockerfile.dashboard -t arbitrage-dashboard:latest .
-docker run -d --name arb-dashboard -p 8501:8501 arbitrage-dashboard:latest
+docker build -t arbitrage-bot:latest .
 ```
 
 ### Logs ansehen
 ```bash
-docker logs arb-dashboard
-docker logs -f arb-dashboard
-```
-
-### Stoppen
-```bash
-docker stop arb-dashboard && docker rm arb-dashboard
+docker logs <container>
+docker logs -f <container>
 ```
 
 ---
@@ -164,31 +158,26 @@ tail -f /home/openclaw/.openclaw/logs/arb_autotrade.log
 
 ## Changelog
 
+### 2026-05-30 - 43-Spalten Format (dc236a2)
+- `limit_watch_status` ENTFERNT → ersetzt durch `ex2_status`
+- `ex1_fill_ts` (Col 18) und `ex2_fill_ts` (Col 31) HINZUFÜGT
+- Status-Mapping vereinheitlicht
+- `docs/TRADE_LOG_STRUCTURE.md` aktualisiert
+
+### 2026-05-15 - MEXC Multi-Fill Support
+- myTrades API für alle Fills summiert
+- KuCoin Teil-Fills Bug gefixt
+
 ### 2026-04-23 - Harmonized Logging eingeführt
 - trade_logger.py komplett neu geschrieben
-- exchange_spezifische Daten werden harmonisiert
-- Ein CSV pro Pair (MPC-USDT_trades.csv)
-- limit_watch_status für Fill-Tracking
-- Limit Order Watcher implementiert
-
-### Vorher (älteres Format)
-- JSON-basiertes arb_trades.json
-- Keine Harmonisierung
-- Kein Fill-Tracking
 
 ---
 
-*Stand: 2026-04-23*
+## Wichtige Links
+
+- **Bot Server:** http://192.168.113.14:18888 (Dashboard)
+- **Bot API:** http://192.168.113.14:18888/api
+
 ---
 
-## ⚠️ WICHTIG: KuCoin Teil-Fills Bug (gefixt in Commit 47d2902)
-
-KuCoin Limit Orders können MEHRERE Teil-Fills haben:
-- **API Problem:** `/api/v1/orders/{id}` gibt nur `dealSize` = letzten Fill zurück
-- **Lösung:** `/api/v1/fills?orderId=X` abrufen und alle Fills summieren
-
-**Betroffene Funktion:** `check_limit_order_fills()` in `arb_autotrade.py`
-
-**MEXC hat das Problem NICHT:** `executedQty` ist bereits kumulativ.
-
-**Deployment:** Nach `git pull origin main` → Bot neu starten!
+*Stand: 2026-05-30*
