@@ -1543,7 +1543,6 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
                 direction=dir_str,
                 ex1_data=ex1_data,
                 ex2_data=ex2_data,
-                limit_watch_status="ERROR",
                 strategy=strategy.upper(),
                 spread_pct=spread_pct,
                 market_price_expected=market_price_expected,
@@ -1648,7 +1647,7 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
                 trade_id = log_trade(
                     pair=TRADING_PAIR, internal_ts=internal_ts, direction=dir_str,
                     ex1_data=ex1_data, ex2_data=ex2_data,
-                    limit_watch_status="ERROR", strategy=strategy.upper(),
+                    strategy=strategy.upper(),
                     spread_pct=spread_pct,
                     market_price_expected=market_price_expected,
                     limit_price_expected=limit_price_expected,
@@ -1757,7 +1756,6 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
                 direction=dir_str,
                 ex1_data=ex1_data,
                 ex2_data=ex2_data,
-                limit_watch_status="ERROR",
                 strategy=strategy.upper(),
                 spread_pct=spread_pct,
                 market_price_expected=market_price_expected,
@@ -1911,7 +1909,6 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
             ex2_data=ex2_data,
             ex1_partial_fills=ex1_data.get('ex1_partial_fills'),  # Individual MEXC fills
             ex2_partial_fills=ex2_data.get('ex2_partial_fills'),  # Individual limit fills
-            limit_watch_status="WATCHING",
             strategy=strategy.upper(),
             spread_pct=spread_pct,
             market_price_expected=market_price_expected,
@@ -1943,8 +1940,7 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
             value_usdt=0,
             fees=0,
             create_ts=ex2_data.get('create_ts', ''),
-            ex2_status='PENDING',
-            limit_watch_status='WATCHING'
+            ex2_status='PENDING'
         )
         log(f"📝 Limit order row created: {trade_id}_ex2p1 (pending)")
     except Exception as e:
@@ -2150,8 +2146,7 @@ def check_limit_order_fills():
                                             value_usdt=0,
                                             fees=0,
                                             create_ts=new_create_ts,
-                                            ex2_status='PENDING',
-                                            limit_watch_status='PENDING'
+                                            ex2_status='PENDING'
                                         )
                                         log(f"REPLACEMENT ORDER FOUND: {trade_id}_ex2p{next_suffix} => orderId={new_order_id}, qty={new_qty}, price={new_price}")
                         except:
@@ -2241,8 +2236,7 @@ def check_limit_order_fills():
                             value_usdt=total_cost,
                             fees=total_fees,
                             create_ts=str(data.get('createTime', '')),
-                            ex2_status='FILLED',
-                            limit_watch_status='FILLED'
+                            ex2_status='FILLED'
                         )
                     else:
                         # Update existing row with aggregated fill data
@@ -2254,8 +2248,7 @@ def check_limit_order_fills():
                             price_actual=total_cost/total_qty if total_qty > 0 else 0,
                             value_usdt=total_cost,
                             fees=total_fees,
-                            ex2_status='FILLED',
-                            limit_watch_status='FILLED'
+                            ex2_status='FILLED'
                         )
                     
                     # Also write individual fills as sub-rows if multiple fills
@@ -2278,8 +2271,7 @@ def check_limit_order_fills():
                                 value_usdt=fill_qty * fill_price,
                                 fees=fill_fee,
                                 create_ts=fill_ts,
-                                ex2_status='FILLED',
-                                limit_watch_status='FILLED'
+                                ex2_status='FILLED'
                             )
                     
                     update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
@@ -2300,8 +2292,7 @@ def check_limit_order_fills():
                             qty_filled=total_qty,
                             price_actual=total_cost/total_qty if total_qty > 0 else 0,
                             fees=total_fees,
-                            ex2_status='PARTIAL',
-                            limit_watch_status='PARTIAL'
+                            ex2_status='PARTIAL'
                         )
                     
                     update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=total_qty)
@@ -2351,8 +2342,7 @@ def check_limit_order_fills():
                             value_usdt=amount_filled,
                             fees=float(data.get('fee', 0) or 0),
                             create_ts=str(data.get('createTime', '')),
-                            ex2_status='FILLED',
-                            limit_watch_status='FILLED'
+                            ex2_status='FILLED'
                         )
                     else:
                         update_limit_row(
@@ -2363,8 +2353,7 @@ def check_limit_order_fills():
                             price_actual=amount_filled/qty_filled if qty_filled > 0 else 0,
                             value_usdt=amount_filled,
                             fees=float(data.get('fee', 0) or 0),
-                            ex2_status='FILLED',
-                            limit_watch_status='FILLED'
+                            ex2_status='FILLED'
                         )
                     
                     update_limit_watch(trade_id, TRADING_PAIR, 'FILLED',
@@ -2385,8 +2374,7 @@ def check_limit_order_fills():
                             qty_filled=qty_filled,
                             price_actual=amount_filled/qty_filled if qty_filled > 0 else 0,
                             fees=float(data.get('fee', 0) or 0),
-                            ex2_status='PARTIAL',
-                            limit_watch_status='PARTIAL'
+                            ex2_status='PARTIAL'
                         )
                     
                     update_limit_watch(trade_id, TRADING_PAIR, 'PARTIAL', qty_filled=qty_filled)
@@ -2432,8 +2420,7 @@ def check_limit_order_fills():
                                             value_usdt=0,
                                             fees=0,
                                             create_ts=new_create_ts,
-                                            ex2_status='PENDING',
-                                            limit_watch_status='PENDING'
+                                            ex2_status='PENDING'
                                         )
                                         log(f"REPLACEMENT ORDER FOUND: {trade_id}_ex2p{next_suffix} => orderId={new_order_id}")
                             except Exception as e:
