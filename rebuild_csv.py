@@ -1,7 +1,49 @@
 #!/usr/bin/env python3
 """
-Rebuild MPCUSDT_trades.csv with correct fills from MEXC API.
-Preserves original ex2 data, only fixes ex1 fills from MEXC myTrades.
+Rebuild MPCUSDT_trades.csv - PERFEKTE KOPIE des trade_logger.py Formats
+
+UNIFIED_COLUMNS (genau 41 Spalten, 0-40):
+ 0: trade_id
+ 1: internal_ts
+ 2: direction
+ 3: pair
+ 4: strategy
+ 5: spread_pct
+ 6: ex1
+ 7: ex1_order_id
+ 8: ex1_type
+ 9: ex1_side
+10: ex1_qty_ordered
+11: ex1_qty_filled
+12: ex1_price_expected
+13: ex1_price_actual
+14: ex1_value_usdt
+15: ex1_fees
+16: ex1_create_ts
+17: ex1_status
+18: ex2
+19: ex2_order_id
+20: ex2_type
+21: ex2_side
+22: ex2_qty_ordered
+23: ex2_qty_filled
+24: ex2_price_expected
+25: ex2_price_actual
+26: ex2_value_usdt
+27: ex2_fees
+28: ex2_create_ts
+29: ex2_status
+30: profit_usdt_expected
+31: profit_mpc_expected
+32: profit_usdt_actual
+33: profit_mpc_actual
+34: limit_watch_status
+35: limit_last_check
+36: error_code
+37: error_message
+38: raw_ex1_response
+39: raw_ex2_response
+40: raw_ex2_response_ts
 """
 
 import requests
@@ -9,217 +51,346 @@ import hmac
 import hashlib
 import time
 import csv
+import base64
 from datetime import datetime
+from collections import defaultdict
 
-# MEXC API credentials
-MEXC_KEY = "mx0vglBgOfyggoJe3I"
-MEXC_SECRET = "4d15399a840d494b9a308534f9cf7907"
+# ============================================================
+# CREDENTIALS
+# ============================================================
+with open('config/config.yaml') as f:
+    import yaml
+    cfg = yaml.safe_load(f)
+    KUCOIN_KEY = cfg['kucoin']['api_key']
+    KUCOIN_SECRET = cfg['kucoin']['api_secret']
+    KUCOIN_PASSPHRASE = cfg['kucoin']['api_passphrase']
 
-INPUT = "/home/openclaw/.openclaw/media/inbound/MPCUSDT_trades_edit2---466b916f-fd3c-4bbd-8524-09653e4e5647.csv"
-OUTPUT = "/home/openclaw/.openclaw/workspace/trading/arbitrage-bot/logs/MPCUSDT_trades.csv"
+# ============================================================
+# MEXC FILLS (aus earlier API call)
+# ============================================================
+MEXC_FILLS = {
+    '1b1611d4e': [
+        {'qty': 57.72, 'price': 0.01741, 'value': 1.0049, 'fee': 0.0005, 'time': 1779913032000},
+        {'qty': 79.28, 'price': 0.01730, 'value': 1.3715, 'fee': 0.0007, 'time': 1779913032000},
+    ],
+    '1b16111d31': [
+        {'qty': 78.07, 'price': 0.01752, 'value': 1.3678, 'fee': 0.0007, 'time': 1779913048000},
+        {'qty': 79.93, 'price': 0.01742, 'value': 1.3924, 'fee': 0.0007, 'time': 1779913048000},
+    ],
+    '1b1611211e': [
+        {'qty': 83.15, 'price': 0.01772, 'value': 1.4734, 'fee': 0.0007, 'time': 1779913052000},
+        {'qty': 68.39, 'price': 0.01764, 'value': 1.2064, 'fee': 0.0006, 'time': 1779913052000},
+        {'qty': 0.46, 'price': 0.01752, 'value': 0.0081, 'fee': 0.0000, 'time': 1779913052000},
+    ],
+    '1b16113062': [
+        {'qty': 32.97, 'price': 0.01793, 'value': 0.5912, 'fee': 0.0003, 'time': 1779913067000},
+        {'qty': 79.73, 'price': 0.01789, 'value': 1.4264, 'fee': 0.0007, 'time': 1779913067000},
+        {'qty': 0.30, 'price': 0.01772, 'value': 0.0053, 'fee': 0.0000, 'time': 1779913067000},
+    ],
+    '1b16113647': [
+        {'qty': 67.73, 'price': 0.01800, 'value': 1.2191, 'fee': 0.0006, 'time': 1779913073000},
+        {'qty': 44.27, 'price': 0.01793, 'value': 0.7938, 'fee': 0.0004, 'time': 1779913073000},
+    ],
+    '1b16121b13': [
+        {'qty': 183.00, 'price': 0.01755, 'value': 3.2117, 'fee': 0.0016, 'time': 1779913106000},
+    ],
+    '1b1612202e': [
+        {'qty': 144.00, 'price': 0.01740, 'value': 2.5056, 'fee': 0.0013, 'time': 1779913111000},
+    ],
+    '1b16122f50': [
+        {'qty': 30.95, 'price': 0.01799, 'value': 0.5568, 'fee': 0.0003, 'time': 1779913126000},
+        {'qty': 81.05, 'price': 0.01789, 'value': 1.4500, 'fee': 0.0007, 'time': 1779913126000},
+    ],
+    '1b16181516': [
+        {'qty': 36.52, 'price': 0.01798, 'value': 0.6566, 'fee': 0.0003, 'time': 1779913460000},
+        {'qty': 75.48, 'price': 0.01785, 'value': 1.3473, 'fee': 0.0007, 'time': 1779913460000},
+    ],
+    '1b161c1a45': [
+        {'qty': 250.00, 'price': 0.01781, 'value': 4.4525, 'fee': 0.0022, 'time': 1779913705000},
+    ],
+    '1b161c1e42': [
+        {'qty': 210.00, 'price': 0.01780, 'value': 3.7380, 'fee': 0.0019, 'time': 1779913709000},
+    ],
+    '1b161c2c27': [
+        {'qty': 75.93, 'price': 0.01783, 'value': 1.3538, 'fee': 0.0007, 'time': 1779913723000},
+    ],
+    '1b161e2f2a': [
+        {'qty': 86.00, 'price': 0.01777, 'value': 1.5282, 'fee': 0.0008, 'time': 1779913846000},
+    ],
+    '1c8252130': [
+        {'qty': 80.45, 'price': 0.01709, 'value': 1.3749, 'fee': 0.0007, 'time': 1779950252000},
+        {'qty': 80.55, 'price': 0.01705, 'value': 1.3734, 'fee': 0.0007, 'time': 1779950252000},
+    ],
+    '1c8252549': [
+        {'qty': 276.57, 'price': 0.01728, 'value': 4.7791, 'fee': 0.0024, 'time': 1779950256000},
+        {'qty': 80.36, 'price': 0.01723, 'value': 1.3846, 'fee': 0.0007, 'time': 1779950256000},
+        {'qty': 0.07, 'price': 0.01709, 'value': 0.0012, 'fee': 0.0000, 'time': 1779950256000},
+    ],
+    '1c825365e': [
+        {'qty': 79.15, 'price': 0.01743, 'value': 1.3796, 'fee': 0.0007, 'time': 1779950273000},
+        {'qty': 82.25, 'price': 0.01730, 'value': 1.4229, 'fee': 0.0007, 'time': 1779950273000},
+        {'qty': 0.60, 'price': 0.01728, 'value': 0.0104, 'fee': 0.0000, 'time': 1779950273000},
+    ],
+    '1cb36f01': [
+        {'qty': 80.44, 'price': 0.01691, 'value': 1.3602, 'fee': 0.0007, 'time': 1779960852000},
+        {'qty': 81.56, 'price': 0.01679, 'value': 1.3694, 'fee': 0.0007, 'time': 1779960852000},
+    ],
+    '1cb361254': [
+        {'qty': 496.76, 'price': 0.01710, 'value': 8.4946, 'fee': 0.0042, 'time': 1779960858000},
+        {'qty': 81.24, 'price': 0.01706, 'value': 1.3859, 'fee': 0.0007, 'time': 1779960858000},
+    ],
+    '1cb36224e': [
+        {'qty': 117.00, 'price': 0.01709, 'value': 1.9995, 'fee': 0.0010, 'time': 1779960873000},
+    ],
+    '1cb362818': [
+        {'qty': 117.00, 'price': 0.01710, 'value': 2.0007, 'fee': 0.0010, 'time': 1779960879000},
+    ],
+    '1cb37048': [
+        {'qty': 117.00, 'price': 0.01710, 'value': 2.0007, 'fee': 0.0010, 'time': 1779960900000},
+    ],
+}
 
-def to_float(val):
-    if not val or val == '':
-        return 0.0
-    return float(str(val).replace(',', '.'))
+# ============================================================
+# TRADE MAPPING
+# ============================================================
+TRADE_MEXC = {
+    '1b1611d4e': 'C02__688414456513777664119',
+    '1b16111d31': 'C02__688414521529683969119',
+    '1b1611211e': 'C02__688414538755608579119',
+    '1b16113062': 'C02__688414602798489601119',
+    '1b16113647': 'C02__688414627339358208119',
+    '1b16121b13': 'C02__688414764631461888119',
+    '1b1612202e': 'C02__688414786253148160119',
+    '1b16122f50': 'C02__688414850790903809119',
+    '1b16181516': 'C02__688416249486381056119',
+    '1b161c1a45': 'C02__688417278021996544119',
+    '1b161c1e42': 'C02__688417295872958465119',
+    '1b161c2c27': 'C02__688417353221672960119',
+    '1b161e2f2a': 'C02__688417869540503552119',
+    '1c8252130': 'C02__688570566356905984119',
+    '1c8252549': 'C02__688570583591292928119',
+    '1c825365e': 'C02__688570656337301504119',
+    '1cb36f01': 'C02__688620065544654849119',
+    '1cb361254': 'C02__688620082586062848119',
+    '1cb36224e': 'C02__688620148457660416119',
+    '1cb362818': 'C02__688620171375337472119',
+    '1cb37048': 'C02__688620258105106433119',
+}
 
-def fmt(val, decimals=2):
-    if val == 0:
-        return ''
-    return f"{val:.{decimals}f}".replace('.', ',')
+TRADE_KCN = {
+    '1b1611d4e': '6a17514967c9710007139cef',
+    '1b16111d31': '6a17515967c971000713d108',
+    '1b1611211e': '6a17515d1296f100074afb9f',
+    '1b16113062': '6a1751979c8d050007ecf50d',
+    '1b16113647': '6a1751910970a10007e9173d',
+    '1b16121b13': '6a1751931296f100074bae96',
+    '1b1612202e': '6a175198f7247100073a7423',
+    '1b16122f50': '6a1751c530aa00000711dc0d',
+    '1b16181516': '6a17578642a70a00075963c5',
+    '1b161c1a45': '6a1753ea8d7f740007fc976b',
+    '1b161c1e42': '6a17577e0970a10007fb714a',
+    '1b161c2c27': '6a1753fc30aa00000718e8bf',
+    '1b161e2f2a': '6a1754774e1cb600073c7de2',
+    '1c8252130': '6a17e2adf103be00072e301c',
+    '1c8252549': '6a17e2b167c971000744051f',
+    '1c825365e': '6a17e2c2f828df000769e0a7',
+    '1cb36f01': '6a1810c6eaee1500076691ce',
+    '1cb361254': '6a1810cae1d8f800075b948e',
+    '1cb36224e': '6a1810da4afdd0000792a8d7',
+    '1cb362818': '6a1810e0f103be0007d34ea6',
+    '1cb37048': '6a1810f442a70a00071b70c5',
+}
 
-def fmt_price(val):
-    if val == 0:
-        return ''
-    return f"{val:.6f}".replace('.', ',')
-
-def get_base_id(tid):
-    """Extract base trade ID from any row type"""
-    if '_ex1p' in tid:
-        return tid.rsplit('_ex1p', 1)[0]
-    elif '_ex2p' in tid:
-        return tid.rsplit('_ex2p', 1)[0]
-    elif '_ex2sum' in tid:
-        return tid.rsplit('_ex2sum', 1)[0]
-    else:
-        return tid
-
-def fix_decimals(row):
-    """Fix decimal format in a row (comma instead of period)"""
-    fixed = list(row)
-    # Columns that should have decimal format
-    decimal_cols = [10, 11, 12, 13, 14, 15, 22, 23, 24, 25, 26, 27, 30, 31, 32, 33]
-    for col in decimal_cols:
-        if col < len(fixed) and fixed[col]:
-            if '.' in str(fixed[col]):
-                fixed[col] = str(fixed[col]).replace('.', ',')
-    return fixed
-
-# Read all rows
-with open(INPUT, 'r') as f:
-    reader = csv.reader(f, delimiter=';')
-    header = next(reader)
-    input_rows = list(reader)
-
-print(f"Input: {len(input_rows)} rows")
-
-# Group trades by base ID
-trades = {}
-for row in input_rows:
-    tid = row[0]
-    if not tid or tid.strip() == '':
-        continue
-    
-    base_id = get_base_id(tid)
-    
-    if base_id not in trades:
-        trades[base_id] = {
-            'main': None, 
-            'ex1p': [], 
-            'ex2sum': None, 
-            'ex2p': [], 
-            'fills': [],
-            'order_id': None
-        }
-    
-    if tid == base_id:
-        trades[base_id]['main'] = list(row)
-        # Extract order_id from main row
-        if len(row) > 7:
-            trades[base_id]['order_id'] = row[7]
-    elif '_ex2sum' in tid:
-        trades[base_id]['ex2sum'] = list(row)
-    elif '_ex1p' in tid:
-        trades[base_id]['ex1p'].append(list(row))
-    elif '_ex2p' in tid:
-        trades[base_id]['ex2p'].append(list(row))
-
-print(f"Grouped into {len(trades)} trades")
-
-# Query MEXC for partial orders with multiple fills
-partial_order_ids = [
-    ('1b1611d4e', 'C02__688414456513777664119'),
-    ('1b16111d31', 'C02__688414521529683969119'),
-    ('1b1611211e', 'C02__688414538755608579119'),
-    ('1b16113062', 'C02__688414602798489601119'),
-    ('1b16113647', 'C02__688414627339358208119'),
-    ('1b16122f50', 'C02__688414850790903809119'),
-    ('1b16181516', 'C02__688416249486381056119'),
-    ('1b161c2c27', 'C02__688417353221672960119'),
-    ('1c8252130', 'C02__688570566356905984119'),
-    ('1c8252549', 'C02__688570583591292928119'),
-    ('1c825365e', 'C02__688570656337301504119'),
-    ('1cb36f01', 'C02__688620065544654849119'),
-    ('1cb361254', 'C02__688620082586062848119'),
+# ============================================================
+# HEADER (genau 41 Spalten wie trade_logger.py)
+# ============================================================
+UNIFIED_COLUMNS = [
+    "trade_id", "internal_ts", "direction", "pair", "strategy", "spread_pct",
+    "ex1", "ex1_order_id", "ex1_type", "ex1_side",
+    "ex1_qty_ordered", "ex1_qty_filled", "ex1_price_expected", "ex1_price_actual",
+    "ex1_value_usdt", "ex1_fees", "ex1_create_ts", "ex1_status",
+    "ex2", "ex2_order_id", "ex2_type", "ex2_side",
+    "ex2_qty_ordered", "ex2_qty_filled", "ex2_price_expected", "ex2_price_actual",
+    "ex2_value_usdt", "ex2_fees", "ex2_create_ts", "ex2_status",
+    "profit_usdt_expected", "profit_mpc_expected", "profit_usdt_actual", "profit_mpc_actual",
+    "limit_watch_status", "limit_last_check", "error_code", "error_message",
+    "raw_ex1_response", "raw_ex2_response", "raw_ex2_response_ts"
 ]
 
-print("\n=== Querying MEXC myTrades ===")
+# ============================================================
+# HELPERS
+# ============================================================
+def fmt(v, d=2):
+    if v is None or v == 0:
+        return ''
+    return f"{v:.{d}f}".replace('.', ',')
 
-for trade_id, order_id in partial_order_ids:
+def fmt_price(v):
+    if v is None or v == 0:
+        return ''
+    return f"{v:.6f}".replace('.', ',')
+
+def kucoin_sig(secret, ts, method, path):
+    msg = f'{ts}{method}{path}'
+    return base64.b64encode(hmac.new(secret.encode(), msg.encode(), hashlib.sha256).digest()).decode()
+
+def kucoin_pass(secret, passphrase):
+    return base64.b64encode(hmac.new(secret.encode(), passphrase.encode(), hashlib.sha256).digest()).decode()
+
+def kucoin_request(method, path):
     ts = str(int(time.time() * 1000))
-    params = f'symbol=MPCUSDT&orderId={order_id}&timestamp={ts}'
-    sig = hmac.new(MEXC_SECRET.encode('utf-8'), params.encode('utf-8'), hashlib.sha256).hexdigest()
-    
-    url = f'https://api.mexc.com/api/v3/myTrades?{params}&signature={sig}'
-    headers = {'X-MEXC-APIKEY': MEXC_KEY}
-    
+    sig = kucoin_sig(KUCOIN_SECRET, ts, method, path)
+    pwd = kucoin_pass(KUCOIN_SECRET, KUCOIN_PASSPHRASE)
+    headers = {
+        'KC-API-KEY': KUCOIN_KEY,
+        'KC-API-SIGN': sig,
+        'KC-API-TIMESTAMP': ts,
+        'KC-API-PASSPHRASE': pwd,
+        'KC-API-KEY-VERSION': '2'
+    }
+    resp = requests.request(method, f'https://api.kucoin.com{path}', headers=headers, timeout=10)
+    return resp.json()
+
+def create_empty_row(trade_id):
+    """Create row dict with all columns initialized to empty"""
+    return {col: "" for col in UNIFIED_COLUMNS}
+
+# ============================================================
+# FETCH KUCOIN FILLS
+# ============================================================
+print("Fetching KuCoin fills...")
+kcn_fills = {}
+for tid, oid in TRADE_KCN.items():
     try:
-        resp = requests.get(url, headers=headers, timeout=10)
-        data = resp.json()
-        
-        if resp.status_code == 200 and isinstance(data, list):
-            fills = []
-            for t in data:
-                fills.append({
-                    'qty': float(t.get('qty', 0)),
-                    'price': float(t.get('price', 0)),
-                    'value': float(t.get('quoteQty', 0)),
-                    'fees': float(t.get('commission', 0)),
-                    'time': int(t.get('time', 0)),
-                })
-            
-            if trade_id in trades:
-                trades[trade_id]['fills'] = fills
-                total = sum(f['qty'] for f in fills)
-                print(f"{trade_id}: {len(fills)} fills, total={total:.2f} MPC")
+        data = kucoin_request('GET', f'/api/v1/fills?orderId={oid}&limit=10')
+        if data.get('code') == '200000':
+            kcn_fills[tid] = data['data']['items']
+            print(f"  {tid}: {len(kcn_fills[tid])} KCN fills")
+        else:
+            kcn_fills[tid] = []
+            print(f"  {tid}: ERROR")
     except Exception as e:
-        print(f"{trade_id}: Error - {e}")
+        kcn_fills[tid] = []
+        print(f"  {tid}: EXCEPTION")
 
-# Build output CSV preserving original structure
-print("\n=== Rebuilding CSV ===")
+# ============================================================
+# BUILD ROWS
+# ============================================================
+print("\nBuilding rows...")
+rows = [UNIFIED_COLUMNS]  # Header
 
-output_rows = [header]
+for tid in sorted(TRADE_MEXC.keys()):
+    mexc_oid = TRADE_MEXC[tid]
+    kcn_oid = TRADE_KCN[tid]
+    
+    # MEXC fills
+    fills = sorted(MEXC_FILLS.get(tid, []), key=lambda x: x['time'])
+    total_mexc_qty = sum(f['qty'] for f in fills)
+    total_mexc_val = sum(f['value'] for f in fills)
+    total_mexc_fee = sum(f['fee'] for f in fills)
+    avg_mexc_price = total_mexc_val / total_mexc_qty if total_mexc_qty > 0 else 0
+    
+    # KCN fills
+    kfills = kcn_fills.get(tid, [])
+    total_kcn_qty = sum(float(f['size']) for f in kfills)
+    total_kcn_val = sum(float(f['funds']) for f in kfills)
+    total_kcn_fee = sum(float(f['fee']) for f in kfills)
+    avg_kcn_price = total_kcn_val / total_kcn_qty if total_kcn_qty > 0 else 0
+    
+    # ---- MAIN ROW (row1) ----
+    mr = create_empty_row(tid)
+    mr['direction'] = 'MXC->KCN'
+    mr['pair'] = 'MPC-USDT'
+    mr['strategy'] = 'USDT'
+    mr['ex1'] = 'MXC'
+    mr['ex1_order_id'] = mexc_oid
+    mr['ex1_type'] = 'market'
+    mr['ex1_side'] = 'buy'
+    mr['ex1_qty_filled'] = total_mexc_qty
+    mr['ex1_price_actual'] = avg_mexc_price
+    mr['ex1_value_usdt'] = total_mexc_val
+    mr['ex1_fees'] = total_mexc_fee
+    mr['ex1_status'] = 'FILLED' if total_mexc_qty > 0 else 'PARTIAL'
+    mr['ex2'] = 'KCN'
+    mr['ex2_order_id'] = kcn_oid
+    mr['ex2_type'] = 'limit'
+    mr['ex2_side'] = 'sell'
+    mr['ex2_qty_ordered'] = total_mexc_qty  # was our buy qty
+    mr['ex2_qty_filled'] = total_kcn_qty
+    mr['ex2_price_actual'] = avg_kcn_price
+    mr['ex2_value_usdt'] = total_kcn_val
+    mr['ex2_fees'] = total_kcn_fee
+    mr['ex2_status'] = 'FILLED' if total_kcn_qty >= total_mexc_qty else 'PARTIAL'
+    mr['profit_mpc_actual'] = total_mexc_qty - total_kcn_qty
+    mr['limit_watch_status'] = 'FILLED'
+    rows.append(mr)
+    
+    # ---- EX1P ROWS (MEXC fills) ----
+    for i, f in enumerate(fills):
+        ts_dt = datetime.fromtimestamp(f['time'] / 1000)
+        ex1p = create_empty_row(f"{tid}_ex1p{i+1}")
+        ex1p['ex1_qty_filled'] = f['qty']
+        ex1p['ex1_price_actual'] = f['price']
+        ex1p['ex1_value_usdt'] = f['value']
+        ex1p['ex1_fees'] = f['fee']
+        ex1p['ex1_create_ts'] = ts_dt.strftime('%Y-%m-%d %H:%M:%S.000')
+        ex1p['ex1_status'] = 'FILLED'
+        rows.append(ex1p)
+    
+    # ---- EX2SUM ROW ----
+    ex2sum = create_empty_row(f"{tid}_ex2sum")
+    ex2sum['ex2'] = 'KCN'
+    ex2sum['ex2_order_id'] = kcn_oid
+    ex2sum['ex2_type'] = 'limit'
+    ex2sum['ex2_side'] = 'sell'
+    ex2sum['ex2_qty_ordered'] = total_mexc_qty
+    ex2sum['ex2_qty_filled'] = total_kcn_qty
+    ex2sum['ex2_price_actual'] = avg_kcn_price
+    ex2sum['ex2_value_usdt'] = total_kcn_val
+    ex2sum['ex2_fees'] = total_kcn_fee
+    ex2sum['ex2_status'] = 'FILLED' if total_kcn_qty >= total_mexc_qty else 'PARTIAL'
+    ex2sum['profit_mpc_actual'] = total_mexc_qty - total_kcn_qty
+    ex2sum['limit_watch_status'] = 'FILLED'
+    rows.append(ex2sum)
+    
+    # ---- EX2P ROWS (KCN fills) ----
+    for i, kf in enumerate(kfills):
+        ts_k = datetime.fromtimestamp(int(kf['createdAt']) / 1000)
+        ex2p = create_empty_row(f"{tid}_ex2p{i+1}")
+        ex2p['ex2_qty_filled'] = float(kf['size'])
+        ex2p['ex2_price_actual'] = float(kf['price'])
+        ex2p['ex2_value_usdt'] = float(kf['funds'])
+        ex2p['ex2_fees'] = float(kf['fee'])
+        ex2p['ex2_create_ts'] = ts_k.strftime('%Y-%m-%d %H:%M:%S.000')
+        ex2p['ex2_status'] = 'FILLED'
+        ex2p['limit_watch_status'] = 'FILLED'
+        rows.append(ex2p)
 
-for trade_id, trade in trades.items():
-    main = trade['main']
-    if not main:
-        print(f"WARNING: No main row for {trade_id}")
-        continue
-    
-    # Calculate correct ex1_qty_filled from MEXC API fills
-    fills = trade['fills']
-    if fills:
-        total_filled = sum(f['qty'] for f in fills)
-    else:
-        # Use original value
-        total_filled = to_float(main[11])
-    
-    # Fix main row with correct totalFilled and decimal format
-    main_row = fix_decimals(main)
-    main_row[11] = fmt(total_filled)  # ex1_qty_filled
-    main_row[17] = 'FILLED'  # ex1_status - if fills exist, order is FILLED
-    
-    # Add main row
-    output_rows.append(main_row)
-    
-    # Handle ex1p rows - create from API fills
-    if fills:
-        # Clear old ex1p rows (they'll be replaced with correct ones)
-        # Actually, we just add new ones - the old ones from input won't be included
-        
-        for i, fill in enumerate(fills):
-            ex1p_row = [''] * len(header)
-            ex1p_row[0] = f"{trade_id}_ex1p{i+1}"
-            ex1p_row[11] = fmt(fill['qty'])  # ex1_qty_filled
-            ex1p_row[13] = fmt_price(fill['price'])  # ex1_price_actual
-            ex1p_row[14] = fmt(fill['value'], 6)  # ex1_value_usdt
-            ex1p_row[15] = fmt(fill['fees'], 6)  # ex1_fees
-            ts = datetime.fromtimestamp(fill['time'] / 1000)
-            ex1p_row[16] = ts.strftime('%Y-%m-%d %H:%M:%S.000')
-            ex1p_row[17] = 'FILLED'
-            ex1p_row[18] = 'KCN'  # ex2 exchange
-            output_rows.append(ex1p_row)
-    else:
-        # No fills from API - use original ex1p rows with decimals fixed
-        for ex1p in trade['ex1p']:
-            ex1p_row = fix_decimals(ex1p)
-            output_rows.append(ex1p_row)
-    
-    # Keep original ex2sum row (with decimal fix)
-    ex2sum = trade['ex2sum']
-    if ex2sum:
-        ex2sum_row = fix_decimals(ex2sum)
-        
-        # Recalculate profit_mpc_expected based on corrected total_filled
-        ex2_qty_ordered = to_float(ex2sum_row[22])
-        ex2_qty_filled = to_float(ex2sum_row[23])
-        
-        profit_mpc_expected = total_filled - ex2_qty_ordered
-        ex2sum_row[31] = fmt(profit_mpc_expected)
-        
-        # Recalculate profit_mpc_actual if FILLED
-        if ex2sum_row[34] == 'FILLED':
-            profit_mpc_actual = total_filled - ex2_qty_filled
-            ex2sum_row[33] = fmt(profit_mpc_actual)
-        
-        output_rows.append(ex2sum_row)
-    
-    # Keep original ex2p rows (with decimal fix)
-    for ex2p in trade['ex2p']:
-        ex2p_row = fix_decimals(ex2p)
-        output_rows.append(ex2p_row)
+# ============================================================
+# WRITE OUTPUT
+# ============================================================
+OUTPUT = '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot/MPCUSDT_trades_final.csv'
 
-# Write output
+# Convert rows to lists with comma formatting
+output_rows = []
+for row_dict in rows:
+    result = []
+    for col in UNIFIED_COLUMNS:
+        val = row_dict.get(col, "")
+        if isinstance(val, (int, float)) and not isinstance(val, bool):
+            if col in ('ex1_qty_ordered', 'ex1_qty_filled', 'ex2_qty_ordered', 'ex2_qty_filled',
+                       'profit_mpc_expected', 'profit_mpc_actual'):
+                val = fmt(val, 2)
+            elif col in ('ex1_price_expected', 'ex1_price_actual', 'ex2_price_expected', 'ex2_price_actual'):
+                val = fmt_price(val)
+            elif col in ('ex1_value_usdt', 'ex1_fees', 'ex2_value_usdt', 'ex2_fees',
+                         'profit_usdt_expected', 'profit_usdt_actual'):
+                val = fmt(val, 4)
+            else:
+                val = fmt(val)
+        result.append(str(val) if val is not None else "")
+    output_rows.append(result)
+
 with open(OUTPUT, 'w', newline='') as f:
     writer = csv.writer(f, delimiter=';')
     for row in output_rows:
@@ -227,30 +398,13 @@ with open(OUTPUT, 'w', newline='') as f:
 
 print(f"\nWrote {len(output_rows)} rows to {OUTPUT}")
 
-# Verify
-print("\n=== VERIFICATION ===")
-with open(OUTPUT, 'r') as f:
-    reader = csv.reader(f, delimiter=';')
-    next(reader)
-    
-    counts = {'main': 0, 'ex1p1': 0, 'ex1p2': 0, 'ex1p3': 0, 'ex2sum': 0, 'ex2p1': 0}
-    
-    for row in reader:
-        tid = row[0]
-        if tid.endswith('_ex1p1'):
-            counts['ex1p1'] += 1
-        elif tid.endswith('_ex1p2'):
-            counts['ex1p2'] += 1
-        elif tid.endswith('_ex1p3'):
-            counts['ex1p3'] += 1
-        elif tid.endswith('_ex2sum'):
-            counts['ex2sum'] += 1
-        elif tid.endswith('_ex2p1'):
-            counts['ex2p1'] += 1
-        elif '_' not in tid:
-            counts['main'] += 1
-    
-    for k, v in counts.items():
-        print(f"{k}: {v}")
-
-print("\n=== DONE ===")
+# SUMMARY
+counts = {'main': 0, 'ex1p': 0, 'ex2sum': 0, 'ex2p': 0}
+for row in output_rows[1:]:
+    t = row[0]
+    if '_ex1p' in t: counts['ex1p'] += 1
+    elif '_ex2sum' in t: counts['ex2sum'] += 1
+    elif '_ex2p' in t: counts['ex2p'] += 1
+    elif t: counts['main'] += 1
+print(f"Summary: {counts}")
+print("DONE!")

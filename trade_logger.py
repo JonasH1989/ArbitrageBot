@@ -263,7 +263,7 @@ def generate_trade_id() -> str:
     ss = now.strftime("%S")
     ms = now.strftime("%f")[:2]
 
-    return f"{int(dd):02x}{int(hh):x}{int(mm):x}{int(ss):x}{int(ms):02x}"
+    return f"{int(dd):02x}{int(hh):02x}{int(mm):02x}{int(ss):02x}{int(ms):02x}"
 
 
 # =============================================================================
