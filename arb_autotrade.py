@@ -38,6 +38,12 @@ except ImportError:
     load_config = None
     is_debug_enabled = lambda: False
 
+# Debug-Logger für Trigger-Pfad Crash-Diagnose (Commit 7a8cb70)
+try:
+    from debug_logger import dbg
+except ImportError:
+    dbg = None  # Fallback: wenn Logger nicht ladbar, dbg.*() sind no-ops
+
 # Helper function for locale-independent float parsing
 def to_float(val):
     """Parse float from string, handling comma decimal separator."""
@@ -860,6 +866,8 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
             kucoin_bal = get_kucoin_balances()
         except Exception as e:
             log(f"Error getting balances for M->K: {e}", "ERROR")
+            if dbg is not None:
+                dbg.error('balance_check_failed', exc=e, ctx={'direction': direction, 'qty': qty, 'buy_price': buy_price})
             return False, f"Balance check error: {e}", 0
         
         mexc_usdt = mexc_bal.get('USDT', {}).get('total', 0) if mexc_bal else 0
@@ -900,6 +908,8 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
             mexc_bal = get_mexc_balances()
         except Exception as e:
             log(f"Error getting balances for K->M: {e}", "ERROR")
+            if dbg is not None:
+                dbg.error('balance_check_failed', exc=e, ctx={'direction': direction, 'qty': qty, 'buy_price': buy_price})
             return False, f"Balance check error: {e}", 0
         
         kucoin_usdt = kucoin_bal.get('USDT', {}).get('total', 0) if kucoin_bal else 0
@@ -1098,7 +1108,11 @@ def execute_market_buy_kucoin(qty):
         'Content-Type': 'application/json'
     }
 
+    start_ts = time.time()
     resp = requests.post('https://api.kucoin.com/api/v1/orders', headers=headers, data=body, timeout=10)
+    elapsed_ms = (time.time() - start_ts) * 1000
+    if dbg is not None:
+        dbg.api_call('kucoin', 'POST', '/api/v1/orders', body, resp.json(), elapsed_ms, qty=qty)
     return resp.json()
 
 def execute_limit_sell_kucoin(qty, price):
@@ -1168,7 +1182,11 @@ def execute_market_buy_mexc(qty):
     url = f'https://api.mexc.com/api/v3/order?{params}&signature={sig}'
     headers = {'X-MEXC-APIKEY': MEXC_KEY}
 
+    start_ts = time.time()
     resp = requests.post(url, headers=headers, timeout=10)
+    elapsed_ms = (time.time() - start_ts) * 1000
+    if dbg is not None:
+        dbg.api_call('mexc', 'POST', '/api/v3/order', params, resp.json(), elapsed_ms, qty=qty)
     return resp.json()
 
 def execute_limit_sell_mexc(qty, price):
@@ -2734,7 +2752,24 @@ def _find_best_trade_for_direction(sell_levels, buy_levels, direction, limit_ex,
                     actual_limit_ex = limit_ex
                     actual_market_side = 'SELL'
                     actual_limit_side = 'BUY'
-                
+
+                # Trigger-Pfad Event: Spread gefunden → Trade-Kandidat
+                if dbg is not None:
+                    dbg.trigger('spread_detected',
+                        direction=direction,
+                        spread_pct=spread_pct,
+                        threshold=threshold,
+                        trade_vol=trade_vol,
+                        cum_sell=cum_sell,
+                        cum_buy=cum_buy,
+                        thinner_side='SELL' if cum_sell <= cum_buy else 'BUY',
+                        profit_usdt=profit_usdt,
+                        profit_mpc=profit_mpc,
+                        strategy=strategy,
+                        limit_ex=limit_ex,
+                        market_ex=market_ex,
+                    )
+
                 return {
                     'dir': direction,
                     'buy': buy_level['price'],
@@ -2794,6 +2829,10 @@ def main():
     hysteresis_armed = False  # Hysteresis flag for start/stop behavior
     last_spread_ok = None  # Track spread condition changes
     last_pair_enabled = None  # Track pair enabled changes
+
+    # Debug-Logger initialisieren — Level via settings_sync (Dashboard-GUI)
+    if dbg is not None:
+        dbg.set_level(get_log_level() if get_log_level is not None else 0)
 
     # Start HTTP logging server for real-time monitoring
     start_http_log_server(port=8505)
