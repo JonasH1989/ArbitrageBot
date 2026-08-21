@@ -581,6 +581,174 @@ def start_http_log_server(port: int = 8503):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+    # =============================================================================
+    # DEBUG-LOGGER API (Jonas 2026-08-21 — automatisierter Log-Abruf)
+    # =============================================================================
+    # Persistente Debug-Logs (Level 2) lesen aus dbg.log_dir
+    # File-Format: {kind}_{YYYY-MM-DD}.jsonl
+    # Kinds: trigger, state, api, error, idle
+    # Zweck: automatisierter Abruf nach Stichwort ("debug log arbitrage") — siehe SOUL.md
+
+    @app.route('/debug/log/files', methods=['GET'])
+    def debug_log_files():
+        """Liste aller verfügbaren Debug-Log-Files."""
+        try:
+            from datetime import timezone
+            log_dir = dbg.log_dir
+            files = []
+            for f in sorted(log_dir.glob('*.jsonl')):
+                if not f.is_file():
+                    continue
+                stat = f.stat()
+                stem = f.stem  # z.B. 'trigger_2026-08-21'
+                parts = stem.split('_', 1)
+                kind = parts[0] if len(parts) >= 2 else 'unknown'
+                date = parts[1] if len(parts) >= 2 else 'unknown'
+                files.append({
+                    'kind': kind,
+                    'date': date,
+                    'filename': f.name,
+                    'size_bytes': stat.st_size,
+                    'mtime': stat.st_mtime,
+                    'path': str(f),
+                })
+            return jsonify({
+                'status': 'ok',
+                'log_dir': str(log_dir),
+                'current_level': dbg.level,
+                'files': files,
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    def _read_debug_log(kind, date=None, offset=0, limit=1000):
+        """Helper: liest Debug-Log-File. Returns (dict, status_code)."""
+        from datetime import timezone
+        if not date:
+            date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        log_dir = dbg.log_dir
+        filepath = log_dir / f'{kind}_{date}.jsonl'
+        if not filepath.exists():
+            available = [p.name for p in log_dir.glob(f'{kind}_*.jsonl')]
+            return {
+                'status': 'not_found',
+                'kind': kind,
+                'date': date,
+                'path': str(filepath),
+                'available_files': available,
+            }, 404
+        try:
+            with open(filepath, 'r', encoding='utf-8') as fh:
+                lines = fh.readlines()
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}, 500
+        total = len(lines)
+        # offset=0 → neueste Zeilen (Ende), offset=N → skip N neueste
+        start = max(0, total - offset - limit)
+        end = max(0, total - offset)
+        entries = []
+        for line in lines[start:end]:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                entries.append({'_parse_error': True, '_raw': line[:500]})
+        return {
+            'status': 'ok',
+            'kind': kind,
+            'date': date,
+            'total_lines': total,
+            'offset': offset,
+            'limit': limit,
+            'returned': len(entries),
+            'entries': entries,
+        }, 200
+
+    @app.route('/debug/log/file/<kind>', methods=['GET'])
+    def debug_log_file(kind):
+        """File lesen mit date/offset/limit Parametern."""
+        date = request.args.get('date')
+        offset = int(request.args.get('offset', 0))
+        limit = int(request.args.get('limit', 1000))
+        result, status = _read_debug_log(kind, date=date, offset=offset, limit=limit)
+        return jsonify(result), status
+
+    @app.route('/debug/log/last/<kind>', methods=['GET'])
+    def debug_log_last(kind):
+        """Letzte N Zeilen (default: 50, heute)."""
+        n = int(request.args.get('n', 50))
+        date = request.args.get('date')
+        result, status = _read_debug_log(kind, date=date, limit=n)
+        return jsonify(result), status
+
+    @app.route('/debug/log/since/<since>', methods=['GET'])
+    def debug_log_since(since):
+        """Alle Events seit Timestamp (ISO 8601) über alle Files hinweg."""
+        from datetime import timezone
+        try:
+            since_dt = datetime.fromisoformat(since.replace('Z', '+00:00'))
+        except ValueError:
+            return jsonify({
+                'status': 'error',
+                'message': f'Ungültiges Timestamp: {since}. Format: 2026-08-21T18:00:00 oder mit Z/Offset',
+            }), 400
+        log_dir = dbg.log_dir
+        results = []
+        for f in sorted(log_dir.glob('*.jsonl')):
+            if not f.is_file():
+                continue
+            try:
+                with open(f, 'r', encoding='utf-8') as fh:
+                    for line in fh:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            entry = json.loads(line)
+                            ts_str = entry.get('ts')
+                            if not ts_str:
+                                continue
+                            ts = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
+                            if ts >= since_dt:
+                                results.append(entry)
+                        except (json.JSONDecodeError, ValueError):
+                            continue
+            except Exception:
+                continue
+        results.sort(key=lambda e: e.get('ts', ''))
+        return jsonify({
+            'status': 'ok',
+            'since': since,
+            'count': len(results),
+            'entries': results,
+        })
+
+    @app.route('/debug/log/level', methods=['GET'])
+    def debug_log_level_get():
+        return jsonify({
+            'status': 'ok',
+            'level': dbg.level,
+            'log_dir': str(dbg.log_dir),
+        })
+
+    @app.route('/debug/log/level/<int:new_level>', methods=['POST'])
+    def debug_log_level_set(new_level):
+        """Level live ändern (0=off, 1=summary, 2=full)."""
+        if new_level not in (0, 1, 2):
+            return jsonify({
+                'status': 'error',
+                'message': 'Level muss 0, 1 oder 2 sein',
+            }), 400
+        old = dbg.level
+        dbg.set_level(new_level)
+        return jsonify({
+            'status': 'ok',
+            'old_level': old,
+            'new_level': dbg.level,
+        })
+
     @app.route('/trades/<pair>', methods=['GET'])
     def get_trades_api(pair):
         """Get trades from CSV for a trading pair"""
