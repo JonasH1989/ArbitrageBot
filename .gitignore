@@ -35,3 +35,56 @@ config/config.yaml
 
 # Docker
 *.tar
+
+# ============================================================================
+# TRADE DATA & LIVE STATE — NEVER COMMIT (sensitive operational data)
+# ============================================================================
+
+# All CSV files (trade logs, exports, scanner results)
+*.csv
+
+# XLSX files in docs/ (KuCoin/MEXC trade/order exports — sensitive)
+*.xlsx
+docs/*.xlsx
+
+
+# Coin scanner JSON outputs (API responses, sometimes contain identifiers)
+coin_scanner_*.json
+coin_research_results.json
+
+# Live trade-state files (would leak live positions + order IDs)
+order_tracker.json
+open_orders_export.csv
+trade_history_export.csv
+
+# ============================================================================
+# DOCS WITH SECRETS — NEVER COMMIT (API keys etc.)
+# ============================================================================
+
+# Contains exchange API keys (rotated 2026-09-22)
+docs/READONLY_API_ACCESS.md
+
+# ============================================================================
+# LOCAL WORKING STATE — NEVER COMMIT
+# ============================================================================
+
+# Runtime logs and portfolio snapshots
+logs/
+logs/*.log
+logs/*.csv
+
+# Backup folders (pre-cleanup archives)
+archive_*/
+archive_*
+
+# Backup / temp files
+*.bak
+*.backup
+*.orig
+*.tmp
+
+# ============================================================================
+# PYTHON ENVIRONMENTS (already covered above; explicit aliases for clarity)
+# ============================================================================
+.venv/
+venv-*/
