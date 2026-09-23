@@ -1987,6 +1987,22 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     # ========================================================================
     log(f"Step 2: {exchange_limit} Limit SELL...")
 
+    # ========================================================================
+    # WALLET RE-CHECK (Race Condition Protection, fix 2026-09-23)
+    # ========================================================================
+    # KuCoin only checks wallet at FILL time. If wallet shrunk between
+    # Pre-Flight-Check and Limit-Sell-Placement, order will be cancelled
+    # at fill, causing runaway replacement orders → Proxmox crash.
+    if exchange_limit.upper() == "KUCOIN":
+        try:
+            _kc_balances = get_kucoin_balances()
+            _kc_available = _kc_balances.get(coin, {}).get('total', 0) if _kc_balances else 0
+            if _kc_available < sell_qty:
+                sell_qty = math.floor(_kc_available * 0.999)
+                log(f"⚠️ KuCoin wallet re-check: sell_qty reduced to {sell_qty:.4f} {coin}")
+        except Exception as _e:
+            log(f"⚠️ Wallet re-check failed: {_e}", "WARNING")
+
     # Route to correct API based on exchange
     if exchange_limit.upper() == "KUCOIN":
         result2 = execute_limit_sell_kucoin(sell_qty, sell_price)
@@ -2319,6 +2335,19 @@ def check_limit_order_fills():
                                     new_create_ts = str(replacement.get('createTime', ''))
                                     
                                     if new_order_id:
+                                        # WALLET RE-CHECK (race condition, fix 2026-09-23)
+                                        # Original order was likely cancelled because wallet
+                                        # was insufficient. Don't place a replacement without
+                                        # confirming wallet has enough now.
+                                        try:
+                                            _kc_balances = get_kucoin_balances()
+                                            _kc_available = _kc_balances.get(coin, {}).get('total', 0) if _kc_balances else 0
+                                            if _kc_available < new_qty:
+                                                log(f"⚠️ Replacement skipped: wallet {_kc_available:.4f} < qty {new_qty:.4f}")
+                                                continue
+                                        except Exception as _e:
+                                            log(f"⚠️ Wallet re-check failed for replacement: {_e}", "WARNING")
+
                                         # Get next suffix
                                         next_suffix = get_highest_ex2p_suffix(trade_id, TRADING_PAIR) + 1
                                         append_limit_row(
