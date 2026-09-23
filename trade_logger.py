@@ -22,6 +22,16 @@ from typing import Dict, Optional, List, Tuple
 
 LOG_DIR = Path("/app/logs")
 
+# =============================================================================
+# DIAGNOSTIC MODE FLAG (2026-09-23)
+# =============================================================================
+# HARDCODED DISABLE for crash diagnosis. Set to True to re-enable.
+# When False: all file/CSV writes become No-Ops (function returns dummy value)
+# Goal: determine if logging is the root cause of Proxmox container crashes.
+# See: memory/2026-09-22-arbitrage-bot-repo-cleanup.md and Jonas' Telegram
+# messages 2026-09-23 09:03 and 09:13 for context.
+LOGGING_ENABLED = False
+
 # Helper for locale-independent float parsing
 def to_float(val):
     """Parse float from string, handling comma decimal separator."""
@@ -37,6 +47,8 @@ LOG_FILE = LOG_DIR / "arb_autotrade.log"  # Shared with arb_autotrade.py
 
 def debug_log(message: str, level: str = "INFO"):
     """Log debug messages to both stderr, debug file AND the main bot log"""
+    if not LOGGING_ENABLED:
+        return  # HARD DISABLED for crash diagnosis (2026-09-23)
     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
     log_line = f"[{ts}] [{level}] {message}"
     print(log_line, file=sys.stderr)
@@ -58,6 +70,8 @@ def debug_log(message: str, level: str = "INFO"):
 
 def debug_trade_write(trade_id: str, row_num: int, columns: Dict):
     """Log details about a row being written"""
+    if not LOGGING_ENABLED:
+        return  # HARD DISABLED for crash diagnosis (2026-09-23)
     debug_log(f"TRADE_WRITE: {trade_id} | Row {row_num}")
     for k, v in columns.items():
         if v:
@@ -231,6 +245,8 @@ def get_trade_csv_path(pair: str) -> Path:
 
 def init_pair_csv(pair: str) -> Path:
     """Initialize CSV file for a trading pair if it doesn't exist"""
+    if not LOGGING_ENABLED:
+        return None  # HARD DISABLED for crash diagnosis (2026-09-23)
     ensure_log_dir()
     csv_path = get_trade_csv_path(pair)
 
@@ -441,6 +457,9 @@ def log_trade(
     """
     Log a complete trade to the pair-specific CSV.
 
+    HARD DISABLED: returns dummy trade_id when LOGGING_ENABLED=False
+    (crash diagnosis 2026-09-23, see memory/2026-09-22-arbitrage-bot-repo-cleanup.md)
+
     Writes MULTIPLE rows per trade:
     - Row 1: Main trade (summaries)
     - Row 2+: ex1p1, ex1p2... (Market partial fills)
@@ -466,7 +485,11 @@ def log_trade(
 
     Returns:
         trade_id: Generated trade ID
+
+    HARD DISABLED: returns dummy trade_id when LOGGING_ENABLED=False (crash diagnosis 2026-09-23)
     """
+    if not LOGGING_ENABLED:
+        return "DISABLED-LOGGING"  # HARD DISABLED for crash diagnosis (2026-09-23)
     trade_id = generate_trade_id()
     debug_log(f"LOG_TRADE: Starting for trade_id={trade_id}")
 
@@ -753,6 +776,8 @@ def append_limit_row(
     ex2_status: str = "OPEN",
 ) -> bool:
     """Append a new ex2pN row to the CSV."""
+    if not LOGGING_ENABLED:
+        return False  # HARD DISABLED for crash diagnosis (2026-09-23)
     csv_path = get_trade_csv_path(pair)
     if not csv_path.exists():
         debug_log(f"APPEND_LIMIT_ROW: CSV not found for {pair}", "WARNING")
@@ -813,7 +838,11 @@ def update_limit_row(
         ex2_status: New status (OPEN, FILLED, CANCELLED)
         new_order_id: For edit - new order_id
         new_price: For edit - new price
+
+    HARD DISABLED: returns False when LOGGING_ENABLED=False (crash diagnosis 2026-09-23)
     """
+    if not LOGGING_ENABLED:
+        return False  # HARD DISABLED for crash diagnosis (2026-09-23)
     csv_path = get_trade_csv_path(pair)
     if not csv_path.exists():
         debug_log(f"UPDATE_LIMIT_ROW: CSV not found for {pair}", "WARNING")
@@ -878,6 +907,8 @@ def update_limit_watch(
 ):
     """
     Update limit order watch state for a trade (ex2sum row).
+
+    HARD DISABLED: returns False when LOGGING_ENABLED=False
 
     When new_status is CANCELLED:
     - Sets ex2_status to CANCELLED on the ex2pN row
