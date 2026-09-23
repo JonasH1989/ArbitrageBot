@@ -6,8 +6,6 @@ Uses harmonized trade_logger for unified multi-exchange logging
 """
 import sys
 import requests
-import asyncio
-import httpx
 import yaml
 import time
 import json
@@ -1238,38 +1236,16 @@ def kucoin_passphrase_enc(secret, passphrase):
     mac = hmac.new(secret.encode(), passphrase.encode(), hashlib.sha256)
     return base64.b64encode(mac.digest()).decode()
 
-# =============================================================================
-# F2: ASYNC ORDERBOOK (Performance Optimization, 2026-09-23)
-# =============================================================================
-# Jonas' idea: fetch KuCoin + MEXC orderbook in parallel instead of sequential.
-# ~2x faster updates = earlier spread detection = fewer missed opportunities.
-async def _fetch_mexc_depth_async(client):
-    """Async fetch MEXC depth (top 10 levels)."""
-    url = f'https://api.mexc.com/api/v3/depth?symbol={COIN_SYMBOL_MEXC}&limit=10'
-    resp = await client.get(url, timeout=5.0)
-    return resp.json()
-
-async def _fetch_kucoin_depth_async(client):
-    """Async fetch KuCoin Level2 orderbook (top 20)."""
-    url = f'https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol={COIN_SYMBOL}'
-    resp = await client.get(url, timeout=5.0)
-    return resp.json().get('data', {})
-
 def get_orderbook_levels():
-    """Get detailed orderbook levels from both exchanges IN PARALLEL (F2).
-
-    F2: KuCoin + MEXC fetched simultaneously via asyncio.gather(),
-    reducing latency from (a+b) to max(a,b).
-    """
+    """Get detailed orderbook levels from both exchanges for multi-level spread check"""
     try:
-        # F2: Parallel fetch KuCoin + MEXC simultaneously
-        async def fetch_both():
-            async with httpx.AsyncClient() as client:
-                return await asyncio.gather(
-                    _fetch_mexc_depth_async(client),
-                    _fetch_kucoin_depth_async(client)
-                )
-        m_depth, k_depth = asyncio.run(fetch_both())
+        # MEXC depth API - get top 10 levels
+        resp_m = requests.get(f'https://api.mexc.com/api/v3/depth?symbol={COIN_SYMBOL_MEXC}&limit=10', timeout=5)
+        m_depth = resp_m.json()
+
+        # KuCoin Level2 API - get top 20
+        resp_k = requests.get(f'https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol={COIN_SYMBOL}', timeout=5)
+        k_depth = resp_k.json().get('data', {})
 
         # Parse MEXC asks (sorted low to high - we need to buy)
         mexc_asks = []
