@@ -896,7 +896,56 @@ def start_http_log_server(port: int = 8503):
     return thread
 
 # Balance check functions
+# =============================================================================
+# WALLET CACHE (F1: Performance Optimization, 2026-09-23)
+# =============================================================================
+# Jonas' idea: cache wallet balances because they only change after a trade.
+# Cache is invalidated after every successful trade. TTL of 60s as safety vent
+# (in case external transfers happen, e.g. manual withdrawal between trades).
+_wallet_cache = {"kucoin": {"data": None, "ts": 0.0}, "mexc": {"data": None, "ts": 0.0}}
+CACHE_TTL_SEC = 60  # Max cache lifetime in seconds (even without trade invalidation)
+
+def invalidate_wallet_cache():
+    """Invalidate wallet cache after every successful trade."""
+    _wallet_cache["kucoin"]["ts"] = 0.0
+    _wallet_cache["mexc"]["ts"] = 0.0
+    log("🔄 Wallet cache invalidated")
+
 def get_mexc_balances() -> dict:
+    """Cached wrapper for _get_mexc_balances_raw().
+
+    Cache strategy:
+    - Reuses cached value if available AND < CACHE_TTL_SEC old
+    - Otherwise calls raw function and caches successful result
+    - Invalidate with invalidate_wallet_cache() after every trade
+    """
+    now = time.time()
+    cache = _wallet_cache["mexc"]
+    if cache["data"] is not None and (now - cache["ts"]) < CACHE_TTL_SEC:
+        return cache["data"]
+    result = _get_mexc_balances_raw()
+    if result:  # Only cache successful (non-empty) results
+        _wallet_cache["mexc"] = {"data": result, "ts": time.time()}
+    return result
+
+def get_kucoin_balances(wallet_type: str = None) -> dict:
+    """Cached wrapper for _get_kucoin_balances_raw().
+
+    Cache strategy:
+    - Reuses cached value if available AND < CACHE_TTL_SEC old
+    - Otherwise calls raw function and caches successful result
+    - Invalidate with invalidate_wallet_cache() after every trade
+    """
+    now = time.time()
+    cache = _wallet_cache["kucoin"]
+    if cache["data"] is not None and (now - cache["ts"]) < CACHE_TTL_SEC:
+        return cache["data"]
+    result = _get_kucoin_balances_raw(wallet_type)
+    if result:  # Only cache successful (non-empty) results
+        _wallet_cache["kucoin"] = {"data": result, "ts": time.time()}
+    return result
+
+def _get_mexc_balances_raw() -> dict:
     """Get ALL MEXC account balances with free and locked amounts."""
     try:
         ts = str(int(time.time() * 1000))
@@ -923,8 +972,8 @@ def get_mexc_balances() -> dict:
         log(f"Error getting MEXC balances: {e}", "ERROR")
         return {}
 
-def get_kucoin_balances(wallet_type: str = None) -> dict:
-    """Get KuCoin account balances.
+def _get_kucoin_balances_raw(wallet_type: str = None) -> dict:
+    """Get KuCoin account balances (uncached).
     
     Args:
         wallet_type: Specific wallet type to filter ('trade', 'main', 'margin', 'otc', 'pool').
@@ -1704,6 +1753,9 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     # ========================================================================
     # PRE-TRADE BALANCE CHECK
     # ========================================================================
+    # F1: Invalidate wallet cache before trade execution
+    # Ensures the balance check uses fresh data from exchanges
+    invalidate_wallet_cache()
     log(f"Checking balances for {dir_str} trade...")
     can_trade, balance_error, max_tradable = check_balances_for_trade(dir_str, qty, buy_price, sell_price)
     
@@ -2340,6 +2392,9 @@ def check_limit_order_fills():
                                         # was insufficient. Don't place a replacement without
                                         # confirming wallet has enough now.
                                         try:
+                                            # F1: Invalidate cache before replacement wallet re-check
+                                            # Ensures we check against fresh balances, not stale cache
+                                            invalidate_wallet_cache()
                                             _kc_balances = get_kucoin_balances()
                                             _kc_available = _kc_balances.get(coin, {}).get('total', 0) if _kc_balances else 0
                                             if _kc_available < new_qty:
