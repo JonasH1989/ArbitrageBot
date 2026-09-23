@@ -107,6 +107,15 @@ KUCOIN_FEE_MAKER = 0.001   # 0.1% maker fee
 # ==============================================================================
 COIN_SYMBOL = "MPC-USDT"      # KuCoin format (e.g., BTC-USDT, ETH-USDT)
 COIN_SYMBOL_MEXC = "MPCUSDT"  # MEXC format (e.g., BTCUSDT, ETHUSDT)
+
+# =============================================================================
+# F3: FAST POLLING (Performance Optimization, 2026-09-23)
+# =============================================================================
+# Jonas' idea: faster main-loop polling when actively scanning for opportunities.
+# Other sleeps (inactive, replacement, error retry) stay at 1s — they have other
+# reasons (CPU conservation, exchange rate-limit politeness, replacement timing).
+# ~5x faster iteration when actively scanning = earlier signal detection.
+LOOP_SLEEP_SEC = 0.2  # F3: 5x faster than 1.0s default
 # KuCoin symbol info (fetched dynamically from API)
 _kucoin_symbol_cache = None
 
@@ -3478,8 +3487,9 @@ def main():
 
         # Check for hourly wallet snapshot
         take_wallet_snapshot()
-        
-        time.sleep(1)  # Check every second
+
+        # F3: faster polling when actively scanning for opportunities
+        time.sleep(LOOP_SLEEP_SEC)
 
 if __name__ == '__main__':
     main()
