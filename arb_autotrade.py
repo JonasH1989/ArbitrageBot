@@ -3287,6 +3287,7 @@ def main():
         if not prices:
             time.sleep(1)
             continue
+        _diag['last_step'] = 'after_prices'
 
         k = prices['kucoin']
         m = prices['mexc']
@@ -3301,6 +3302,7 @@ def main():
 
         # Get real orderbook levels
         ob_data = get_orderbook_levels()
+        _diag['last_step'] = 'after_orderbook_call'
         _diag['last_step'] = 'after_orderbook'
 
         # Phase 1b: Cache latest orderbook for Dashboard (/latest/orderbook)
@@ -3370,6 +3372,7 @@ def main():
         # Determine which spread direction is profitable
         profitable_spread = max(spread_pct_km, spread_pct_mk)
         direction = "K→M" if spread_pct_km >= spread_pct_mk else "M→K"
+        _diag['last_step'] = 'after_profitable_spread'
         _diag['last_step'] = 'after_profitable'
 
         # Phase 1b: Cache latest spreads for Dashboard (/latest/spreads)
