@@ -941,6 +941,30 @@ def invalidate_wallet_cache():
     _wallet_cache["mexc"]["ts"] = 0.0
     log("🔄 Wallet cache invalidated")
 
+# =============================================================================
+# LATEST DATA CACHE (Phase 1b: Dashboard-Echtzeit-Updates, 2026-09-24)
+# =============================================================================
+# Bot caches latest spreads + orderbook so Dashboard can read via /latest/*
+# endpoints WITHOUT making extra Exchange calls. Thread-safe via Lock.
+# Dashboard does @st.fragment(run_every="100ms") → reads sub-ms from cache.
+_latest_data_lock = threading.Lock()
+_latest_spreads = {
+    "kucoin": {"bid": 0.0, "ask": 0.0},
+    "mexc": {"bid": 0.0, "ask": 0.0},
+    "spread_mk_pct": 0.0,
+    "spread_km_pct": 0.0,
+    "profitable_spread": 0.0,
+    "direction": "",
+    "ts": 0.0
+}
+_latest_orderbook = {
+    "kucoin_bids": [],
+    "kucoin_asks": [],
+    "mexc_bids": [],
+    "mexc_asks": [],
+    "ts": 0.0
+}
+
 def get_mexc_balances() -> dict:
     """Cached wrapper for _get_mexc_balances_raw().
 
@@ -3214,6 +3238,17 @@ def main():
         # Get real orderbook levels
         ob_data = get_orderbook_levels()
 
+        # Phase 1b: Cache latest orderbook for Dashboard (/latest/orderbook)
+        if ob_data:
+            with _latest_data_lock:
+                _latest_orderbook = {
+                    "kucoin_bids": ob_data.get('kucoin_bids', []),
+                    "kucoin_asks": ob_data.get('kucoin_asks', []),
+                    "mexc_bids": ob_data.get('mexc_bids', []),
+                    "mexc_asks": ob_data.get('mexc_asks', []),
+                    "ts": time.time()
+                }
+
         # Calculate minimum trade quantity (dynamically from exchange APIs)
         mexc_min_qty = round((MEXC_MIN_USDT + 0.1) / m['ask']) if m['ask'] > 0 else 10
         kucoin_min_qty = get_kucoin_min_qty(k['bid']) if k['bid'] > 0 else 10
@@ -3270,6 +3305,18 @@ def main():
         # Determine which spread direction is profitable
         profitable_spread = max(spread_pct_km, spread_pct_mk)
         direction = "K→M" if spread_pct_km >= spread_pct_mk else "M→K"
+
+        # Phase 1b: Cache latest spreads for Dashboard (/latest/spreads)
+        with _latest_data_lock:
+            _latest_spreads = {
+                "kucoin": {"bid": k['bid'], "ask": k['ask']},
+                "mexc": {"bid": m['bid'], "ask": m['ask']},
+                "spread_mk_pct": spread_pct_mk,
+                "spread_km_pct": spread_pct_km,
+                "profitable_spread": profitable_spread,
+                "direction": direction,
+                "ts": time.time()
+            }
 
         # Log periodic status every 30 seconds for monitoring
         if int(time.time()) % 10 == 0:
