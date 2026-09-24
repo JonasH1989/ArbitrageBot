@@ -759,6 +759,26 @@ def start_http_log_server(port: int = 8503):
             'new_level': dbg.level,
         })
 
+    @app.route('/latest/spreads', methods=['GET'])
+    def get_latest_spreads_endpoint():
+        """Get latest spreads + bid/ask (cached from main loop, sub-ms response).
+
+        Phase 1b: Dashboard reads this instead of calling Exchanges directly.
+        Bot updates cache every iteration (200ms with F3).
+        """
+        with _latest_data_lock:
+            return jsonify(_latest_spreads.copy())
+
+    @app.route('/latest/orderbook', methods=['GET'])
+    def get_latest_orderbook_endpoint():
+        """Get latest orderbook top levels (cached from main loop, sub-ms response).
+
+        Phase 1b: Dashboard reads this instead of calling Exchanges directly.
+        Bot updates cache every iteration (200ms with F3).
+        """
+        with _latest_data_lock:
+            return jsonify(_latest_orderbook.copy())
+
     @app.route('/trades/<pair>', methods=['GET'])
     def get_trades_api(pair):
         """Get trades from CSV for a trading pair"""
