@@ -3293,16 +3293,20 @@ def main():
             continue
         _diag['last_step'] = 'after_prices'
 
-        k = prices['kucoin']
-        m = prices['mexc']
+        try:
+            k = prices['kucoin']
+            m = prices['mexc']
 
-        # Check M->K (Buy MEXC, Sell KuCoin)
-        spread_mk = k['bid'] - m['ask']
-        spread_pct_mk = (spread_mk / m['ask']) * 100 if m['ask'] > 0 else 0
+            # Check M->K (Buy MEXC, Sell KuCoin)
+            spread_mk = k['bid'] - m['ask']
+            spread_pct_mk = (spread_mk / m['ask']) * 100 if m['ask'] > 0 else 0
 
-        # Check K->M (Buy KuCoin, Sell MEXC)
-        spread_km = m['bid'] - k['ask']
-        spread_pct_km = (spread_km / k['ask']) * 100 if k['ask'] > 0 else 0
+            # Check K->M (Buy KuCoin, Sell MEXC)
+            spread_km = m['bid'] - k['ask']
+            spread_pct_km = (spread_km / k['ask']) * 100 if k['ask'] > 0 else 0
+            _diag['last_step'] = 'after_spread_calc'
+        except Exception as e:
+            _diag['last_loop_error'] = f"spread_calc: {type(e).__name__}: {e} | k={k if 'k' in dir() else 'N/A'} | m={m if 'm' in dir() else 'N/A'} | prices={prices}"
 
         # Get real orderbook levels
         try:
