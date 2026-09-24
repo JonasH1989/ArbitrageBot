@@ -3398,6 +3398,7 @@ def main():
                 "direction": direction,
                 "ts": time.time()
             }
+            _diag['last_step'] = 'after_cache_update'
 
         # Log periodic status every 30 seconds for monitoring
         if int(time.time()) % 10 == 0:
