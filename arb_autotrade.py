@@ -779,6 +779,23 @@ def start_http_log_server(port: int = 8503):
         with _latest_data_lock:
             return jsonify(_latest_orderbook.copy())
 
+    @app.route('/debug/loop-status', methods=['GET'])
+    def get_debug_loop_status():
+        """Show main loop iteration status for debugging Phase 1b.
+
+        If time_since_last_iteration > ~5s, the main loop is stuck/crashed.
+        """
+        now = time.time()
+        last_loop = _last_loop_iteration_ts
+        return jsonify({
+            'last_loop_iteration_ts': last_loop,
+            'seconds_since_last_iteration': (now - last_loop) if last_loop > 0 else None,
+            'cache_spreads_ts': _latest_spreads.get('ts', 0),
+            'cache_orderbook_ts': _latest_orderbook.get('ts', 0),
+            'cache_spreads_age_sec': (now - _latest_spreads.get('ts', 0)) if _latest_spreads.get('ts', 0) > 0 else None,
+            'cache_orderbook_age_sec': (now - _latest_orderbook.get('ts', 0)) if _latest_orderbook.get('ts', 0) > 0 else None,
+        })
+
     @app.route('/trades/<pair>', methods=['GET'])
     def get_trades_api(pair):
         """Get trades from CSV for a trading pair"""
@@ -964,6 +981,10 @@ _latest_orderbook = {
     "mexc_asks": [],
     "ts": 0.0
 }
+
+# Phase 1b diagnostic: timestamp of last completed main loop iteration
+# (set at end of loop, BEFORE sleep). If old → loop is stuck or crashed early.
+_last_loop_iteration_ts = 0.0
 
 def get_mexc_balances() -> dict:
     """Cached wrapper for _get_mexc_balances_raw().
@@ -3552,6 +3573,9 @@ def main():
 
         # Check for hourly wallet snapshot
         take_wallet_snapshot()
+
+        # Phase 1b diagnostic: mark iteration as complete (only reached if no crash above)
+        _last_loop_iteration_ts = time.time()
 
         # F3: faster polling when actively scanning for opportunities
         time.sleep(LOOP_SLEEP_SEC)
