@@ -1097,8 +1097,8 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
                 dbg.error('balance_check_failed', exc=e, ctx={'direction': direction, 'qty': qty, 'buy_price': buy_price})
             return False, f"Balance check error: {e}", 0
         
-        mexc_usdt = mexc_bal.get('USDT', {}).get('total', 0) if mexc_bal else 0
-        coin_available_kucoin = kucoin_bal.get(coin, {}).get('total', 0) if kucoin_bal else 0
+        mexc_usdt = mexc_bal.get('USDT', {}).get('free', 0) if mexc_bal else 0
+        coin_available_kucoin = kucoin_bal.get(coin, {}).get('free', 0) if kucoin_bal else 0
         
         # Calculate max tradable qty based on limiting factor
         # SAFETY: Guard against division by zero
@@ -1139,8 +1139,8 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
                 dbg.error('balance_check_failed', exc=e, ctx={'direction': direction, 'qty': qty, 'buy_price': buy_price})
             return False, f"Balance check error: {e}", 0
         
-        kucoin_usdt = kucoin_bal.get('USDT', {}).get('total', 0) if kucoin_bal else 0
-        coin_available_mexc = mexc_bal.get(coin, {}).get('total', 0) if mexc_bal else 0
+        kucoin_usdt = kucoin_bal.get('USDT', {}).get('free', 0) if kucoin_bal else 0
+        coin_available_mexc = mexc_bal.get(coin, {}).get('free', 0) if mexc_bal else 0
         
         # Calculate max tradable qty based on limiting factor
         # SAFETY: Guard against division by zero
@@ -1838,10 +1838,10 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     mexc_bal = get_mexc_balances()
     kucoin_bal = get_kucoin_balances()
     
-    mexc_usdt = mexc_bal.get('USDT', {}).get('total', 0) if mexc_bal else 0
-    mexc_coins = mexc_bal.get(coin, {}).get('total', 0) if mexc_bal else 0
-    kucoin_usdt = kucoin_bal.get('USDT', {}).get('total', 0) if kucoin_bal else 0
-    kucoin_coins = kucoin_bal.get(coin, {}).get('total', 0) if kucoin_bal else 0
+    mexc_usdt = mexc_bal.get('USDT', {}).get('free', 0) if mexc_bal else 0
+    mexc_coins = mexc_bal.get(coin, {}).get('free', 0) if mexc_bal else 0
+    kucoin_usdt = kucoin_bal.get('USDT', {}).get('free', 0) if kucoin_bal else 0
+    kucoin_coins = kucoin_bal.get(coin, {}).get('free', 0) if kucoin_bal else 0
     
     log(f"   MEXC: USDT=${mexc_usdt:.4f}, {coin}={mexc_coins:.2f}", "DEBUG")
     log(f"   KuCoin: USDT=${kucoin_usdt:.4f}, {coin}={kucoin_coins:.2f}", "DEBUG")
@@ -2079,7 +2079,7 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     if exchange_limit.upper() == "KUCOIN":
         try:
             _kc_balances = get_kucoin_balances()
-            _kc_available = _kc_balances.get(coin, {}).get('total', 0) if _kc_balances else 0
+            _kc_available = _kc_balances.get(coin, {}).get('free', 0) if _kc_balances else 0
             if _kc_available < sell_qty:
                 sell_qty = math.floor(_kc_available * 0.999)
                 log(f"⚠️ KuCoin wallet re-check: sell_qty reduced to {sell_qty:.4f} {coin}")
@@ -2427,7 +2427,7 @@ def check_limit_order_fills():
                                             # Ensures we check against fresh balances, not stale cache
                                             invalidate_wallet_cache()
                                             _kc_balances = get_kucoin_balances()
-                                            _kc_available = _kc_balances.get(coin, {}).get('total', 0) if _kc_balances else 0
+                                            _kc_available = _kc_balances.get(coin, {}).get('free', 0) if _kc_balances else 0
                                             if _kc_available < new_qty:
                                                 log(f"⚠️ Replacement skipped: wallet {_kc_available:.4f} < qty {new_qty:.4f}")
                                                 continue
