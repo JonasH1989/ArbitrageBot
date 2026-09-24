@@ -3283,7 +3283,11 @@ def main():
             )
             last_config_hash = config_hash
 
-        prices = get_prices()
+        try:
+            prices = get_prices()
+        except Exception as e:
+            _diag['last_loop_error'] = f"get_prices: {type(e).__name__}: {e}"
+            prices = None
         if not prices:
             time.sleep(1)
             continue
@@ -3301,7 +3305,11 @@ def main():
         spread_pct_km = (spread_km / k['ask']) * 100 if k['ask'] > 0 else 0
 
         # Get real orderbook levels
-        ob_data = get_orderbook_levels()
+        try:
+            ob_data = get_orderbook_levels()
+        except Exception as e:
+            _diag['last_loop_error'] = f"get_orderbook_levels: {type(e).__name__}: {e}"
+            ob_data = None
         _diag['last_step'] = 'after_orderbook_call'
         _diag['last_step'] = 'after_orderbook'
 
