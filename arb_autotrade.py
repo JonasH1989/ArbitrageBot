@@ -3398,6 +3398,9 @@ def main():
                 "direction": direction,
                 "ts": time.time()
             }
+            _diag['cache_update_count'] = _diag.get('cache_update_count', 0) + 1
+            _diag['last_cache_ts'] = _latest_spreads['ts']
+            _diag['last_cache_k_bid'] = k['bid']
             _diag['last_step'] = 'after_cache_update'
 
         # Log periodic status every 30 seconds for monitoring
