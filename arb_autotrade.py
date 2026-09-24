@@ -779,6 +779,21 @@ def start_http_log_server(port: int = 8503):
         with _latest_data_lock:
             return jsonify(_latest_orderbook.copy())
 
+    @app.route('/debug/internal-state', methods=['GET'])
+    def get_debug_internal_state():
+        """Return full internal diagnostic state (Jonas asked: pull logs from API).
+
+        Use this instead of docker logs to debug the bot remotely.
+        Shows:
+        - last_step: where the main loop last reached (e.g. 'loop_start', 'complete')
+        - loop_iterations: how many iterations completed
+        - prices_*: last prices() call info (result, error, ts)
+        - orderbook_*: last get_orderbook_levels() call info
+        - last_iteration_ts: when loop last completed (0 = never)
+        - last_loop_error: any unhandled exception in main loop
+        """
+        return jsonify(_diag)
+
     @app.route('/debug/loop-status', methods=['GET'])
     def get_debug_loop_status():
         """Show main loop iteration status for debugging Phase 1b.
@@ -985,6 +1000,21 @@ _latest_orderbook = {
 # Phase 1b diagnostic: timestamp of last completed main loop iteration
 # (set at end of loop, BEFORE sleep). If old → loop is stuck or crashed early.
 _last_loop_iteration_ts = 0.0
+
+# Diagnostic dict — exposed via /debug/internal-state endpoint
+# (Jonas wants remote diagnostics instead of docker logs)
+_diag = {
+    'last_step': 'init',
+    'loop_iterations': 0,
+    'prices_last_call_ts': 0.0,
+    'prices_result': None,
+    'prices_error': None,
+    'orderbook_last_call_ts': 0.0,
+    'orderbook_result': None,
+    'orderbook_error': None,
+    'last_iteration_ts': 0.0,
+    'last_loop_error': None
+}
 
 def get_mexc_balances() -> dict:
     """Cached wrapper for _get_mexc_balances_raw().
@@ -1326,6 +1356,8 @@ def get_orderbook_levels():
     KuCoin + MEXC fetched simultaneously via ThreadPoolExecutor.
     Same return shape as original sequential version.
     """
+    global _diag
+    _diag['orderbook_last_call_ts'] = time.time()
     try:
         # F2v2: Submit both fetches simultaneously to thread pool
         m_future = _orderbook_executor.submit(_fetch_mexc_depth)
@@ -1358,6 +1390,7 @@ def get_orderbook_levels():
             for price, qty in m_depth['bids'][:5]:
                 mexc_bids.append({'price': float(price), 'qty': float(qty)})
 
+        _diag['orderbook_result'] = 'OK'
         return {
             'mexc_asks': mexc_asks,
             'kucoin_bids': kucoin_bids,
@@ -1365,11 +1398,15 @@ def get_orderbook_levels():
             'mexc_bids': mexc_bids
         }
     except Exception as e:
+        _diag['orderbook_result'] = 'error'
+        _diag['orderbook_error'] = f"{type(e).__name__}: {e}"
         log(f"Error getting orderbook levels: {e}")
         return None
 
 def get_prices():
     """Get Level 1 prices from real orderbook (not ticker!)"""
+    global _diag
+    _diag['prices_last_call_ts'] = time.time()
     try:
         # KuCoin Level1 orderbook
         resp_k = requests.get(f'https://api.kucoin.com/api/v1/market/orderbook/level1?symbol={COIN_SYMBOL}', timeout=5)
@@ -1387,11 +1424,14 @@ def get_prices():
         m_ask = float(m_depth['asks'][0][0]) if m_depth.get('asks') else 0
         m_bid = float(m_depth['bids'][0][0]) if m_depth.get('bids') else 0
 
+        _diag['prices_result'] = 'OK'
         return {
             'kucoin': {'bid': k_bid, 'ask': k_ask},
             'mexc': {'bid': m_bid, 'ask': m_ask}
         }
     except Exception as e:
+        _diag['prices_result'] = 'error'
+        _diag['prices_error'] = f"{type(e).__name__}: {e}"
         log(f"Error getting prices: {e}")
         return None
 
@@ -3211,6 +3251,9 @@ def main():
     log(f"SAFETY: Bot started in disabled state", "CONFIG")
     
     while True:
+        global _diag
+        _diag['last_step'] = 'loop_start'
+        _diag['loop_iterations'] += 1
         # Heartbeat log every 30s - shows bot is alive + Mem/CPU
         heartbeat_counter += 1
         if time.time() - last_heartbeat_ts >= 30:
@@ -3576,6 +3619,8 @@ def main():
 
         # Phase 1b diagnostic: mark iteration as complete (only reached if no crash above)
         _last_loop_iteration_ts = time.time()
+        _diag['last_iteration_ts'] = _last_loop_iteration_ts
+        _diag['last_step'] = 'complete'
 
         # F3: faster polling when actively scanning for opportunities
         time.sleep(LOOP_SLEEP_SEC)
