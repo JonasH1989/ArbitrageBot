@@ -3301,6 +3301,7 @@ def main():
 
         # Get real orderbook levels
         ob_data = get_orderbook_levels()
+        _diag['last_step'] = 'after_orderbook'
 
         # Phase 1b: Cache latest orderbook for Dashboard (/latest/orderbook)
         if ob_data:
@@ -3369,6 +3370,7 @@ def main():
         # Determine which spread direction is profitable
         profitable_spread = max(spread_pct_km, spread_pct_mk)
         direction = "K→M" if spread_pct_km >= spread_pct_mk else "M→K"
+        _diag['last_step'] = 'after_profitable'
 
         # Phase 1b: Cache latest spreads for Dashboard (/latest/spreads)
         with _latest_data_lock:
