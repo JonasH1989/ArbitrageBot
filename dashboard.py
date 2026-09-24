@@ -850,7 +850,7 @@ else:
     except Exception:
         pass
     
-    if kucoin.get('ok') and mexc.get('ok'):
+    if kucoin and mexc and kucoin.get('ok') and mexc.get('ok'):
         # Use Level 2 best prices for spread (synchronized with orderbook table)
         k_ask = kucoin_asks_l2[0][0] if kucoin_asks_l2 else kucoin['ask']
         k_bid = kucoin_bids_l2[0][0] if kucoin_bids_l2 else kucoin['bid']
