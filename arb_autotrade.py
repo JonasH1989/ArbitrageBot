@@ -6,6 +6,7 @@ Uses harmonized trade_logger for unified multi-exchange logging
 """
 import sys
 import requests
+from concurrent.futures import ThreadPoolExecutor
 import yaml
 import time
 import json
@@ -1236,16 +1237,37 @@ def kucoin_passphrase_enc(secret, passphrase):
     mac = hmac.new(secret.encode(), passphrase.encode(), hashlib.sha256)
     return base64.b64encode(mac.digest()).decode()
 
-def get_orderbook_levels():
-    """Get detailed orderbook levels from both exchanges for multi-level spread check"""
-    try:
-        # MEXC depth API - get top 10 levels
-        resp_m = requests.get(f'https://api.mexc.com/api/v3/depth?symbol={COIN_SYMBOL_MEXC}&limit=10', timeout=5)
-        m_depth = resp_m.json()
+# =============================================================================
+# F2v2: PARALLEL ORDERBOOK via ThreadPoolExecutor (2026-09-24)
+# =============================================================================
+# Replaces asyncio+httpx (F2 v1) which crashed because httpx wasn't installed.
+# ThreadPoolExecutor is stdlib (already in container) + requests (already there).
+# ~2x speed-up: (a+b) → max(a,b) for parallel KuCoin + MEXC fetches.
+_orderbook_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix='orderbook')
 
-        # KuCoin Level2 API - get top 20
-        resp_k = requests.get(f'https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol={COIN_SYMBOL}', timeout=5)
-        k_depth = resp_k.json().get('data', {})
+def _fetch_mexc_depth():
+    """Sync fetch MEXC depth (top 10 levels) — used by F2v2 parallel executor."""
+    resp = requests.get(f'https://api.mexc.com/api/v3/depth?symbol={COIN_SYMBOL_MEXC}&limit=10', timeout=5)
+    return resp.json()
+
+def _fetch_kucoin_depth():
+    """Sync fetch KuCoin Level2 orderbook (top 20) — used by F2v2 parallel executor."""
+    resp = requests.get(f'https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol={COIN_SYMBOL}', timeout=5)
+    return resp.json().get('data', {})
+
+def get_orderbook_levels():
+    """Get detailed orderbook levels from both exchanges IN PARALLEL (F2v2).
+
+    KuCoin + MEXC fetched simultaneously via ThreadPoolExecutor.
+    Same return shape as original sequential version.
+    """
+    try:
+        # F2v2: Submit both fetches simultaneously to thread pool
+        m_future = _orderbook_executor.submit(_fetch_mexc_depth)
+        k_future = _orderbook_executor.submit(_fetch_kucoin_depth)
+        # Wait for both (5s timeout each)
+        m_depth = m_future.result(timeout=5)
+        k_depth = k_future.result(timeout=5)
 
         # Parse MEXC asks (sorted low to high - we need to buy)
         mexc_asks = []
