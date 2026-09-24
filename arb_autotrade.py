@@ -3251,7 +3251,7 @@ def main():
     log(f"SAFETY: Bot started in disabled state", "CONFIG")
     
     while True:
-        global _diag
+        global _diag, _latest_spreads, _latest_orderbook
         _diag['last_step'] = 'loop_start'
         _diag['loop_iterations'] += 1
         # Heartbeat log every 30s - shows bot is alive + Mem/CPU
