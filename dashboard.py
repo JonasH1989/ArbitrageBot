@@ -19,6 +19,10 @@ from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_
 
 import base64
 
+# Bot cache base URL (Phase 1c fix: dashboard container needs real URL, not localhost)
+# Set CACHE_BASE_URL in Coolify Dashboard-Container env to e.g. http://arb-bot:8505
+CACHE_BASE_URL = os.environ.get('CACHE_BASE_URL', 'http://localhost:8505')
+
 # Sound files
 SOUND_FILES = {
     'bis3': '/app/static/bis3prozent.mp3',
@@ -835,7 +839,7 @@ else:
     kucoin_bids_l2 = []
     kucoin_asks_l2 = []
     try:
-        spreads_resp = requests.get(f'http://localhost:8505/latest/spreads', timeout=5)
+        spreads_resp = requests.get(f'{CACHE_BASE_URL}/latest/spreads', timeout=5)
         if spreads_resp.status_code == 200:
             spreads = spreads_resp.json()
             # Reconstruct kucoin/mexc dicts from cache
@@ -1020,13 +1024,13 @@ else:
                     with col3:
                         st.markdown("### 📊 Trade Stats")
                         try:
-                            resp = requests.get('http://localhost:8505/trades/summary/MPC-USDT', timeout=5)
+                            resp = requests.get(f'{CACHE_BASE_URL}/trades/summary/MPC-USDT', timeout=5)
                             if resp.status_code == 200:
                                 data = resp.json()
                                 summary = data.get('summary', {})
                                 
                                 # Count unique trade IDs
-                                all_trades_resp = requests.get('http://localhost:8505/trades/MPC-USDT', timeout=5)
+                                all_trades_resp = requests.get(f'{CACHE_BASE_URL}/trades/MPC-USDT', timeout=5)
                                 total_trades = 0
                                 if all_trades_resp.status_code == 200:
                                     trades_data = all_trades_resp.json()
@@ -1039,7 +1043,7 @@ else:
                                     total_trades = len(trade_ids)
                                 
                                 # Get pending count
-                                pending_resp = requests.get('http://localhost:8505/trades/pending', timeout=5)
+                                pending_resp = requests.get(f'{CACHE_BASE_URL}/trades/pending', timeout=5)
                                 pending_count = 0
                                 if pending_resp.status_code == 200:
                                     pending_count = pending_resp.json().get('count', 0)
@@ -1099,7 +1103,7 @@ else:
             # Phase 1c: Use bot's L2 orderbook cache (no direct exchange API calls)
             mexc_bids, mexc_asks, kucoin_bids, kucoin_asks = [], [], [], []
             try:
-                ob_resp = requests.get(f'http://localhost:8505/latest/orderbook', timeout=5)
+                ob_resp = requests.get(f'{CACHE_BASE_URL}/latest/orderbook', timeout=5)
                 if ob_resp.status_code == 200:
                     ob = ob_resp.json()
                     mexc_bids = [(float(p), float(v)) for p, v in ob.get('mexc_bids', [])[:20]]
@@ -1732,7 +1736,7 @@ else:
         
         # Get current trade count
         try:
-            trades_resp = requests.get(f'http://localhost:8505/trades/{selected_pair}', timeout=5)
+            trades_resp = requests.get(f'{CACHE_BASE_URL}/trades/{selected_pair}', timeout=5)
             if trades_resp.status_code == 200:
                 trades_data = trades_resp.json()
                 current_trade_count = trades_data.get('count', 0)
