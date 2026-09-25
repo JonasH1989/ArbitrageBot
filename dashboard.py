@@ -1644,7 +1644,7 @@ else:
             elif False:  # unreachable, kept for structure
                 st.info("Keine Trades")
         
-        if trade_possible_km or trade_possible_mk:
+        if (trade_possible_km or trade_possible_mk) and max(spread_pct_km, spread_pct_mk) >= threshold_start:
             # Determine best direction based on strategy
             if current_strategy == 'usdt':
                 # USDT strategy: compare total profit
@@ -1769,7 +1769,7 @@ else:
             except Exception as e:
                 st.warning(f"⚠️ Bot-Cache nicht erreichbar: {BOT_CACHE_URL} → {type(e).__name__}: {str(e)[:80]}")
         
-        if pair_alert and alert_enabled and (trade_possible_km or trade_possible_mk):
+        if pair_alert and alert_enabled and (trade_possible_km or trade_possible_mk) and max(spread_pct_km, spread_pct_mk) >= threshold_start:
             # Determine spread and play appropriate sound
             spread_pct = max(spread_pct_km, spread_pct_mk)
             if spread_pct >= 10:
