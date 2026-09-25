@@ -21,7 +21,7 @@ import base64
 
 # Bot cache base URL (Phase 1c fix: dashboard container needs real URL, not localhost)
 # Set CACHE_BASE_URL in Coolify Dashboard-Container env to e.g. http://arb-bot:8505
-CACHE_BASE_URL = os.environ.get('CACHE_BASE_URL', 'http://192.168.113.14:18888')
+CACHE_BASE_URL = os.environ.get('CACHE_BASE_URL', 'http://localhost:8505')
 
 # Sound files
 SOUND_FILES = {
@@ -851,8 +851,8 @@ else:
             mexc = {'ok': True, 'bid': mexc_bid, 'ask': mexc_ask, 'bid_size': 0, 'ask_size': 0}
             # For L2 orderbook, we still fetch from exchange but as fallback
             # (Phase 1c TODO: cache L2 orderbook in bot too)
-    except Exception as e:
-        st.error(f"❌ Cache-Call fehlgeschlagen: {CACHE_BASE_URL}/latest/spreads → {type(e).__name__}: {str(e)[:120]}")
+    except Exception:
+        pass
     
     if kucoin and mexc and kucoin.get('ok') and mexc.get('ok'):
         # Use Level 2 best prices for spread (synchronized with orderbook table)
@@ -1783,3 +1783,5 @@ if st.session_state.selected_pair:
 
 # =============================================================================
 # LIVE LOG VIEWER (SIDEBAR)
+
+
