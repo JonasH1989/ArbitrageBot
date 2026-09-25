@@ -66,6 +66,33 @@ st.set_page_config(page_title="Arbitrage Bot", page_icon="📊", layout="wide")
 BOT_CACHE_URL = 'http://arbitrage-bot:8505'
 st.sidebar.info(f"🔗 Bot-Cache: {BOT_CACHE_URL}")
 
+
+# ============================================================================
+# Helper: Fetch Level 2 orderbook from MEXC + KuCoin (public APIs, no auth)
+# Used by orderbook/spread render. Extracted for fragment-wrapping.
+# ============================================================================
+def fetch_l2_orderbook(symbol_mexc="MPCUSDT", symbol_kucoin="MPC-USDT"):
+    """Fetch L2 orderbook from MEXC depth (limit=20) and KuCoin level2_20.
+    Returns (mexc_bids, mexc_asks, kucoin_bids, kucoin_asks) — lists of (price, qty) tuples.
+    Empty lists on any failure (timeout, bad JSON, non-200)."""
+    try:
+        mexc_ob_resp = requests.get(f"https://api.mexc.com/api/v3/depth?symbol={symbol_mexc}&limit=20", timeout=5)
+        mexc_ob = mexc_ob_resp.json() if mexc_ob_resp.status_code == 200 else {'bids': [], 'asks': []}
+        mexc_bids_l2 = [(float(p), float(v)) for p, v in mexc_ob.get('bids', [])[:20]]
+        mexc_asks_l2 = [(float(p), float(v)) for p, v in mexc_ob.get('asks', [])[:20]]
+    except:
+        mexc_bids_l2, mexc_asks_l2 = [], []
+
+    try:
+        kucoin_ob_resp = requests.get(f"https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol={symbol_kucoin}", timeout=5)
+        kucoin_ob = kucoin_ob_resp.json() if kucoin_ob_resp.status_code == 200 else {}
+        kucoin_bids_l2 = [(float(p), float(v)) for p, v in kucoin_ob.get('data', {}).get('bids', [])[:20]]
+        kucoin_asks_l2 = [(float(p), float(v)) for p, v in kucoin_ob.get('data', {}).get('asks', [])[:20]]
+    except:
+        kucoin_bids_l2, kucoin_asks_l2 = [], []
+
+    return mexc_bids_l2, mexc_asks_l2, kucoin_bids_l2, kucoin_asks_l2
+
 CONFIG_FILE = 'config/config.yaml'
 
 def load_config():
@@ -834,23 +861,9 @@ else:
     # Get data
     kucoin = get_kucoin_orderbook(pair)
     mexc = get_mexc_orderbook(pair)
-    
+
     # Also fetch Level 2 orderbook for accurate spread calculation (same data as orderbook table)
-    try:
-        mexc_ob_resp = requests.get("https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=20", timeout=5)
-        mexc_ob = mexc_ob_resp.json() if mexc_ob_resp.status_code == 200 else {'bids': [], 'asks': []}
-        mexc_bids_l2 = [(float(p), float(v)) for p, v in mexc_ob.get('bids', [])[:20]]
-        mexc_asks_l2 = [(float(p), float(v)) for p, v in mexc_ob.get('asks', [])[:20]]
-    except:
-        mexc_bids_l2, mexc_asks_l2 = [], []
-    
-    try:
-        kucoin_ob_resp = requests.get("https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol=MPC-USDT", timeout=5)
-        kucoin_ob = kucoin_ob_resp.json() if kucoin_ob_resp.status_code == 200 else {}
-        kucoin_bids_l2 = [(float(p), float(v)) for p, v in kucoin_ob.get('data', {}).get('bids', [])[:20]]
-        kucoin_asks_l2 = [(float(p), float(v)) for p, v in kucoin_ob.get('data', {}).get('asks', [])[:20]]
-    except:
-        kucoin_bids_l2, kucoin_asks_l2 = [], []
+    mexc_bids_l2, mexc_asks_l2, kucoin_bids_l2, kucoin_asks_l2 = fetch_l2_orderbook(COIN_SYMBOL_MEXC, COIN_SYMBOL)
     
     if kucoin and mexc and kucoin.get('ok') and mexc.get('ok'):
         # Use Level 2 best prices for spread (synchronized with orderbook table)
