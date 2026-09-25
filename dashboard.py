@@ -21,7 +21,7 @@ import base64
 
 # Bot cache base URL (Phase 1c fix: dashboard container needs real URL, not localhost)
 # Set CACHE_BASE_URL in Coolify Dashboard-Container env to e.g. http://arb-bot:8505
-CACHE_BASE_URL = os.environ.get('CACHE_BASE_URL', 'http://localhost:8505')
+CACHE_BASE_URL = os.environ.get('CACHE_BASE_URL', 'http://192.168.113.14:18888')
 
 # Sound files
 SOUND_FILES = {
