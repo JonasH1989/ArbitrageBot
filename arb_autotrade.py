@@ -3336,7 +3336,7 @@ def main():
         # Find best tradeable spread using BIDIRECTIONAL VOLUME ACCUMULATION
         # This replaces the old sweep that fixed one side - now both sides accumulate!
         strategy = get_trading_strategy(TRADING_PAIR)
-        best_trade = calculate_best_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy)
+        best_trade = calculate_best_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=True)
 
         # Log sweep results every 30 seconds
         if int(time.time()) % 10 == 0:
