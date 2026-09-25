@@ -62,6 +62,10 @@ KUCoin_LOGO = "/app/static/kucoin.jpg"
 MEXC_LOGO = "/app/static/mexc.jpg"
 st.set_page_config(page_title="Arbitrage Bot", page_icon="📊", layout="wide")
 
+# Bot cache base URL — sichtbar in Sidebar für Diagnose
+BOT_CACHE_URL = 'http://localhost:8505'
+st.sidebar.info(f"🔗 Bot-Cache: {BOT_CACHE_URL}")
+
 CONFIG_FILE = 'config/config.yaml'
 
 def load_config():
@@ -1022,13 +1026,13 @@ else:
                     with col3:
                         st.markdown("### 📊 Trade Stats")
                         try:
-                            resp = requests.get('http://localhost:8505/trades/summary/MPC-USDT', timeout=5)
+                            resp = requests.get(f'{BOT_CACHE_URL}/trades/summary/MPC-USDT', timeout=5)
                             if resp.status_code == 200:
                                 data = resp.json()
                                 summary = data.get('summary', {})
                                 
                                 # Count unique trade IDs
-                                all_trades_resp = requests.get('http://localhost:8505/trades/MPC-USDT', timeout=5)
+                                all_trades_resp = requests.get(f'{BOT_CACHE_URL}/trades/MPC-USDT', timeout=5)
                                 total_trades = 0
                                 if all_trades_resp.status_code == 200:
                                     trades_data = all_trades_resp.json()
@@ -1041,7 +1045,7 @@ else:
                                     total_trades = len(trade_ids)
                                 
                                 # Get pending count
-                                pending_resp = requests.get('http://localhost:8505/trades/pending', timeout=5)
+                                pending_resp = requests.get(f'{BOT_CACHE_URL}/trades/pending', timeout=5)
                                 pending_count = 0
                                 if pending_resp.status_code == 200:
                                     pending_count = pending_resp.json().get('count', 0)
@@ -1739,7 +1743,7 @@ else:
         
         # Get current trade count
         try:
-            trades_resp = requests.get(f'http://localhost:8505/trades/{selected_pair}', timeout=5)
+            trades_resp = requests.get(f'{BOT_CACHE_URL}/trades/{selected_pair}', timeout=5)
             if trades_resp.status_code == 200:
                 trades_data = trades_resp.json()
                 current_trade_count = trades_data.get('count', 0)
@@ -1750,8 +1754,8 @@ else:
                     # Play kaching sound for new trade
                     play_sound('kaching', vol)
                     st.success("🎉 NEUER TRADE ERKANNT!")
-        except:
-            pass  # Bot may not be running
+        except Exception as e:
+            st.warning(f"⚠️ Bot-Cache nicht erreichbar: {BOT_CACHE_URL}/trades/{selected_pair} → {type(e).__name__}: {str(e)[:80]}")
         
         if pair_alert and alert_enabled and (trade_possible_km or trade_possible_mk):
             # Determine spread and play appropriate sound
