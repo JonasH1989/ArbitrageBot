@@ -3242,9 +3242,13 @@ def main():
     pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
     log(f"Pair {TRADING_PAIR} enabled in config: {pair_enabled}")
 
-    # Bot starts with the previously configured enabled-state (no hardcoded disable).
-    # If user enabled via Dashboard before redeploy/restart, that state is respected.
-    log(f"Startup: pair_enabled={pair_enabled} (from config, respected)", "CONFIG")
+    # SAFETY: On every startup, bot starts DISABLED
+    # User must manually enable via Dashboard after redeploy
+    # This is the proven approach that works reliably
+    log(f"SAFETY: Setting pair_enabled=False on startup (bot must be enabled via Dashboard)", "CONFIG")
+    set_pair_settings(TRADING_PAIR, enabled=False)
+    pair_enabled = False
+    log(f"SAFETY: Bot started in disabled state", "CONFIG")
 
     while True:
         global _diag, _latest_spreads, _latest_orderbook
