@@ -963,8 +963,12 @@ else:
                 except Exception as e:
                     st.caption(f"Snapshot CSV Fehler: {e}")
             
-            # Get current price from bot's spreads cache (Phase 1c: no direct exchange API call)
-            current_mpc_price = mexc['ask'] if mexc and mexc.get('ask', 0) > 0 else 0.01427
+            # Get current prices for fair comparison
+            try:
+                mexc_resp = requests.get("https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=1", timeout=5)
+                current_mpc_price = float(mexc_resp.json().get('asks', [[0]])[0][0]) if 'asks' in mexc_resp.json() else 0.01427
+            except:
+                current_mpc_price = 0.01427  # fallback
             
             # Portfolio Rapport
             with st.expander("💼 Portfolio Rapport", expanded=True):
@@ -1096,23 +1100,28 @@ else:
         
         # Orderbook detailed view
         with st.expander("📋 Orderbook", expanded=False):
-            # Phase 1c: Use bot's L2 orderbook cache (no direct exchange API calls)
-            mexc_bids, mexc_asks, kucoin_bids, kucoin_asks = [], [], [], []
             try:
-                ob_resp = requests.get(f'http://localhost:8505/latest/orderbook', timeout=5)
-                if ob_resp.status_code == 200:
-                    ob = ob_resp.json()
-                    mexc_bids = [(float(p), float(v)) for p, v in ob.get('mexc_bids', [])[:20]]
-                    mexc_asks = [(float(p), float(v)) for p, v in ob.get('mexc_asks', [])[:20]]
-                    kucoin_bids = [(float(p), float(v)) for p, v in ob.get('kucoin_bids', [])[:20]]
-                    kucoin_asks = [(float(p), float(v)) for p, v in ob.get('kucoin_asks', [])[:20]]
+                mexc_ob_resp = requests.get("https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=20", timeout=5)
+                mexc_ob = mexc_ob_resp.json() if mexc_ob_resp.status_code == 200 else {'bids': [], 'asks': []}
+                mexc_bids = [(float(p), float(v)) for p, v in mexc_ob.get('bids', [])[:20]]
+                mexc_asks = [(float(p), float(v)) for p, v in mexc_ob.get('asks', [])[:20]]
             except:
-                pass
+                mexc_bids, mexc_asks = [], []
             
-            if not (mexc_bids and mexc_asks and kucoin_bids and kucoin_asks):
-                st.caption("⏳ Warte auf Orderbook-Daten vom Bot...")
+            try:
+                kucoin_ob_resp = requests.get("https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol=MPC-USDT", timeout=5)
+                kucoin_ob = kucoin_ob_resp.json() if kucoin_ob_resp.status_code == 200 else {}
+                kucoin_bids = [(float(p), float(v)) for p, v in kucoin_ob.get('data', {}).get('bids', [])[:20]]
+                kucoin_asks = [(float(p), float(v)) for p, v in kucoin_ob.get('data', {}).get('asks', [])[:20]]
+            except:
+                kucoin_bids, kucoin_asks = [], []
             
-            if mexc_bids and mexc_asks and kucoin_bids and kucoin_asks:
+            if mexc_bids_l2 and mexc_asks_l2 and kucoin_bids_l2 and kucoin_asks_l2:
+                # Reuse already-fetched Level 2 data (no duplicate API calls)
+                mexc_bids = mexc_bids_l2
+                mexc_asks = mexc_asks_l2
+                kucoin_bids = kucoin_bids_l2
+                kucoin_asks = kucoin_asks_l2
                 
                 st.markdown("**Legende:** 🟢 Threshold erfüllt | 🟡 Positiv aber < Threshold | 🔴 Negativ")
                 st.markdown("---")
