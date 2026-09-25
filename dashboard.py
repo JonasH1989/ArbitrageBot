@@ -1780,11 +1780,11 @@ else:
     else:
         st.error("Daten nicht verfuegbar")
     
-# Auto refresh
-if st.session_state.selected_pair:
-    import time
-    time.sleep(2)
-    st.rerun()
+# Auto refresh — ENTFERNT (war lahme Page-Refresh, jetzt Fragment-basiert)
+# if st.session_state.selected_pair:
+#     import time
+#     time.sleep(2)
+#     st.rerun()
 
 
 # =============================================================================
