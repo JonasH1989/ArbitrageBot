@@ -101,9 +101,8 @@ def fetch_l2_orderbook(symbol_mexc="MPCUSDT", symbol_kucoin="MPC-USDT"):
 # values always come from the same HTTP response (no skew).
 # ============================================================================
 @st.fragment(run_every=2)
-def render_orderbook_spread_view():
+def render_orderbook_spread_view(threshold_start=1.0):
     mexc_bids_l2, mexc_asks_l2, kucoin_bids_l2, kucoin_asks_l2 = fetch_l2_orderbook()
-    threshold_start = st.session_state.get('threshold_start', 1.0)
 
     with st.expander("📋 Orderbook", expanded=False):
         if not (mexc_bids_l2 and mexc_asks_l2 and kucoin_bids_l2 and kucoin_asks_l2):
@@ -1220,7 +1219,7 @@ else:
             # =========================================================================
         
         # Orderbook detailed view (now in @st.fragment, syncron fetch+render)
-        render_orderbook_spread_view()
+        render_orderbook_spread_view(threshold_start=threshold_start)
         
         
         # Einstellungen
