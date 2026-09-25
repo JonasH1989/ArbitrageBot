@@ -1741,23 +1741,22 @@ else:
         if 'last_trade_count' not in st.session_state:
             st.session_state.last_trade_count = 0
         
-        # Get current trade count
-        try:
-            trades_resp = requests.get(f'{BOT_CACHE_URL}/trades/{selected_pair}', timeout=5)
-            if trades_resp.status_code == 200:
-                trades_data = trades_resp.json()
-                current_trade_count = trades_data.get('count', 0)
-                
-                # If new trades detected, play trade alert
-                if current_trade_count > st.session_state.last_trade_count:
-                    st.session_state.last_trade_count = current_trade_count
-                    # Play kaching sound for new trade
-                    play_sound('kaching', vol)
-                    st.success("🎉 NEUER TRADE ERKANNT!")
-        except NameError:
-            st.warning("⚠️ selected_pair nicht definiert (kein Pair ausgewählt?)")
-        except Exception as e:
-            st.warning(f"⚠️ Bot-Cache nicht erreichbar: {BOT_CACHE_URL} → {type(e).__name__}: {str(e)[:80]}")
+        # Get current trade count (nur wenn Pair ausgewählt)
+        if st.session_state.get('selected_pair'):
+            try:
+                trades_resp = requests.get(f'{BOT_CACHE_URL}/trades/{st.session_state.selected_pair}', timeout=5)
+                if trades_resp.status_code == 200:
+                    trades_data = trades_resp.json()
+                    current_trade_count = trades_data.get('count', 0)
+
+                    # If new trades detected, play trade alert
+                    if current_trade_count > st.session_state.last_trade_count:
+                        st.session_state.last_trade_count = current_trade_count
+                        # Play kaching sound for new trade
+                        play_sound('kaching', vol)
+                        st.success("🎉 NEUER TRADE ERKANNT!")
+            except Exception as e:
+                st.warning(f"⚠️ Bot-Cache nicht erreichbar: {BOT_CACHE_URL} → {type(e).__name__}: {str(e)[:80]}")
         
         if pair_alert and alert_enabled and (trade_possible_km or trade_possible_mk):
             # Determine spread and play appropriate sound
