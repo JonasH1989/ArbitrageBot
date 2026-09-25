@@ -1737,10 +1737,6 @@ else:
         if st.button("🔍 Debug Alerts", key="alert_debug_toggle"):
             st.session_state.alert_debug = not st.session_state.get('alert_debug', False)
         
-        # Track last trade for trade alerts
-        if 'last_trade_count' not in st.session_state:
-            st.session_state.last_trade_count = 0
-        
         # Get current trade count (nur wenn Pair ausgewählt)
         if st.session_state.get('selected_pair'):
             try:
@@ -1749,10 +1745,12 @@ else:
                     trades_data = trades_resp.json()
                     current_trade_count = trades_data.get('count', 0)
 
-                    # If new trades detected, play trade alert
-                    if current_trade_count > st.session_state.last_trade_count:
+                    # First run: nur Count speichern, KEIN Sound (sonst bei jedem Dashboard-Render)
+                    if 'last_trade_count' not in st.session_state:
                         st.session_state.last_trade_count = current_trade_count
-                        # Play kaching sound for new trade
+                    elif current_trade_count > st.session_state.last_trade_count:
+                        # Echter neuer Trade → Sound
+                        st.session_state.last_trade_count = current_trade_count
                         play_sound('kaching', vol)
                         st.success("🎉 NEUER TRADE ERKANNT!")
             except Exception as e:
