@@ -863,7 +863,7 @@ else:
     mexc = get_mexc_orderbook(pair)
 
     # Also fetch Level 2 orderbook for accurate spread calculation (same data as orderbook table)
-    mexc_bids_l2, mexc_asks_l2, kucoin_bids_l2, kucoin_asks_l2 = fetch_l2_orderbook(COIN_SYMBOL_MEXC, COIN_SYMBOL)
+    mexc_bids_l2, mexc_asks_l2, kucoin_bids_l2, kucoin_asks_l2 = fetch_l2_orderbook()
     
     if kucoin and mexc and kucoin.get('ok') and mexc.get('ok'):
         # Use Level 2 best prices for spread (synchronized with orderbook table)
