@@ -827,28 +827,26 @@ else:
             set_pair_settings(pair, enabled=new_enabled)
             st.rerun()
     
-    # Get data from Cache (Phase 1c: use bot's cache instead of direct exchange APIs)
-    kucoin = None
-    mexc = None
-    mexc_bids_l2 = []
-    mexc_asks_l2 = []
-    kucoin_bids_l2 = []
-    kucoin_asks_l2 = []
+    # Get data
+    kucoin = get_kucoin_orderbook(pair)
+    mexc = get_mexc_orderbook(pair)
+    
+    # Also fetch Level 2 orderbook for accurate spread calculation (same data as orderbook table)
     try:
-        spreads_resp = requests.get(f'http://localhost:8505/latest/spreads', timeout=5)
-        if spreads_resp.status_code == 200:
-            spreads = spreads_resp.json()
-            # Reconstruct kucoin/mexc dicts from cache
-            kucoin_bid = spreads.get('kucoin', {}).get('bid', 0)
-            kucoin_ask = spreads.get('kucoin', {}).get('ask', 0)
-            mexc_bid = spreads.get('mexc', {}).get('bid', 0)
-            mexc_ask = spreads.get('mexc', {}).get('ask', 0)
-            kucoin = {'ok': True, 'bid': kucoin_bid, 'ask': kucoin_ask, 'bid_size': 0, 'ask_size': 0}
-            mexc = {'ok': True, 'bid': mexc_bid, 'ask': mexc_ask, 'bid_size': 0, 'ask_size': 0}
-            # For L2 orderbook, we still fetch from exchange but as fallback
-            # (Phase 1c TODO: cache L2 orderbook in bot too)
-    except Exception:
-        pass
+        mexc_ob_resp = requests.get("https://api.mexc.com/api/v3/depth?symbol=MPCUSDT&limit=20", timeout=5)
+        mexc_ob = mexc_ob_resp.json() if mexc_ob_resp.status_code == 200 else {'bids': [], 'asks': []}
+        mexc_bids_l2 = [(float(p), float(v)) for p, v in mexc_ob.get('bids', [])[:20]]
+        mexc_asks_l2 = [(float(p), float(v)) for p, v in mexc_ob.get('asks', [])[:20]]
+    except:
+        mexc_bids_l2, mexc_asks_l2 = [], []
+    
+    try:
+        kucoin_ob_resp = requests.get("https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol=MPC-USDT", timeout=5)
+        kucoin_ob = kucoin_ob_resp.json() if kucoin_ob_resp.status_code == 200 else {}
+        kucoin_bids_l2 = [(float(p), float(v)) for p, v in kucoin_ob.get('data', {}).get('bids', [])[:20]]
+        kucoin_asks_l2 = [(float(p), float(v)) for p, v in kucoin_ob.get('data', {}).get('asks', [])[:20]]
+    except:
+        kucoin_bids_l2, kucoin_asks_l2 = [], []
     
     if kucoin and mexc and kucoin.get('ok') and mexc.get('ok'):
         # Use Level 2 best prices for spread (synchronized with orderbook table)
