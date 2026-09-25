@@ -1754,8 +1754,10 @@ else:
                     # Play kaching sound for new trade
                     play_sound('kaching', vol)
                     st.success("🎉 NEUER TRADE ERKANNT!")
+        except NameError:
+            st.warning("⚠️ selected_pair nicht definiert (kein Pair ausgewählt?)")
         except Exception as e:
-            st.warning(f"⚠️ Bot-Cache nicht erreichbar: {BOT_CACHE_URL}/trades/{selected_pair} → {type(e).__name__}: {str(e)[:80]}")
+            st.warning(f"⚠️ Bot-Cache nicht erreichbar: {BOT_CACHE_URL} → {type(e).__name__}: {str(e)[:80]}")
         
         if pair_alert and alert_enabled and (trade_possible_km or trade_possible_mk):
             # Determine spread and play appropriate sound
