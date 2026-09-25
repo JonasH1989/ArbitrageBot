@@ -63,7 +63,7 @@ MEXC_LOGO = "/app/static/mexc.jpg"
 st.set_page_config(page_title="Arbitrage Bot", page_icon="📊", layout="wide")
 
 # Bot cache base URL — sichtbar in Sidebar für Diagnose
-BOT_CACHE_URL = 'http://localhost:8505'
+BOT_CACHE_URL = 'http://arbitrage-bot:8505'
 st.sidebar.info(f"🔗 Bot-Cache: {BOT_CACHE_URL}")
 
 CONFIG_FILE = 'config/config.yaml'
