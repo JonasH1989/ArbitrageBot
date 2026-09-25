@@ -3581,13 +3581,15 @@ def main():
                 trade_in_progress = False
                 continue
             
-            # START check: spread must still be >= threshold_start (not just > stop)
-            # This prevents rapid-fire trades when spread is collapsing toward zero
+            # START check removed: hysteresis handles spread between stop and start.
+            # Once hysteresis is armed (spread crossed threshold_start once), bot
+            # stays in RUNNING until fresh spread falls below threshold_stop.
+            # This enables true hysteresis behavior — trades continue across the
+            # spread-band between threshold_stop and threshold_start.
             if fresh_profitable_spread < threshold_start:
-                log(f"⏸ PAUSING: fresh spread={fresh_profitable_spread:.3f}% < START_THRESHOLD={threshold_start}% (but > stop)")
-                state = STATE_WAITING
+                log(f"⏸ START-Below ({fresh_profitable_spread:.3f}% < {threshold_start}%) — hysteresis armed, stay in RUNNING, fall through to trade check")
                 trade_in_progress = False
-                continue
+                # NO state change, NO continue: fall through to calculate_best_trade()
             
             # Recalculate best trade with fresh orderbook data
             best_trade = calculate_best_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, current_strategy, for_follow_up_trade=True)
@@ -3627,8 +3629,8 @@ def main():
             
             # Only complete trade if SUCCESS=True
             if success:
-                log(f"✅ Trade executed - waiting for limit fill confirmation")
-                state = STATE_WAITING
+                log(f"✅ Trade executed - staying in RUNNING for next trade check (hysteresis-consistent)")
+                state = STATE_RUNNING  # Consistent with Pfad A (Z. 3539)
                 trade_in_progress = False  # Allow next trade to start
             else:
                 log(f"⚠️ Trade execution failed (API error). Resetting.")
