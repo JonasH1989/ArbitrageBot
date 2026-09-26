@@ -426,6 +426,20 @@ def start_http_log_server(port: int = 8503):
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)})
 
+    @app.route('/state', methods=['GET'])
+    def get_state():
+        """Current bot state for Dashboard debug display."""
+        try:
+            return jsonify({
+                'state': state,
+                'pair_enabled': pair_enabled,
+                'hysteresis_armed': hysteresis_armed,
+                'threshold_start': threshold_start,
+                'threshold_stop': threshold_stop,
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)})
+
     @app.route('/health', methods=['GET'])
     def get_health():
         """Health check with system metrics"""

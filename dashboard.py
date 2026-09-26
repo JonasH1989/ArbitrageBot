@@ -122,7 +122,16 @@ def render_orderbook_spread_view(threshold_start=1.0):
         kucoin_bids = kucoin_bids_l2
         kucoin_asks = kucoin_asks_l2
 
-        st.markdown("**Legende:** 🟢 Threshold erfüllt | 🟡 Positiv aber < Threshold | 🔴 Negativ")
+        # Bot State aus Cache (live via Fragment run_every=2)
+        try:
+            _bs = requests.get(f"{BOT_CACHE_URL}/state", timeout=2).json()
+        except:
+            _bs = {}
+        _se = {'WAITING': '🟡', 'RUNNING': '🟢'}.get(_bs.get('state', '?'), '⚪')
+        _he = '🟢' if _bs.get('hysteresis_armed') else '⚪'
+        _pe = '🟢' if _bs.get('pair_enabled') else '🔴'
+
+        st.markdown(f"**Legende:** 🟢 Threshold erfüllt | 🟡 Positiv aber < Threshold | 🔴 Negativ  |  **State:** {_se} {_bs.get('state', '?')}  |  Hyst: {_he}  |  Pair: {_pe}")
         st.markdown("---")
         col_km, col_mk = st.columns(2)
 
