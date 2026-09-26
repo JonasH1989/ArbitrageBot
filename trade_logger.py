@@ -23,14 +23,14 @@ from typing import Dict, Optional, List, Tuple
 LOG_DIR = Path("/app/logs")
 
 # =============================================================================
-# DIAGNOSTIC MODE FLAG (2026-09-23)
+# LOGGING TOGGLE (re-enabled 2026-09-26 19:04 by Jonas)
 # =============================================================================
-# HARDCODED DISABLE for crash diagnosis. Set to True to re-enable.
-# When False: all file/CSV writes become No-Ops (function returns dummy value)
-# Goal: determine if logging is the root cause of Proxmox container crashes.
-# See: memory/2026-09-22-arbitrage-bot-repo-cleanup.md and Jonas' Telegram
-# messages 2026-09-23 09:03 and 09:13 for context.
-LOGGING_ENABLED = False
+# Set to False to disable all file/CSV writes (no-op, returns dummy value).
+# Background: Jonas disabled this 2026-09-23 to diagnose Proxmox container
+# crashes. After observation, crashes were NOT caused by trade-logger writes.
+# Re-enabled per Jonas' request so we can capture trades to CSV again.
+# See: memory/2026-09-22-arbitrage-bot-repo-cleanup.md
+LOGGING_ENABLED = True
 
 # Helper for locale-independent float parsing
 def to_float(val):
