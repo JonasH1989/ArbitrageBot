@@ -207,15 +207,6 @@ def render_orderbook_spread_view(threshold_start=1.0):
                 bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                 st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #00c853; font-weight: bold;'>${k_bid_p:.6f}</span> <span style='color: #00c853;'>|</span> <span style='color: #00c853;'>{k_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
 
-    # Spread-Indikator (gelb/rot/grau) — updates alle 2s via Fragment
-    spread_max = max(abs(spread_pct_km), abs(spread_pct_mk))
-    if spread_max >= 3.0:
-        st.error(f"🚨 **Spread {spread_max:.2f}%!** (> 3%)")
-    elif spread_max >= 1.0:
-        st.warning(f"🟡 **Spread {spread_max:.2f}%** (1-3%)")
-    else:
-        st.info(f"⚪ **Spread {spread_max:.2f}%** (< 1%)")
-
 CONFIG_FILE = 'config/config.yaml'
 
 def load_config():
