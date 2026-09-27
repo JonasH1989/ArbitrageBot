@@ -207,6 +207,15 @@ def render_orderbook_spread_view(threshold_start=1.0):
                 bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                 st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #00c853; font-weight: bold;'>${k_bid_p:.6f}</span> <span style='color: #00c853;'>|</span> <span style='color: #00c853;'>{k_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
 
+    # Spread-Indikator (gelb/rot/grau) — updates alle 2s via Fragment
+    spread_max = max(abs(spread_pct_km), abs(spread_pct_mk))
+    if spread_max >= 3.0:
+        st.error(f"🚨 **Spread {spread_max:.2f}%!** (> 3%)")
+    elif spread_max >= 1.0:
+        st.warning(f"🟡 **Spread {spread_max:.2f}%** (1-3%)")
+    else:
+        st.info(f"⚪ **Spread {spread_max:.2f}%** (< 1%)")
+
 CONFIG_FILE = 'config/config.yaml'
 
 def load_config():
@@ -224,6 +233,141 @@ def load_config():
 def save_config(config):
     """Save config - now a no-op since we save immediately via settings_sync"""
     pass  # All saves now happen immediately via set_setting calls
+
+
+# ============================================================================
+# Fragment: BESTE RICHTUNG — updates alle 2s nach Trade
+# Selbst-enthaltend: holt Orderbook + Balances frisch vom Bot-Cache.
+# Ersetzt den main-flow Block damit die Anzeige nach Trades updated.
+# ============================================================================
+@st.fragment(run_every=2)
+def render_best_direction():
+    try:
+        # Fresh orderbook
+        mexc_bids, mexc_asks, kucoin_bids, kucoin_asks = fetch_l2_orderbook()
+        if not (mexc_bids and mexc_asks and kucoin_bids and kucoin_asks):
+            return
+
+        # Fresh balances from bot cache
+        try:
+            bal = requests.get(f"{BOT_CACHE_URL}/balances", timeout=2).json()
+            k_usdt = float(bal.get('kucoin', {}).get('USDT', {}).get('free', 0))
+            m_usdt = float(bal.get('mexc', {}).get('USDT', {}).get('free', 0))
+        except Exception:
+            k_usdt = m_usdt = 0
+
+        # Config from session_state (written by main flow)
+        cfg = st.session_state.get('bot_pair_config', {})
+        current_strategy = cfg.get('strategy', 'coins')
+        threshold_start = cfg.get('threshold_start', 1.9)
+
+        # Calculate
+        k_ask, k_bid = kucoin_asks[0][0], kucoin_bids[0][0]
+        m_ask, m_bid = mexc_asks[0][0], mexc_bids[0][0]
+        profit_km = m_bid - k_ask
+        profit_mk = k_bid - m_ask
+        spread_pct_km = (profit_km / k_ask * 100) if k_ask > 0 else 0
+        spread_pct_mk = (profit_mk / m_ask * 100) if m_ask > 0 else 0
+
+        # Multi-level volume (L1+L2+L3)
+        kucoin_vol = sum(q for _, q in kucoin_asks[:3])
+        mexc_vol = sum(q for _, q in mexc_asks[:3])
+        vol_km = min(kucoin_vol, mexc_vol)
+        vol_mk = min(mexc_vol, kucoin_vol)
+
+        # Trade possible?
+        km_ok = profit_km > 0 and spread_pct_km >= threshold_start
+        mk_ok = profit_mk > 0 and spread_pct_mk >= threshold_start
+
+        # Coins
+        coins_km = (vol_km * profit_km / k_ask) if k_ask > 0 else 0
+        coins_mk = (vol_mk * profit_mk / m_ask) if m_ask > 0 else 0
+
+        if (km_ok or mk_ok) and max(spread_pct_km, spread_pct_mk) >= threshold_start:
+            if current_strategy == 'usdt':
+                pkm_total = profit_km * vol_km
+                pmk_total = profit_mk * vol_mk
+                show_direction = "K→M" if pkm_total >= pmk_total else "M→K"
+                show_volume = vol_km if show_direction == "K→M" else vol_mk
+                show_profit_txt = f"${abs(profit_km if show_direction == 'K→M' else profit_mk):.6f}"
+            else:
+                show_direction = "K→M" if coins_km >= coins_mk else "M→K"
+                show_volume = vol_km if show_direction == "K→M" else vol_mk
+                show_profit_txt = f"{abs(coins_km if show_direction == 'K→M' else coins_mk):.2f} MPC"
+
+            st.success(f"🟢 **BESTE RICHTUNG: {show_direction}** | Gewinn: {show_profit_txt} | Vol: {show_volume:.0f} Coins")
+
+            col_buy, col_sell, col_profit = st.columns(3)
+
+            with col_buy:
+                st.markdown("### 📥 KAUFEN")
+                if show_direction == "K→M":
+                    avail = k_usdt
+                    max_by_usdt = avail / k_ask if k_ask > 0 else 0
+                    max_coins = min(max_by_usdt, vol_km)
+                    st.metric("Exchange", "KuCoin")
+                    st.metric("Preis (Ask)", f"${k_ask:.6f}")
+                    st.metric("Verfügbar USDT", f"${avail:.2f}")
+                    st.metric("Kaufbar (max)", f"{max_coins:.0f} MPC")
+                else:
+                    avail = m_usdt
+                    max_by_usdt = avail / m_ask if m_ask > 0 else 0
+                    max_coins = min(max_by_usdt, vol_mk)
+                    if avail > 0:
+                        st.metric("Exchange", "MEXC")
+                        st.metric("Preis (Ask)", f"${m_ask:.6f}")
+                        st.metric("Verfügbar USDT", f"${avail:.2f}")
+                        st.metric("Kaufbar (max)", f"{max_coins:.0f} MPC")
+                    else:
+                        st.metric("Exchange", "⚠️ MEXC")
+                        st.metric("Preis (Ask)", f"${m_ask:.6f}")
+                        st.metric("Verfügbar USDT", f"${avail:.2f}")
+                        st.error("KEINE USDT!")
+
+            with col_sell:
+                st.markdown("### 📤 VERKAUFEN")
+                if show_direction == "K→M":
+                    st.metric("Exchange", "MEXC")
+                    st.metric("Preis (Bid)", f"${m_bid:.6f}")
+                    st.metric("Max verkaufbar", f"{max_coins:.0f} MPC")
+                    st.metric("Ertrag (USD)", f"${m_bid * max_coins:.4f}")
+                else:
+                    st.metric("Exchange", "KuCoin")
+                    st.metric("Preis (Bid)", f"${k_bid:.6f}")
+                    st.metric("Max verkaufbar", f"{max_coins:.0f} MPC")
+                    st.metric("Ertrag (USD)", f"${k_bid * max_coins:.4f}")
+
+            with col_profit:
+                st.markdown("### 💰 GEWINN")
+                if show_direction == "K→M":
+                    cost = k_ask * max_coins
+                    revenue = m_bid * max_coins
+                    profit = revenue - cost
+                    if current_strategy == 'usdt':
+                        st.metric("Kosten", f"${cost:.4f}")
+                        st.metric("Erlös", f"${revenue:.4f}")
+                        st.metric("💵 NETTO-GEWINN", f"${profit:.4f}", delta=f"+{profit:.4f}")
+                    else:
+                        st.metric("Kosten", f"{cost / k_ask:.2f} MPC")
+                        st.metric("Erlös", f"{revenue / m_bid:.2f} MPC")
+                        coins_profit = (revenue / m_bid) - (cost / k_ask)
+                        st.metric("💵 NETTO-GEWINN", f"{coins_profit:.2f} MPC", delta=f"+{coins_profit:.2f}")
+                else:
+                    cost = m_ask * max_coins
+                    revenue = k_bid * max_coins
+                    profit = revenue - cost
+                    if current_strategy == 'usdt':
+                        st.metric("Kosten", f"${cost:.4f}")
+                        st.metric("Erlös", f"${revenue:.4f}")
+                        st.metric("💵 NETTO-GEWINN", f"${profit:.4f}", delta=f"+{profit:.4f}")
+                    else:
+                        st.metric("Kosten", f"{cost / m_ask:.2f} MPC")
+                        st.metric("Erlös", f"{revenue / k_bid:.2f} MPC")
+                        coins_profit = (revenue / k_bid) - (cost / m_ask)
+                        st.metric("💵 NETTO-GEWINN", f"{coins_profit:.2f} MPC", delta=f"+{coins_profit:.2f}")
+    except Exception as e:
+        st.error(f"Fragment-Fehler: {e}")
+
 
 # ============================================================================
 # API Functions
@@ -1059,7 +1203,13 @@ else:
         
         coins_km = (vol_km * profit_km / k_ask) if k_ask > 0 else 0
         coins_mk = (vol_mk * profit_mk / m_ask) if m_ask > 0 else 0
-        
+
+        # Store pair config in session_state for fragment access
+        st.session_state['bot_pair_config'] = {
+            'strategy': current_strategy,
+            'threshold_start': threshold_start,
+        }
+
         # =========================================================================
         # SECTIONS
         # =========================================================================
@@ -1653,98 +1803,8 @@ else:
             elif False:  # unreachable, kept for structure
                 st.info("Keine Trades")
         
-        if (trade_possible_km or trade_possible_mk) and max(spread_pct_km, spread_pct_mk) >= threshold_start:
-            # Determine best direction based on strategy
-            if current_strategy == 'usdt':
-                # USDT strategy: compare total profit
-                profit_km_total = profit_km * vol_km
-                profit_mk_total = profit_mk * vol_mk
-                show_direction = "K→M" if profit_km_total >= profit_mk_total else "M→K"
-                show_volume = vol_km if show_direction == "K→M" else vol_mk
-                show_profit_txt = f"${abs(profit_km if show_direction == 'K→M' else profit_mk):.6f}"
-            else:
-                # Coins strategy
-                show_direction = "K→M" if coins_km >= coins_mk else "M→K"
-                show_volume = vol_km if show_direction == "K→M" else vol_mk
-                show_profit_txt = f"{abs(coins_km if show_direction == 'K→M' else coins_mk):.2f} MPC"
-            
-            # Direction header
-            direction_color = "🟢"
-            st.success(f"{direction_color} **BESTE RICHTUNG: {show_direction}** | Gewinn: {show_profit_txt} | Vol: {show_volume:.0f} Coins")
-            
-            # Create clear table
-            col_buy, col_sell, col_profit = st.columns(3)
-            
-            with col_buy:
-                st.markdown("### 📥 KAUFEN")
-                if show_direction == "K→M":
-                    # K→M: Buy on KuCoin (we have k_usdt USDT there)
-                    available_usdt = k_usdt  # From wallet
-                    max_coins_by_usdt = available_usdt / k_ask if k_ask > 0 else 0
-                    max_coins = min(max_coins_by_usdt, vol_km)
-                    st.metric("Exchange", "KuCoin")
-                    st.metric("Preis (Ask)", f"${k_ask:.6f}")
-                    st.metric("Verfügbar USDT", f"${available_usdt:.2f}")
-                    st.metric("Kaufbar (max)", f"{max_coins:.0f} MPC")
-                else:
-                    # M→K: Buy on MEXC (we have m_usdt USDT there)
-                    available_usdt = m_usdt  # From wallet
-                    max_coins_by_usdt = available_usdt / m_ask if m_ask > 0 else 0
-                    max_coins = min(max_coins_by_usdt, vol_mk)
-                    if available_usdt > 0:
-                        st.metric("Exchange", "MEXC")
-                        st.metric("Preis (Ask)", f"${m_ask:.6f}")
-                        st.metric("Verfügbar USDT", f"${available_usdt:.2f}")
-                        st.metric("Kaufbar (max)", f"{max_coins:.0f} MPC")
-                    else:
-                        st.metric("Exchange", "⚠️ MEXC")
-                        st.metric("Preis (Ask)", f"${m_ask:.6f}")
-                        st.metric("Verfügbar USDT", f"${available_usdt:.2f}")
-                        st.error("KEINE USDT!")
-            
-            with col_sell:
-                st.markdown("### 📤 VERKAUFEN")
-                if show_direction == "K→M":
-                    st.metric("Exchange", "MEXC")
-                    st.metric("Preis (Bid)", f"${m_bid:.6f}")
-                    st.metric("Max verkaufbar", f"{max_coins:.0f} MPC")
-                    st.metric("Ertrag (USD)", f"${m_bid * max_coins:.4f}")
-                else:
-                    st.metric("Exchange", "KuCoin")
-                    st.metric("Preis (Bid)", f"${k_bid:.6f}")
-                    st.metric("Max verkaufbar", f"{max_coins:.0f} MPC")
-                    st.metric("Ertrag (USD)", f"${k_bid * max_coins:.4f}")
-            
-            with col_profit:
-                st.markdown("### 💰 GEWINN")
-                if show_direction == "K→M":
-                    cost = k_ask * max_coins
-                    revenue = m_bid * max_coins
-                    profit = revenue - cost
-                    if current_strategy == 'usdt':
-                        st.metric("Kosten", f"${cost:.4f}")
-                        st.metric("Erlös", f"${revenue:.4f}")
-                        st.metric("💵 NETTO-GEWINN", f"${profit:.4f}", delta=f"+{profit:.4f}")
-                    else:
-                        st.metric("Kosten", f"{cost / k_ask:.2f} MPC")
-                        st.metric("Erlös", f"{revenue / m_bid:.2f} MPC")
-                        coins_profit = (revenue / m_bid) - (cost / k_ask)
-                        st.metric("💵 NETTO-GEWINN", f"{coins_profit:.2f} MPC", delta=f"+{coins_profit:.2f}")
-                else:
-                    cost = m_ask * max_coins
-                    revenue = k_bid * max_coins
-                    profit = revenue - cost
-                    if current_strategy == 'usdt':
-                        st.metric("Kosten", f"${cost:.4f}")
-                        st.metric("Erlös", f"${revenue:.4f}")
-                        st.metric("💵 NETTO-GEWINN", f"${profit:.4f}", delta=f"+{profit:.4f}")
-                    else:
-                        st.metric("Kosten", f"{cost / m_ask:.2f} MPC")
-                        st.metric("Erlös", f"{revenue / k_bid:.2f} MPC")
-                        coins_profit = (revenue / k_bid) - (cost / m_ask)
-                        st.metric("💵 NETTO-GEWINN", f"{coins_profit:.2f} MPC", delta=f"+{coins_profit:.2f}")
-        else:
-            pass  # No profitable spread
+        # BESTE RICHTUNG: now in @st.fragment render_best_direction() — updates alle 2s
+        render_best_direction()
         
         # Show both directions for reference
         # Alert - only if threshold is met
