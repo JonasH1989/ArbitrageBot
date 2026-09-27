@@ -3192,6 +3192,8 @@ def _find_best_trade_for_direction(sell_levels, buy_levels, direction, limit_ex,
 
 
 def main():
+    # Make these module-scope so Flask /state endpoint can read them
+    global state, pair_enabled, hysteresis_armed, threshold_start, threshold_stop
     log("=== AUTO-TRADE BOT STARTED ===")
     log("Strategy: Coin-Gewinn (COIN akkumulieren)")
     log("Principle: ONE TRADE AT A TIME")
