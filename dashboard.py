@@ -68,6 +68,16 @@ st.sidebar.info(f"🔗 Bot-Cache: {BOT_CACHE_URL}")
 
 
 # ============================================================================
+# Debug-Helper: st.rerun() mit Sidebar-Toggle (für Full-Reload-Eingrenzung)
+# ============================================================================
+def _safe_rerun(key: str):
+    """st.rerun() wrapped — wird durch Sidebar-Checkbox dbg_rerun_<key> deaktiviert.
+    Default True → verhält sich wie st.rerun() wenn keine Checkbox aktiv ist."""
+    if st.session_state.get(f'dbg_rerun_{key}', True):
+        st.rerun()
+
+
+# ============================================================================
 # Helper: Fetch Level 2 orderbook from MEXC + KuCoin (public APIs, no auth)
 # Used by orderbook/spread render. Extracted for fragment-wrapping.
 # ============================================================================
@@ -100,7 +110,7 @@ def fetch_l2_orderbook(symbol_mexc="MPCUSDT", symbol_kucoin="MPC-USDT"):
 # renders the orderbook tables. This guarantees Orderbook and Spread
 # values always come from the same HTTP response (no skew).
 # ============================================================================
-@st.fragment(run_every=2)
+@st.fragment(run_every=1)
 def render_orderbook_spread_view(threshold_start=1.0):
     mexc_bids_l2, mexc_asks_l2, kucoin_bids_l2, kucoin_asks_l2 = fetch_l2_orderbook()
 
@@ -231,7 +241,7 @@ def save_config(config):
 # Selbst-enthaltend: holt Orderbook + Balances frisch vom Bot-Cache.
 # Ersetzt den main-flow Block damit die Anzeige nach Trades updated.
 # ============================================================================
-@st.fragment(run_every=2)
+@st.fragment(run_every=1)
 def render_best_direction():
     try:
         # Fresh orderbook
@@ -806,7 +816,7 @@ with st.sidebar:
         if st.button("💾 KuCoin"):
             set_api_keys('kucoin', api_key=kucoin_key, api_secret=kucoin_secret, api_passphrase=kucoin_pass)
             st.success("Gespeichert!")
-            st.rerun()
+            _safe_rerun('kucoin_save')
         
         # Wallet type selector - only show if API keys are set
         if kucoin_key and kucoin_secret and kucoin_pass:
@@ -848,7 +858,7 @@ with st.sidebar:
                             if selected != current_wallet:
                                 set_setting('kucoin.trading_wallet', selected)
                                 st.success(f"Wallet gesetzt: {selected}")
-                                st.rerun()
+                                _safe_rerun('kucoin_wallet')
                         else:
                             pass  # All wallets shown
                     else:
@@ -865,7 +875,7 @@ with st.sidebar:
         if st.button("💾 MEXC"):
             set_api_keys('mexc', api_key=mexc_key, api_secret=mexc_secret)
             st.success("Gespeichert!")
-            st.rerun()
+            _safe_rerun('mexc_save')
         
         # MEXC Wallet selector (MEXC uses funding/trade wallets via API)
         if mexc_key and mexc_secret:
@@ -895,7 +905,7 @@ with st.sidebar:
                 if selected != current_wallet:
                     set_setting('mexc.trading_wallet', selected)
                     st.success(f"Wallet gesetzt: {selected}")
-                    st.rerun()
+                    _safe_rerun('mexc_wallet')
             except Exception as e:
                 st.caption(f"Wallet-Fehler: {e}")
     
@@ -1015,7 +1025,7 @@ with st.sidebar:
         new_pair = st.selectbox("Paar", remaining, key="new_pair_select")
         if st.button("➕ Hinzufuegen"):
             add_pair(new_pair)
-            st.rerun()
+            _safe_rerun('pair_add')
     else:
         st.info("Alle vorhanden!")
     
@@ -1025,9 +1035,24 @@ with st.sidebar:
         pair_to_delete = st.selectbox("Paar", list(pairs_config.keys()), key="delete_pair_select")
         if st.button("🗑️ Entfernen", key="delete_pair_btn"):
             remove_pair(pair_to_delete)
-            st.rerun()
+            _safe_rerun('pair_remove')
     else:
         st.info("Keine Paare vorhanden!")
+
+    # ========================================================================
+    # 🐛 DEBUG: st.rerun() Trigger-Toggles (Full-Reload-Eingrenzung)
+    # ========================================================================
+    with st.expander("🐛 Debug: st.rerun() Trigger", expanded=False):
+        st.caption("Schalte einzelne st.rerun() ab um zu sehen welcher Trigger die Full-Reloads verursacht. Default: alle AN.")
+        st.checkbox("💾 KuCoin Save (Z.809)", value=True, key="dbg_rerun_kucoin_save")
+        st.checkbox("KuCoin Wallet-Select (Z.851)", value=True, key="dbg_rerun_kucoin_wallet")
+        st.checkbox("💾 MEXC Save (Z.868)", value=True, key="dbg_rerun_mexc_save")
+        st.checkbox("MEXC Wallet-Select (Z.898)", value=True, key="dbg_rerun_mexc_wallet")
+        st.checkbox("➕ Paar hinzufügen (Z.1018)", value=True, key="dbg_rerun_pair_add")
+        st.checkbox("🗑️ Paar entfernen (Z.1028)", value=True, key="dbg_rerun_pair_remove")
+        st.checkbox("📊 Anzeigen Pair (Z.1083)", value=True, key="dbg_rerun_pair_view")
+        st.checkbox("← Home (Z.1094)", value=True, key="dbg_rerun_home")
+        st.checkbox("Bot AKTIV Toggle (Z.1108)", value=True, key="dbg_rerun_bot_toggle")
 
 # ============================================================================
 # TILE OVERVIEW
@@ -1080,7 +1105,7 @@ if st.session_state.selected_pair is None:
                 
                 if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
                     st.session_state.selected_pair = pair_name
-                    st.rerun()
+                    _safe_rerun('pair_view')
             
 # ============================================================================
 # DETAIL VIEW - ORIGINAL DASHBOARD
@@ -1091,7 +1116,7 @@ else:
     
     if st.button("← Home"):
         st.session_state.selected_pair = None
-        st.rerun()
+        _safe_rerun('home')
     
     # Reload pair_data directly from config (NOT from cached pairs_config)
     pair_data = get_pair_settings(pair)
@@ -1105,7 +1130,7 @@ else:
         new_enabled = st.checkbox("Bot AKTIV", value=pair_enabled, key="bot_enable_checkbox")
         if new_enabled != pair_enabled:
             set_pair_settings(pair, enabled=new_enabled)
-            st.rerun()
+            _safe_rerun('bot_toggle')
     
     # Get data
     kucoin = get_kucoin_orderbook(pair)
