@@ -2205,6 +2205,19 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
         except Exception as _e:
             log(f"⚠️ Wallet re-check failed: {_e}", "WARNING")
 
+
+    # CRITICAL FIX 2026-10-14 (Jonas): MEXC wallet re-check (was only for KuCoin before).
+    # Prevents silent sell failures due to MEXC balance drift between pre-flight and sell.
+    if exchange_limit.upper() == "MEXC":
+        try:
+            _mexc_balances = get_mexc_balances()
+            _mexc_available = _mexc_balances.get(coin, {}).get('free', 0) if _mexc_balances else 0
+            if _mexc_available < sell_qty:
+                sell_qty = math.floor(_mexc_available * 0.999)
+                log(f"⚠️ MEXC wallet re-check: sell_qty reduced to {sell_qty:.4f} {coin}")
+        except Exception as _e:
+            log(f"⚠️ MEXC wallet re-check failed: {_e}", "WARNING")
+
     # Route to correct API based on exchange
     if exchange_limit.upper() == "KUCOIN":
         result2 = execute_limit_sell_kucoin(sell_qty, sell_price)
@@ -2362,7 +2375,10 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     coin = COIN_SYMBOL.split('-')[0]
     log(f"{profit_label} Net Profit: ${net_profit:.4f} | {coin} Gain: {mpc_gain:.4f}{profit_note}")
 
-    return True, trade_id
+    # CRITICAL FIX 2026-10-14 (Jonas): Return False if any error occurred during trade execution.
+    # Without this, a failed limit sell was reported as success, leaving bought coins on
+    # exchange_market without the corresponding sell on exchange_limit.
+    return error_code is None, trade_id
 
 
 # Legacy alias for backward compatibility (will be removed)
@@ -2855,6 +2871,55 @@ def check_limit_order_fills():
         except Exception as e:
             log(f"⚠️ Error checking order {ex2_order_id}: {e}")
 
+
+def check_stale_limit_orders():
+    """Safety net: if a limit order has been pending > STALE_THRESHOLD_SEC, place market sell.
+
+    CRITICAL FIX 2026-10-14 (Jonas): Prevents stuck limit orders from blocking bot.
+    If a limit sell was placed but never fills, the bought coins sit on the buy exchange
+    until manual intervention. This function detects stale orders and triggers a market sell.
+    """
+    STALE_THRESHOLD_SEC = 300  # 5 minutes
+    pending = get_pending_limit_orders(TRADING_PAIR)
+    if not pending:
+        return
+    now = time.time()
+    for trade in pending:
+        trade_id = trade.get('trade_id', '')
+        # Skip sub-rows (only process parent _ex2sum rows)
+        if not trade_id.endswith('_ex2sum'):
+            continue
+        base_trade_id = trade_id.replace('_ex2sum', '')
+        ex2_raw = trade.get('ex2', '')
+        ex2_exchange = 'KUCOIN' if ex2_raw == 'KCN' else ('MEXC' if ex2_raw == 'MXC' else ex2_raw)
+        ex2_order_id = trade.get('ex2_order_id', '')
+        ex2_qty = float(trade.get('ex2_qty_ordered', 0) or 0)
+        ex2_qty_filled = float(trade.get('ex2_qty_filled', 0) or 0)
+        ex2_qty_remaining = ex2_qty - ex2_qty_filled
+        create_ts_str = trade.get('ex2_create_ts', '')
+        if not ex2_order_id or ex2_qty_remaining <= 0:
+            continue
+        # Parse create_ts (format: '2026-10-14 00:15:32.123')
+        try:
+            create_ts = datetime.strptime(create_ts_str[:19], '%Y-%m-%d %H:%M:%S').timestamp()
+            age_sec = now - create_ts
+        except Exception:
+            continue
+        if age_sec > STALE_THRESHOLD_SEC:
+            log(f"⚠️ STALE LIMIT ORDER: {base_trade_id} | {ex2_exchange} | age={age_sec:.0f}s > {STALE_THRESHOLD_SEC}s | qty_remaining={ex2_qty_remaining}")
+            # Place market sell as fallback (limit order can be cancelled manually later)
+            try:
+                if ex2_exchange == 'KUCOIN':
+                    result = execute_market_sell_kucoin(ex2_qty_remaining)
+                elif ex2_exchange == 'MEXC':
+                    result = execute_market_sell_mexc(ex2_qty_remaining)
+                else:
+                    log(f"⚠️ Unknown exchange for stale order: {ex2_raw}")
+                    continue
+                log(f"🔄 MARKET SELL FALLBACK: {ex2_exchange} qty={ex2_qty_remaining} | result keys={list(result.keys()) if isinstance(result, dict) else type(result).__name__}")
+            except Exception as e:
+                log(f"❌ Market sell fallback failed for {base_trade_id}: {e}", "ERROR")
+
 def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 3000, fallback_price: float = 0.011) -> dict:
     """Get KuCoin market order fill data by polling the order status.
     
@@ -3246,6 +3311,7 @@ def main():
     last_heartbeat_ts = time.time()
     last_cpu_mem = (0, 0)
     last_limit_check = 0
+    last_stale_check = 0  # CRITICAL FIX 2026-10-14: throttle for stale limit order check
 
     # NOTE: pair_enabled is READ-ONLY from config!
     # It can ONLY be changed by:
@@ -3395,6 +3461,12 @@ def main():
         # Check limit order fills every 10 seconds
         if time.time() - last_limit_check > 10:
             check_limit_order_fills()
+            last_limit_check = time.time()
+
+        # CRITICAL FIX 2026-10-14: Check for stale limit orders every 30s, market-sell if >5min pending
+        if time.time() - last_stale_check > 30:
+            check_stale_limit_orders()
+            last_stale_check = time.time()
             last_limit_check = time.time()
 
         # Determine which spread direction is profitable
