@@ -1854,7 +1854,7 @@ def poll_mexc_market_order(order_id: str, orig_qty: float, transact_time: int, m
         }]
     }
 
-def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, buy_price, sell_price, strategy='usdt', spread_pct=0.0):
+def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, buy_price, sell_price, strategy='usdt', spread_pct=0.0, market_side='BUY'):
     """Execute arbitrage trade: Market Buy on one exchange, Limit Sell on another.
 
     GENERIC FUNCTION - Works with ANY two exchanges!
@@ -1965,39 +1965,85 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     log(f"   MEXC: USDT=${mexc_usdt:.4f}, {coin}={mexc_coins:.2f}", "DEBUG")
     log(f"   KuCoin: USDT=${kucoin_usdt:.4f}, {coin}={kucoin_coins:.2f}", "DEBUG")
     
-    # Check needed funds for BOTH sides
-    usdt_needed_ex1 = qty * market_price_expected * 1.002  # For market buy on exchange_market
-    coins_needed_ex2 = qty  # For limit sell on exchange_limit (same qty for USDT strategy)
-    price_for_ex2 = limit_price_expected
-    coins_value_ex2 = coins_needed_ex2 * price_for_ex2
+    # CRITICAL FIX 2026-10-14 (Jonas): Dynamic market/limit balance check
+    # market_side='BUY': market buys with USDT, limit sells coins
+    # market_side='SELL': market sells coins, limit buys with USDT
+    if market_side == 'BUY':
+        market_needs_usdt = True
+        limit_needs_coins = True
+    else:  # market_side == 'SELL'
+        market_needs_usdt = False
+        limit_needs_coins = False
     
+    if market_needs_usdt:
+        usdt_needed_ex1 = qty * market_price_expected * 1.002  # For market buy on exchange_market
+    else:
+        usdt_needed_ex1 = 0  # Not used when market is SELL
+    coins_needed_ex2 = qty  # For limit order (always need this many coins available on limit side IF limit sells)
+    if limit_needs_coins:
+        price_for_ex2 = limit_price_expected
+        coins_value_ex2 = coins_needed_ex2 * price_for_ex2
+    else:
+        usdt_needed_ex2 = qty * limit_price_expected * 1.002  # For limit buy on exchange_limit
+        coins_needed_ex2 = 0  # Not used when limit is BUY
+    
+    # Check market side balance
     if exchange_market.upper() == "MEXC":
-        # MEXC = Market BUY (needs USDT), KUCOIN = Limit SELL (needs coins)
-        if mexc_usdt < usdt_needed_ex1:
-            error_code = "INSUFFICIENT_BALANCE"
-            error_message = f"MEXC has insufficient USDT: ${mexc_usdt:.4f} < ${usdt_needed_ex1:.4f} needed"
-            log(f"❌ {error_message}")
-            return False, None
-        
-        if kucoin_coins < coins_needed_ex2:
-            error_code = "INSUFFICIENT_BALANCE"
-            error_message = f"KuCoin has insufficient {coin}: {kucoin_coins:.2f} < {coins_needed_ex2:.2f} needed"
-            log(f"❌ {error_message}")
-            return False, None
+        if market_needs_usdt:
+            if mexc_usdt < usdt_needed_ex1:
+                error_code = "INSUFFICIENT_BALANCE"
+                error_message = f"MEXC has insufficient USDT: ${mexc_usdt:.4f} < ${usdt_needed_ex1:.4f} needed"
+                log(f"❌ {error_message}")
+                return False, None
+        else:  # market_needs_coins
+            if mexc_coins < qty:
+                error_code = "INSUFFICIENT_BALANCE"
+                error_message = f"MEXC has insufficient {coin}: {mexc_coins:.2f} < {qty:.2f} needed"
+                log(f"❌ {error_message}")
+                return False, None
     
     elif exchange_market.upper() == "KUCOIN":
-        # KUCOIN = Market BUY (needs USDT), MEXC = Limit SELL (needs coins)
-        if kucoin_usdt < usdt_needed_ex1:
-            error_code = "INSUFFICIENT_BALANCE"
-            error_message = f"KuCoin has insufficient USDT: ${kucoin_usdt:.4f} < ${usdt_needed_ex1:.4f} needed"
-            log(f"❌ {error_message}")
-            return False, None
-        
-        if mexc_coins < coins_needed_ex2:
-            error_code = "INSUFFICIENT_BALANCE"
-            error_message = f"MEXC has insufficient {coin}: {mexc_coins:.2f} < {coins_needed_ex2:.2f} needed"
-            log(f"❌ {error_message}")
-            return False, None
+        if market_needs_usdt:
+            if kucoin_usdt < usdt_needed_ex1:
+                error_code = "INSUFFICIENT_BALANCE"
+                error_message = f"KuCoin has insufficient USDT: ${kucoin_usdt:.4f} < ${usdt_needed_ex1:.4f} needed"
+                log(f"❌ {error_message}")
+                return False, None
+        else:  # market_needs_coins
+            if kucoin_coins < qty:
+                error_code = "INSUFFICIENT_BALANCE"
+                error_message = f"KuCoin has insufficient {coin}: {kucoin_coins:.2f} < {qty:.2f} needed"
+                log(f"❌ {error_message}")
+                return False, None
+    
+    # Check limit side balance
+    if exchange_limit.upper() == "MEXC":
+        if limit_needs_coins:
+            if mexc_coins < coins_needed_ex2:
+                error_code = "INSUFFICIENT_BALANCE"
+                error_message = f"MEXC has insufficient {coin}: {mexc_coins:.2f} < {coins_needed_ex2:.2f} needed"
+                log(f"❌ {error_message}")
+                return False, None
+        else:  # limit_needs_usdt
+            if mexc_usdt < usdt_needed_ex2:
+                error_code = "INSUFFICIENT_BALANCE"
+                error_message = f"MEXC has insufficient USDT: ${mexc_usdt:.4f} < ${usdt_needed_ex2:.4f} needed"
+                log(f"❌ {error_message}")
+                return False, None
+    
+    elif exchange_limit.upper() == "KUCOIN":
+        if limit_needs_coins:
+            if kucoin_coins < coins_needed_ex2:
+                error_code = "INSUFFICIENT_BALANCE"
+                error_message = f"KuCoin has insufficient {coin}: {kucoin_coins:.2f} < {coins_needed_ex2:.2f} needed"
+                log(f"❌ {error_message}")
+                return False, None
+        else:  # limit_needs_usdt
+            if kucoin_usdt < usdt_needed_ex2:
+                error_code = "INSUFFICIENT_BALANCE"
+                error_message = f"KuCoin has insufficient USDT: ${kucoin_usdt:.4f} < ${usdt_needed_ex2:.4f} needed"
+                log(f"❌ {error_message}")
+                return False, None
     
     log(f"✅ Pre-flight balance check passed for both sides", "DEBUG")
 
@@ -2008,11 +2054,17 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
 
     # Route to correct API based on exchange
     if exchange_market.upper() == "KUCOIN":
-        result1 = execute_market_buy_kucoin(qty)
+        if market_side == 'BUY':
+            result1 = execute_market_buy_kucoin(qty)
+        else:  # market_side == 'SELL' (CRITICAL FIX 2026-10-14: dynamic market/limit)
+            result1 = execute_market_sell_kucoin(qty)
         ex1_harmonize = harmonize_kucoin_order
         api_success_check = lambda r: r.get('code') == '200000'
     elif exchange_market.upper() == "MEXC":
-        result1 = execute_market_buy_mexc(qty)
+        if market_side == 'BUY':
+            result1 = execute_market_buy_mexc(qty)
+        else:  # market_side == 'SELL'
+            result1 = execute_market_sell_mexc(qty)
         ex1_harmonize = harmonize_mexc_order
         # MEXC returns {'code': -2015, 'msg': 'Insufficient balance.'} on balance errors
         # Success: {'orderId': 'xxx', 'origQty': 'xxx', ...} - no 'code' field on success
@@ -2163,15 +2215,19 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     # STEP 2: Determine sell quantity based on strategy
     # ========================================================================
     if strategy == 'coins':
-        # Coins strategy: sell less MPC to keep the spread as MPC profit
-        # USDT spent (minus fees) / sell price = MPC to sell
-        usdt_to_sell = ex1_data['value_usdt'] - ex1_data['fees']
-        sell_qty = usdt_to_sell / sell_price if sell_price > 0 else qty
+        # CRITICAL FIX 2026-10-14: Coins strategy works for both BUY and SELL market
+        # BUY market: sell less MPC to keep the spread as MPC profit
+        # SELL market: buy back less MPC to keep the spread as MPC profit
+        usdt_value = ex1_data['value_usdt'] - ex1_data['fees']
+        if market_side == 'BUY':
+            limit_price_calc = sell_price
+        else:  # SELL
+            limit_price_calc = buy_price
+        sell_qty = usdt_value / limit_price_calc if limit_price_calc > 0 else qty
         coin = COIN_SYMBOL.split('-')[0]
-        log(f"Strategy=COINS: USDT spent={usdt_to_sell:.4f}, calculating {coin} to sell @ ${sell_price:.6f}")
+        log(f"Strategy=COINS (market_side={market_side}): USDT value={usdt_value:.4f}, calculating {coin} limit qty @ ${limit_price_calc:.6f}")
     else:
-        # USDT strategy: sell same quantity as ordered (qty), not what was filled
-        # CRITICAL FIX: use planned qty, not ex1_data['qty_filled'] (which may be less due to partial fills)
+        # USDT strategy: limit qty = market qty (same on both sides)
         sell_qty = qty
 
     # Round to integer for KuCoin (KuCoin requires whole numbers, increment=1)
@@ -2220,11 +2276,17 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
 
     # Route to correct API based on exchange
     if exchange_limit.upper() == "KUCOIN":
-        result2 = execute_limit_sell_kucoin(sell_qty, sell_price)
+        if market_side == 'BUY':
+            result2 = execute_limit_sell_kucoin(sell_qty, sell_price)
+        else:  # market_side == 'SELL'
+            result2 = execute_limit_buy_kucoin(sell_qty, buy_price)
         ex2_harmonize = harmonize_kucoin_order
         limit_success_check = lambda r: r.get('code') == '200000'
     elif exchange_limit.upper() == "MEXC":
-        result2 = execute_limit_sell_mexc(sell_qty, sell_price)
+        if market_side == 'BUY':
+            result2 = execute_limit_sell_mexc(sell_qty, sell_price)
+        else:  # market_side == 'SELL'
+            result2 = execute_limit_buy_mexc(sell_qty, buy_price)
         ex2_harmonize = harmonize_mexc_order
         limit_success_check = lambda r: r.get('code') is None or 'orderId' in r
     else:
@@ -2239,7 +2301,9 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
 
         # Get the response data for harmonization
         response_data2 = result2.get('data', result2) if exchange_limit.upper() == "KUCOIN" else result2
-        ex2_data = ex2_harmonize(response_data2, "sell", "limit", TRADING_PAIR)
+        # CRITICAL FIX 2026-10-14: harmonize side depends on market_side
+        ex2_side = "buy" if market_side == 'SELL' else "sell"
+        ex2_data = ex2_harmonize(response_data2, ex2_side, "limit", TRADING_PAIR)
         ex2_data['price_expected'] = limit_price_expected
         # CRITICAL: Set qty_ordered to the PLANNED value (sell_qty), not from exchange response
         # Exchange may return 0 or wrong value for limit orders
@@ -2275,15 +2339,15 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     #   - sell_side: sell_qty * sell_price
     #   - fees: estimated based on fee tiers (taker ~0.1%, maker ~0.02%)
     
-    buy_qty = ex1_data['qty_filled']
-    buy_price = market_price_expected  # Expected price, not actual filled price
-    sell_price_expected = sell_price
-    
-    # Buy side value (expected)
-    buy_value_expected = buy_qty * buy_price
-    
-    # Sell side value (expected) - use planned sell_qty and expected price
-    sell_value_expected = sell_qty * sell_price_expected
+    # CRITICAL FIX 2026-10-14: Profit calculation works for both BUY and SELL market
+    # BUY market: buy_value = ex1 (market buy), sell_value = ex2 (limit sell)
+    # SELL market: sell_value = ex1 (market sell), buy_value = ex2 (limit buy)
+    if market_side == 'BUY':
+        buy_value_expected = ex1_data['qty_filled'] * market_price_expected
+        sell_value_expected = sell_qty * sell_price
+    else:  # market_side == 'SELL'
+        sell_value_expected = ex1_data['qty_filled'] * market_price_expected
+        buy_value_expected = sell_qty * buy_price
     
     # Estimate fees:
     # - Taker fee (market order): ~0.1% of buy_value
@@ -3544,14 +3608,31 @@ def main():
                     trade_strategy = best_trade.get('strategy', current_strategy)
                     coin = COIN_SYMBOL.split('-')[0]
                     log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
-                    if best_trade['dir'] == 'K→M':
-                        success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', vol_for_kucoin, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
-                    else:
-                        success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
+                    # CRITICAL FIX 2026-10-14: Use dynamic market/limit from best_trade (not hardcoded by direction)
+                    # thinner_side tells us which side has the thinner order book → that side gets the market order
+                    _thinner_side = best_trade.get('thinner_side', 'SELL')
+                    if _thinner_side == 'SELL':
+                        # Sell side thinner → Market BUY on sell side, Limit SELL on buy side
+                        _market_ex = best_trade['sell_ex']
+                        _limit_ex = best_trade['buy_ex']
+                        _market_side = 'BUY'
+                    else:  # _thinner_side == 'BUY'
+                        # Buy side thinner → Market SELL on buy side, Limit BUY on sell side
+                        _market_ex = best_trade['buy_ex']
+                        _limit_ex = best_trade['sell_ex']
+                        _market_side = 'SELL'
+                    _vol = vol_for_kucoin if _market_ex == 'KUCOIN' else vol_for_mexc
+                    success, trade_id = execute_trade_market_buy_limit_sell(
+                        _market_ex, _limit_ex, _vol,
+                        best_trade['buy'], best_trade['sell'],
+                        trade_strategy, best_trade['pct'],
+                        market_side=_market_side
+                    )
                 elif spread_pct_km >= spread_pct_mk:
-                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', math.floor(vol_for_kucoin), k['ask'], m['bid'], current_strategy, spread_pct_km)
+                    # Fallback: no best_trade, use raw orderbook. Market is always on the buy side.
+                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', math.floor(vol_for_kucoin), k['ask'], m['bid'], current_strategy, spread_pct_km, market_side='BUY')
                 else:
-                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk)
+                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk, market_side='BUY')
                 
                 # Only complete trade if SUCCESS=True
                 if success:
@@ -3654,10 +3735,26 @@ def main():
             trade_strategy = best_trade.get('strategy', current_strategy)
             coin = COIN_SYMBOL.split('-')[0]
             log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
-            if best_trade['dir'] == 'K→M':
-                success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', vol_for_kucoin, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
-            else:
-                success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', vol_for_mexc, best_trade['buy'], best_trade['sell'], trade_strategy, best_trade['pct'])
+            # CRITICAL FIX 2026-10-14: Use dynamic market/limit from best_trade (not hardcoded by direction)
+            # thinner_side tells us which side has the thinner order book → that side gets the market order
+            _thinner_side = best_trade.get('thinner_side', 'SELL')
+            if _thinner_side == 'SELL':
+                # Sell side thinner → Market BUY on sell side, Limit SELL on buy side
+                _market_ex = best_trade['sell_ex']
+                _limit_ex = best_trade['buy_ex']
+                _market_side = 'BUY'
+            else:  # _thinner_side == 'BUY'
+                # Buy side thinner → Market SELL on buy side, Limit BUY on sell side
+                _market_ex = best_trade['buy_ex']
+                _limit_ex = best_trade['sell_ex']
+                _market_side = 'SELL'
+            _vol = vol_for_kucoin if _market_ex == 'KUCOIN' else vol_for_mexc
+            success, trade_id = execute_trade_market_buy_limit_sell(
+                _market_ex, _limit_ex, _vol,
+                best_trade['buy'], best_trade['sell'],
+                trade_strategy, best_trade['pct'],
+                market_side=_market_side
+            )
             
             # Only complete trade if SUCCESS=True
             if success:
