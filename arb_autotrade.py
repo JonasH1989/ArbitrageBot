@@ -3104,171 +3104,183 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
     }
 
 
-def calculate_best_trade(ob_data, min_trade_qty, threshold_start, stop_threshold, strategy, for_follow_up_trade=False):
-    """Calculate best trade using CORRECT multi-level accumulation.
+def prepare_trade(ob_data, threshold_start, threshold_stop, current_strategy, for_follow_up_trade=False, min_trade_qty=10):
+    """CRITICAL FIX 2026-10-18 (Jonas): Combined wallet + orderbook pre-trade check.
     
-    CORRECT ALGORITHM (per 8 Trade Cases):
-    1. Erst L1单独 prüfen - wenn genug Volumen + Spread >= threshold → Trade
-    2. Nur wenn nicht genug: Level akkumulieren (L1+L2, L1+L2+L3, ...)
-    3. An jedem Akkumulations-Punkt: Spread + Volumen checken
-    4. trade_vol = MIN(akkumulierte dünnere Seite, andere Seite Vol an diesem Punkt)
-    5. Dünnere Seite kann sich ändern → dann ggf. andere Trade-Richtung!
+    Replaces calculate_best_trade() + check_balances_for_trade().
+    Wallet limits are applied DURING the orderbook sweep with effective (volume-weighted) prices.
     
-    Threshold-Logik:
-    - for_follow_up_trade=True: threshold_stop (während Hysteresis aktiv)
-    - for_follow_up_trade=False: threshold_start (erster Trade)
+    Returns: trade_plan dict or None
+    trade_plan keys: vol, buy_ex, sell_ex, market_ex, limit_ex, market_side, 
+                     buy_price, sell_price, spread_pct, profit_usdt, profit_mpc,
+                     thinner_side, cum_sell, cum_buy, direction, strategy
     """
-    threshold = stop_threshold if for_follow_up_trade else threshold_start
-    
-    best_trade = None
-    
     if not ob_data:
         return None
     
-    # Get orderbook levels
-    kucoin_bids = ob_data.get('kucoin_bids', [])  # KuCoin sell depth (we buy here)
-    kucoin_asks = ob_data.get('kucoin_asks', [])  # KuCoin buy depth (we sell here)
-    mexc_asks = ob_data.get('mexc_asks', [])      # MEXC sell depth (we buy here)
-    mexc_bids = ob_data.get('mexc_bids', [])      # MEXC buy depth (we sell here)
+    threshold = threshold_stop if for_follow_up_trade else threshold_start
+    coin = COIN_SYMBOL.split('-')[0]
     
-    # =========================================================================
-    # Direction M→K: KuCoin Bid > MEXC Ask → Buy MEXC, Sell KuCoin
-    # =========================================================================
-    best_mk = _find_best_trade_for_direction(
-        kucoin_bids,  # sell side (we sell here = Limit side)
-        mexc_asks,    # buy side (we buy here = Market side)
-        'M→K',
-        'KUCOIN',     # Limit exchange
-        'MEXC',       # Market exchange
-        min_trade_qty,
-        threshold,
-        strategy
-    )
-    if best_mk:
-        best_trade = best_mk
+    # 1. Orderbook levels
+    kucoin_bids = ob_data.get('kucoin_bids', [])
+    kucoin_asks = ob_data.get('kucoin_asks', [])
+    mexc_asks = ob_data.get('mexc_asks', [])
+    mexc_bids = ob_data.get('mexc_bids', [])
     
-    # =========================================================================
-    # Direction K→M: MEXC Bid > KuCoin Ask → Buy KuCoin, Sell MEXC
-    # =========================================================================
-    best_km = _find_best_trade_for_direction(
-        mexc_bids,   # sell side (we sell here = Limit side)
-        kucoin_asks, # buy side (we buy here = Market side)
-        'K→M',
-        'MEXC',      # Limit exchange
-        'KUCOIN',    # Market exchange
-        min_trade_qty,
-        threshold,
-        strategy
-    )
-    if best_km:
-        # Compare profits and pick better
-        profit_mk = best_mk.get('profit_usdt' if strategy != 'coins' else 'profit_mpc', 0) if best_mk else 0
-        profit_km = best_km.get('profit_usdt' if strategy != 'coins' else 'profit_mpc', 0) if best_km else 0
-        if best_trade is None or profit_km > profit_mk:
-            best_trade = best_km
+    # 2. Wallet snapshot (BOTH exchanges, einmalig am Anfang)
+    try:
+        kucoin_bal = get_kucoin_balances()
+        mexc_bal = get_mexc_balances()
+    except Exception as e:
+        log(f"prepare_trade: balance fetch failed: {e}", "ERROR")
+        return None
+    
+    wallets = {
+        'KUCOIN': {
+            'USDT': kucoin_bal.get('USDT', {}).get('free', 0) if kucoin_bal else 0,
+            coin: kucoin_bal.get(coin, {}).get('free', 0) if kucoin_bal else 0,
+        },
+        'MEXC': {
+            'USDT': mexc_bal.get('USDT', {}).get('free', 0) if mexc_bal else 0,
+            coin: mexc_bal.get(coin, {}).get('free', 0) if mexc_bal else 0,
+        },
+    }
+    
+    best_trade = None
+    
+    # 3. Sweep mit Wallet-Check pro Iteration
+    def sweep(sell_levels, buy_levels, direction, limit_ex, market_ex):
+        nonlocal best_trade
+        if not sell_levels or not buy_levels:
+            return
+        
+        cum_sell = 0
+        cum_buy = 0
+        cum_sell_value = 0.0  # USDT-Wert akkumuliert
+        cum_buy_value = 0.0
+        
+        for sell_level in sell_levels:
+            cum_sell += sell_level['qty']
+            cum_sell_value += sell_level['qty'] * sell_level['price']
+            avg_sell_price = cum_sell_value / cum_sell if cum_sell > 0 else 0
+            
+            cum_buy = 0
+            cum_buy_value = 0.0
+            for buy_level in buy_levels:
+                cum_buy += buy_level['qty']
+                cum_buy_value += buy_level['qty'] * buy_level['price']
+                avg_buy_price = cum_buy_value / cum_buy if cum_buy > 0 else 0
+                
+                # Spread-Check (per level pair)
+                spread = sell_level['price'] - buy_level['price']
+                spread_pct = (spread / buy_level['price']) * 100 if buy_level['price'] > 0 else 0
+                if spread_pct < threshold:
+                    break  # nächstes buy_level hat evtl. besseren spread
+                
+                # Dünnere Seite = Market-Order
+                if cum_sell <= cum_buy:
+                    # Sell-Side dünner → Market BUY auf sell-ex (limit_ex)
+                    actual_market_ex = limit_ex
+                    actual_limit_ex = market_ex
+                    actual_market_side = 'BUY'
+                else:
+                    # Buy-Side dünner → Market SELL auf buy-ex (market_ex)
+                    actual_market_ex = market_ex
+                    actual_limit_ex = limit_ex
+                    actual_market_side = 'SELL'
+                
+                # === WALLET-CHECK (EFFEKTIVE PREISE) ===
+                # Market-Seite: braucht USDT (BUY) oder Coins (SELL)
+                if actual_market_side == 'BUY':
+                    wallet_market_usdt = wallets[actual_market_ex]['USDT']
+                    max_from_market = wallet_market_usdt / avg_buy_price if avg_buy_price > 0 else 0
+                else:  # SELL market
+                    wallet_market_coin = wallets[actual_market_ex][coin]
+                    max_from_market = wallet_market_coin
+                
+                # Limit-Seite: braucht Coins (SELL) oder USDT (BUY), je nach Strategie
+                if current_strategy == 'coins':
+                    # 'coins': gleicher USDT-Wert auf beiden Seiten
+                    # Market-Value = avg_market_price * orderbook_vol
+                    # Limit-qty = market_value / avg_limit_price
+                    if actual_market_side == 'BUY':
+                        # BUY market: market_value = avg_sell_price * orderbook_vol
+                        #            (avg_sell_price ist der Preis auf der Market-Exchange für BUY)
+                        market_value_per_vol = avg_sell_price
+                    else:
+                        # SELL market: market_value = avg_buy_price * orderbook_vol
+                        market_value_per_vol = avg_buy_price
+                    
+                    # Limit-qty pro trade_vol:
+                    #   limit_qty = market_value / avg_limit_price
+                    #   = orderbook_vol * market_value_per_vol / avg_limit_price
+                    
+                    # Need: limit_qty <= wallet_limit (coins für SELL-limit, USDT für BUY-limit)
+                    # → orderbook_vol * market_value_per_vol / avg_limit_price <= wallet_limit
+                    # → orderbook_vol <= wallet_limit * avg_limit_price / market_value_per_vol
+                    if actual_market_side == 'BUY':
+                        # limit ist SELL, need coins
+                        wallet_limit_coin = wallets[actual_limit_ex][coin]
+                        avg_limit_price = avg_sell_price  # limit is sell side here
+                    else:
+                        # limit ist BUY, need USDT
+                        wallet_limit_usdt = wallets[actual_limit_ex]['USDT']
+                        avg_limit_price = avg_buy_price  # limit is buy side here
+                        max_from_limit = wallet_limit_usdt / avg_limit_price if avg_limit_price > 0 else 0
+                    
+                    if actual_market_side == 'BUY':
+                        max_from_limit = wallet_limit_coin * avg_limit_price / market_value_per_vol if market_value_per_vol > 0 else 0
+                else:
+                    # 'usdt': gleiche Qty auf beiden Seiten
+                    if actual_market_side == 'BUY':
+                        # limit SELL: need X coins
+                        max_from_limit = wallets[actual_limit_ex][coin]
+                    else:
+                        # limit BUY: need X * avg_buy_price USDT
+                        wallet_limit_usdt = wallets[actual_limit_ex]['USDT']
+                        avg_limit_price = avg_buy_price
+                        max_from_limit = wallet_limit_usdt / avg_limit_price if avg_limit_price > 0 else 0
+                
+                # === TRADE VOLUME = MIN(orderbook, wallet) ===
+                orderbook_vol = min(cum_sell, cum_buy)
+                effective_vol = min(orderbook_vol, max_from_market, max_from_limit)
+                
+                if effective_vol < min_trade_qty:
+                    continue  # wallet/fees zu klein, weiter akkumulieren
+                
+                # === GEFUNDEN: Trade-Plan bauen ===
+                profit_usdt = spread * effective_vol
+                profit_mpc = profit_usdt / avg_buy_price if avg_buy_price > 0 else 0
+                
+                # Buy/Sell exchanges bestimmen
+                if actual_market_side == 'BUY':
+                    buy_ex, sell_ex = actual_market_ex, actual_limit_ex
+                else:
+                    buy_ex, sell_ex = actual_limit_ex, actual_market_ex
+                
+                candidate = {
+                    'vol': effective_vol,
+                    'buy_ex': buy_ex, 'sell_ex': sell_ex,
+                    'market_ex': actual_market_ex, 'limit_ex': actual_limit_ex,
+                    'market_side': actual_market_side,
+                    'buy_price': avg_buy_price, 'sell_price': avg_sell_price,
+                    'spread_pct': spread_pct,
+                    'profit_usdt': profit_usdt, 'profit_mpc': profit_mpc,
+                    'thinner_side': 'SELL' if cum_sell <= cum_buy else 'BUY',
+                    'cum_sell': cum_sell, 'cum_buy': cum_buy,
+                    'direction': direction, 'strategy': current_strategy,
+                }
+                if best_trade is None or profit_usdt > best_trade['profit_usdt']:
+                    best_trade = candidate
+                break  # pro sell_level ein Kandidat (oder weiter)
+    
+    # 4. Beide Richtungen prüfen
+    sweep(kucoin_bids, mexc_asks, 'M→K', 'KUCOIN', 'MEXC')
+    sweep(mexc_bids, kucoin_asks, 'K→M', 'MEXC', 'KUCOIN')
     
     return best_trade
 
 
-def _find_best_trade_for_direction(sell_levels, buy_levels, direction, limit_ex, market_ex, min_trade_qty, threshold, strategy):
-    """Find best trade for a specific direction (M→K or K→M).
-    
-    IMPORTANT: The thinner side gets the Market Order, the thicker side gets Limit Order.
-    We don't know which is which just from the direction!
-    
-    Algorithm:
-    1. AkkumuliereLevel auf BEIDEN Seiten
-    2. Nach jedem Level-Paar: Prüfe welche Seite dünner ist
-    3. trade_vol = MIN(akkumulierte dünnere Seite, dickere Seite an diesem Punkt)
-    4. Spread muss >= threshold sein für dieses Level-Paar
-    5. Dünnere Seite = Market Order
-    """
-    best = None
-    
-    if not sell_levels or not buy_levels:
-        return None
-    
-    # Akkumuliere auf BEIDEN Seiten gleichzeitig
-    cum_sell = 0  # Akkumulierte Volumen auf Sell side
-    cum_buy = 0   # Akkumulierte Volumen auf Buy side
-    
-    for sell_level in sell_levels:
-        cum_sell += sell_level['qty']
-        
-        # Für JEDES Sell Level: akkumuliere Buy Side bis dieses Level erreicht
-        cum_buy = 0
-        for buy_level in buy_levels:
-            cum_buy += buy_level['qty']
-            
-            # Spread: sell price - buy price
-            spread = sell_level['price'] - buy_level['price']
-            spread_pct = (spread / buy_level['price']) * 100 if buy_level['price'] > 0 else 0
-            
-            # Spread muss >= threshold sein für DIESES Level-Paar
-            if spread_pct < threshold:
-                break  # Nächstes Buy Level hat vielleicht besseren Spread
-            
-            #trade_vol = MIN(dünnere Seite, dickere Seite an diesem Punkt)
-            #Die dünnere Seite = die mit dem KLEINEREN akkumulierten Volumen
-            thinner_vol = min(cum_sell, cum_buy)
-            thicker_vol = max(cum_sell, cum_buy)
-            
-            trade_vol = thinner_vol  # Wir können nur das handeln was die dünnere Seite hergibt
-            
-            if trade_vol >= min_trade_qty:
-                # Gültiger Trade gefunden! -> SOFORT return, nicht weiter akkumulieren!
-                # Wir wollen nur genau genug Volume für die Mindestorder, nicht mehr
-                profit_usdt = spread * trade_vol
-                profit_mpc = profit_usdt / buy_level['price'] if buy_level['price'] > 0 else 0
-                
-                # Bestimme welche Seite Market Order bekommt (die dünnere)
-                if cum_sell <= cum_buy:
-                    # Sell side ist dünner → Market BUY auf Sell side
-                    actual_market_ex = limit_ex
-                    actual_limit_ex = market_ex
-                    actual_market_side = 'BUY'
-                    actual_limit_side = 'SELL'
-                else:
-                    # Buy side ist dünner → Market SELL auf Buy side
-                    actual_market_ex = market_ex
-                    actual_limit_ex = limit_ex
-                    actual_market_side = 'SELL'
-                    actual_limit_side = 'BUY'
-
-                # Trigger-Pfad Event: Spread gefunden → Trade-Kandidat
-                if dbg is not None:
-                    dbg.trigger('spread_detected',
-                        direction=direction,
-                        spread_pct=spread_pct,
-                        threshold=threshold,
-                        trade_vol=trade_vol,
-                        cum_sell=cum_sell,
-                        cum_buy=cum_buy,
-                        thinner_side='SELL' if cum_sell <= cum_buy else 'BUY',
-                        profit_usdt=profit_usdt,
-                        profit_mpc=profit_mpc,
-                        strategy=strategy,
-                        limit_ex=limit_ex,
-                        market_ex=market_ex,
-                    )
-
-                return {
-                    'dir': direction,
-                    'buy': buy_level['price'],
-                    'sell': sell_level['price'],
-                    'buy_ex': actual_market_ex if actual_market_side == 'BUY' else actual_limit_ex,
-                    'sell_ex': actual_limit_ex if actual_limit_side == 'SELL' else actual_market_ex,
-                    'pct': spread_pct,
-                    'vol': trade_vol,
-                    'cum_sell': cum_sell,
-                    'cum_buy': cum_buy,
-                    'thinner_side': 'SELL' if cum_sell <= cum_buy else 'BUY',
-                    'profit_usdt': profit_usdt,
-                    'profit_mpc': profit_mpc,
-                    'strategy': strategy
-                }
-    
-    return best
 
 
 def main():
@@ -3432,7 +3444,7 @@ def main():
         # Find best tradeable spread using BIDIRECTIONAL VOLUME ACCUMULATION
         # This replaces the old sweep that fixed one side - now both sides accumulate!
         strategy = get_trading_strategy(TRADING_PAIR)
-        best_trade = calculate_best_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=True)
+        best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=True)
 
         # Log sweep results every 30 seconds
         if int(time.time()) % 10 == 0:
@@ -3575,20 +3587,9 @@ def main():
                     check_buy = m['ask'] if dir_check == 'M→K' else k['ask']
                     check_sell = k['bid'] if dir_check == 'M→K' else m['bid']
                 
-                # Pre-check: can we actually trade?
-                can_trade, balance_error, max_tradable = check_balances_for_trade(dir_check, check_qty, check_buy, check_sell)
-                if not can_trade:
-                    # CANNOT trade - do NOT set trade_in_progress, stay in WAITING
-                    if int(time.time()) % 5 == 0:  # Log every 5s to avoid spam
-                        log(f"⛔ TRIGGER SKIPPED: {balance_error}", "BALANCE")
-                    return  # ← EXIT early, do NOT enter trade
-                
-                # Balance OK - proceed with trade (possibly with reduced qty)
-                # Override volume with max_tradable if needed
-                if max_tradable < check_qty and max_tradable >= get_kucoin_min_qty(best_trade.get('buy', 0.017)):
-                    log(f"⚠️ Reduced trade qty: {check_qty:.0f} → {math.floor(max_tradable):.0f} (wallet limit)", "BALANCE")
-                    if best_trade:
-                        best_trade['vol'] = math.floor(max_tradable)
+                # prepare_trade() already wallet-capped vol. Skip if no viable trade.
+                if not best_trade:
+                    return
                 
                 # Balance OK - proceed with trade
                 log(f"🚀 TRIGGER: spread={profitable_spread:.2f}% >= threshold={threshold_start}%", "DECISION")
@@ -3705,7 +3706,7 @@ def main():
                 # NO state change, NO continue: fall through to calculate_best_trade()
             
             # Recalculate best trade with fresh orderbook data
-            best_trade = calculate_best_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, current_strategy, for_follow_up_trade=True)
+            best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, current_strategy, for_follow_up_trade=True)
             
             if not best_trade:
                 log(f"No tradeable spread found (spread below thresholds or insufficient volume)")
@@ -3713,21 +3714,11 @@ def main():
                 trade_in_progress = False
                 continue
             
-            # Execute trade
-            # Pre-flight balance check before setting trade_in_progress
-            dir_check = best_trade['dir']
-            check_qty = math.floor(best_trade['vol'])
-            can_trade, balance_error, max_tradable = check_balances_for_trade(dir_check, check_qty, best_trade['buy'], best_trade['sell'])
-            if not can_trade:
-                log(f"⛔ TRADE BLOCKED: {balance_error}")
-                trade_in_progress = False
+            # prepare_trade() already wallet-capped vol. Skip if no viable trade.
+            if not best_trade:
                 state = STATE_WAITING
+                trade_in_progress = False
                 continue
-            
-            # Override volume with max_tradable if wallet is limiting
-            if max_tradable < check_qty and max_tradable >= get_kucoin_min_qty(best_trade.get('buy', 0.017)):
-                log(f"⚠️ Reduced trade qty: {check_qty:.0f} → {math.floor(max_tradable):.0f} (wallet limit)", "BALANCE")
-                best_trade['vol'] = math.floor(max_tradable)
             
             trade_in_progress = True
             vol_for_mexc = math.floor(best_trade['vol'])
