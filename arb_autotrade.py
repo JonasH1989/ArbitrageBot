@@ -3104,7 +3104,7 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
     }
 
 
-def prepare_trade(ob_data, threshold_start, threshold_stop, current_strategy, for_follow_up_trade=False, min_trade_qty=10):
+def prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=False):
     """CRITICAL FIX 2026-10-18 (Jonas): Combined wallet + orderbook pre-trade check.
     
     Replaces calculate_best_trade() + check_balances_for_trade().
