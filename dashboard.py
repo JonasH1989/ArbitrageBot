@@ -1096,6 +1096,45 @@ if st.session_state.selected_pair is None:
                 _diag_log.append(f"  OPEN ex2sum rows: {len(_open)}")
             except Exception as _e:
                 _diag_log.append(f"ERROR: {_e}")
+            _NL = chr(10)
+            with st.expander("📊 Diagnose log", expanded=True):
+                st.code(_NL.join(_diag_log), language="text")
+
+        # Diagnose button (Jonas 2026-10-19 13:50) - shows raw CSV state for debugging
+        col_d1, col_d2 = st.columns([1, 2])
+        with col_d1:
+            diagnose_clicked = st.button(
+                "🔍 Diagnose CSV",
+                key="diagnose_btn",
+                help="Show raw FILLED-row counts and profit_usdt_actual values from MPCUSDT_trades.csv. Quick (<1 sec)."
+            )
+        with col_d2:
+            st.caption("Liest die CSV direkt und zeigt FILLED-Row-Count + erste 5 Profit-Werte + Summe. Nuetzlich wenn Dashboard ↔ Backfill-Log unterschiedlich aussieht.")
+
+        if diagnose_clicked:
+            _diag_log = []
+            try:
+                import trade_logger as _tl_diag
+                _rows_all = _tl_diag._read_csv_data_rows('/app/logs/MPCUSDT_trades.csv')
+                _filled = [r for r in _rows_all if (r.get('ex2_status') or '').strip().upper() == 'FILLED']
+                _diag_log.append(f"Total CSV rows: {len(_rows_all)}")
+                _diag_log.append(f"FILLED rows: {len(_filled)}")
+                _diag_log.append("First 5 FILLED profit_usdt_actual values:")
+                for _r in _filled[:5]:
+                    _tid = _r.get('trade_id', '')
+                    _prof = _r.get('profit_usdt_actual', '')
+                    _diag_log.append(f"  {_tid}: {_prof!r}")
+                _total = 0.0
+                for _r in _filled:
+                    _raw = _r.get('profit_usdt_actual', '') or '0'
+                    try: _total += float(str(_raw).replace(',', '.'))
+                    except: pass
+                _diag_log.append(f"Sum of all FILLED profit_usdt_actual: {_total:.4f}")
+                _diag_log.append("Open count check:")
+                _open = [r for r in _rows_all if (r.get('trade_id') or '').endswith('_ex2sum') and (r.get('ex2_status') or '').strip().upper() == 'OPEN']
+                _diag_log.append(f"  OPEN ex2sum rows: {len(_open)}")
+            except Exception as _e:
+                _diag_log.append(f"ERROR: {_e}")
             _NL = chr(10)  # avoid heredoc eating \n
             with st.expander("📊 Diagnose log", expanded=True):
                 st.code(_NL.join(_diag_log), language="text")
