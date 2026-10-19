@@ -16,6 +16,7 @@ import os
 import json
 import sys
 import time
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, List, Tuple
@@ -36,6 +37,13 @@ TRADE_ROW_SUFFIXES = (
     '_ex2sum',
 )
 
+# Regex matching any fill or summary row suffix.
+# Replaces the fixed TRADE_ROW_SUFFIXES tuple which only went up to _ex1p5/_ex2p5
+# and silently miscounted rows like _ex1p6, _ex1p7 as "main trades"
+# (discovered 2026-10-19: the fixed tuple caused count_main_trades to return
+# 5970 instead of the actual 1313 unique main trades, because ~4657 fill rows
+# beyond _ex1p5/_ex2p5 leaked into the main count).
+TRADE_ROW_SUFFIX_RE = re.compile(r'_(?:ex[12]p\d+|ex2sum)$')
 # =============================================================================
 # COLUMN INDEX MAP (0-based, matches docs/TRADE_LOG_STRUCTURE.md)
 # =============================================================================
@@ -1140,7 +1148,7 @@ def count_main_trades(pair: str) -> int:
     main_ids = set()
     for row in _read_csv_data_rows(csv_path):
         tid = row.get('trade_id', '')
-        if tid and not any(tid.endswith(s) for s in TRADE_ROW_SUFFIXES):
+        if tid and not TRADE_ROW_SUFFIX_RE.search(tid):
             main_ids.add(tid)
     return len(main_ids)
 

@@ -7,6 +7,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import requests
 import yaml
+import re
 from datetime import datetime
 from pathlib import Path
 import os
@@ -31,7 +32,11 @@ import base64
 def is_main_trade_row(row: dict) -> bool:
     """Return True if this row is a Main trade row (no fill/sum suffix)."""
     tid = (row.get('trade_id') or '').strip()
-    return bool(tid) and not any(tid.endswith(s) for s in TRADE_ROW_SUFFIXES)
+    if not tid:
+        return False
+    # Use regex to match ANY number of fills (_ex1p1, _ex1p2, ..., _ex1p99)
+    # and the summary row (_ex2sum). The old fixed tuple only went to _ex1p5.
+    return not bool(TRADE_ROW_SUFFIX_RE.search(tid))
 
 def is_ex2sum_row(row: dict) -> bool:
     """Return True if this row is an _ex2sum row (contains profit values)."""

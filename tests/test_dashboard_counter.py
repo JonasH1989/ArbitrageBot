@@ -17,6 +17,7 @@ The fix introduces:
 
 import csv
 import sys
+import re
 from pathlib import Path
 
 # Add project root to path so 'import trade_logger' works
@@ -24,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from trade_logger import (
     TRADE_ROW_SUFFIXES,
+    TRADE_ROW_SUFFIX_RE,
     count_main_trades,
     total_profit_usdt,
     completed_profit_usdt,
@@ -38,7 +40,9 @@ from trade_logger import (
 def is_main_trade_row(row: dict) -> bool:
     """Mirror of dashboard.is_main_trade_row for unit testing."""
     tid = (row.get("trade_id") or "").strip()
-    return bool(tid) and not any(tid.endswith(s) for s in TRADE_ROW_SUFFIXES)
+    if not tid:
+        return False
+    return not bool(TRADE_ROW_SUFFIX_RE.search(tid))
 
 
 def is_ex2sum_row(row: dict) -> bool:
@@ -67,6 +71,30 @@ def test_trade_row_suffixes_complete():
     for n in range(1, 6):
         assert f"_ex1p{n}" in TRADE_ROW_SUFFIXES, f"missing _ex1p{n}"
         assert f"_ex2p{n}" in TRADE_ROW_SUFFIXES, f"missing _ex2p{n}"
+
+
+def test_trade_row_suffix_re_handles_more_than_5_fills():
+    """Regression: trades with > 5 fills must NOT be miscounted as main trades.
+    The old fixed-tuple TRADE_ROW_SUFFIXES only went to _ex1p5/_ex2p5
+    and caused count_main_trades() to return 5970 instead of 1313 (Jonas 2026-10-19)."""
+    main_tid = "0c12220753"  # Real CSV: has 7 ex1p fills
+    fill_tids = [f"{main_tid}_ex1p{i}" for i in range(1, 8)]
+    fill_tids += [f"{main_tid}_ex2p{i}" for i in range(1, 4)]
+    fill_tids += [f"{main_tid}_ex2sum"]
+
+    assert is_main_trade_row({"trade_id": main_tid}) is True
+    for ftid in fill_tids:
+        assert is_main_trade_row({"trade_id": ftid}) is False, (
+            f"FAIL: {ftid} should NOT be a main trade row")
+
+    # Regex direct checks
+    for n in range(1, 100):
+        assert TRADE_ROW_SUFFIX_RE.search(f"t_ex1p{n}") is not None
+        assert TRADE_ROW_SUFFIX_RE.search(f"t_ex2p{n}") is not None
+    assert TRADE_ROW_SUFFIX_RE.search("t_ex2sum") is not None
+    assert TRADE_ROW_SUFFIX_RE.search("t1") is None
+    assert TRADE_ROW_SUFFIX_RE.search("t1_ex1p") is None  # no number
+    assert TRADE_ROW_SUFFIX_RE.search("t1_ex3p1") is None  # only ex1/ex2
 
 
 # =============================================================================
