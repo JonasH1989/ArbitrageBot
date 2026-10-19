@@ -1094,4 +1094,4 @@ if st.session_state.selected_pair is None:
                         <span style="font-size: 24px;">{status_color}</span>
                         <span style="font-size: 20px; font-weight: bold; color: white;">{pair_name}</span>
                     </div>
-                """)
+                """, unsafe_allow_html=True)
