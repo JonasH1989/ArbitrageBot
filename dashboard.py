@@ -1070,10 +1070,10 @@ if st.session_state.selected_pair is None:
                         _cfg = yaml.safe_load(_f)
                     _mexc_cfg = _cfg.get('mexc', {})
                     _kucoin_cfg = _cfg.get('kucoin', {})
-                    with open(_csv_path, 'r', newline='') as _f:
-                        _reader = csv.DictReader(_f, delimiter=';')
-                        _rows = list(_reader)
-                        _cols = _reader.fieldnames
+                    # Use _read_csv_data_rows (positional, header-aware) for consistency
+                    _rows = _read_csv_data_rows(_csv_path)
+                    # Get ex2sum-only subset for the stale check
+                    _ex2sum_rows = [r for r in _rows if (r.get('trade_id') or '').endswith('_ex2sum')]
                     def _bf_f2(v):
                         if not v: return 0.0
                         try: return float(str(v).replace(',', '.'))
