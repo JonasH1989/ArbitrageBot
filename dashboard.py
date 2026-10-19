@@ -13,7 +13,7 @@ import os
 import pandas as pd
 import io
 import io
-from trade_logger import *
+from trade_logger import *, _read_csv_data_rows
 import sys
 from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, get_alert_settings, set_alert_settings, get_api_keys, set_api_keys, get_all_pairs, add_pair, remove_pair, get_log_level, set_log_level
 import base64
@@ -1070,8 +1070,9 @@ if st.session_state.selected_pair is None:
                         _cfg = yaml.safe_load(_f)
                     _mexc_cfg = _cfg.get('mexc', {})
                     _kucoin_cfg = _cfg.get('kucoin', {})
-                    # Use _read_csv_data_rows (positional, header-aware) for consistency
-                    _rows = _read_csv_data_rows(_csv_path)
+                    # Use _read_csv_data_rows via module (handles private-name issue)
+                    import trade_logger as _tl_mod
+                    _rows = _tl_mod._read_csv_data_rows(_csv_path)
                     # Get ex2sum-only subset for the stale check
                     _ex2sum_rows = [r for r in _rows if (r.get('trade_id') or '').endswith('_ex2sum')]
                     def _bf_f2(v):
