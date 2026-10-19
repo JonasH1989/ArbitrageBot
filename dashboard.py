@@ -1065,7 +1065,7 @@ if st.session_state.selected_pair is None:
             with st.spinner("Running backfill... (~3 min for 792 trades)"):
                 try:
                     _cfg_path = '/app/config/config.yaml'
-                    _csv_path = '/app/logs/MPCUSDT_trades.csv'
+                    _csv_path = Path('/app/logs/MPCUSDT_trades.csv')
                     with open(_cfg_path) as _f:
                         _cfg = yaml.safe_load(_f)
                     _mexc_cfg = _cfg.get('mexc', {})
