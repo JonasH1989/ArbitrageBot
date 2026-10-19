@@ -157,7 +157,7 @@ Responsibilities:
                     
                     # 1b. Option A (Jonas 2026-10-19 11:47): Re-check FILLED orders with stale profit=0
                     elif ex2sum_row and ex2sum_row.get('ex2_status') == 'FILLED':
-                        if refetch_count < REFETCH_LIMIT_PER_CYCLE:
+                        if refetch_count < self.REFETCH_LIMIT_PER_CYCLE:
                             profit_now = to_float(ex2sum_row.get('profit_usdt_actual', 0) or 0)
                             if profit_now == 0:
                                 # Stale data (service missed the fill) — re-fetch from exchange
