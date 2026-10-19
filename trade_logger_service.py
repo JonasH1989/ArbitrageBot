@@ -37,7 +37,12 @@ COL = {name: i for i, name in enumerate(UNIFIED_COLUMNS)}
 class TradeLoggerService:
     """
     Background service for comprehensive trade data management.
-    
+
+    # Max stale-FILLED re-fetches per service cycle (30s cycle = ~40/min,
+    # well within most exchange rate limits). 792 stale trades will be
+    # processed in ~40 cycles = ~20 min after deploy (Jonas 2026-10-19 11:47).
+    REFETCH_LIMIT_PER_CYCLE = 20
+
     Responsibilities:
     - Poll limit orders for status updates (WATCHING → FILLED/PARTIAL)
     - Fetch missing fees from exchange APIs (myTrades/fills)
@@ -135,6 +140,7 @@ class TradeLoggerService:
                     return
                 
                 modified = False
+                refetch_count = 0  # Option A: re-fetch stale FILLED counter
                 
                 # Group rows by trade (main trade + its fill rows)
                 trade_blocks = self._group_trade_blocks(rows)
@@ -147,12 +153,27 @@ class TradeLoggerService:
                     
                     trade_id = main_row['trade_id']
                     
-                    # 1. Check limit order status (if WATCHING)
+                    # 1. Check limit order status (if OPEN)
                     if ex2sum_row and ex2sum_row.get('ex2_status') == 'OPEN':
                         result = self._check_limit_order(main_row, ex2sum_row, limit_fill_rows)
                         if result:
                             self._apply_limit_update(rows, block, result)
                             modified = True
+                    
+                    # 1b. Option A (Jonas 2026-10-19 11:47): Re-check FILLED orders with stale profit=0
+                    elif ex2sum_row and ex2sum_row.get('ex2_status') == 'FILLED':
+                        if refetch_count < REFETCH_LIMIT_PER_CYCLE:
+                            profit_now = to_float(ex2sum_row.get('profit_usdt_actual', 0) or 0)
+                            if profit_now == 0:
+                                # Stale data (service missed the fill) — re-fetch from exchange
+                                result = self._check_limit_order(main_row, ex2sum_row, limit_fill_rows)
+                                if result and result.get('qty_filled', 0) > 0:
+                                    self._apply_limit_update(rows, block, result)
+                                    modified = True
+                                    refetch_count += 1
+                                    print(f"[TradeLogger] Re-fetched stale FILLED trade {trade_id}")
+                                else:
+                                    print(f"[TradeLogger] WARN: could not re-fetch stale FILLED trade {trade_id}")
                     
                     # 2. Check for multi-fills on ex1 (if qty_ordered != qty_filled)
                     ex1_ordered = to_float(main_row.get('ex1_qty_ordered', 0) or 0)
