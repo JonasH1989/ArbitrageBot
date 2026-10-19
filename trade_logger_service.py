@@ -38,6 +38,12 @@ class TradeLoggerService:
     """
     Background service for comprehensive trade data management.
 
+    # Max stale-FILLED re-fetches per service cycle (30s cycle). 792 stale
+    # trades processed in ~40 cycles = ~20 min. (Jonas 2026-10-19 11:47)
+    REFETCH_LIMIT_PER_CYCLE = 20
+
+    Responsibilities:
+
 Responsibilities:
     - Poll limit orders for status updates (WATCHING → FILLED/PARTIAL)
     - Fetch missing fees from exchange APIs (myTrades/fills)
