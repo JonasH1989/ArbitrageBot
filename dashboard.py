@@ -1081,11 +1081,51 @@ if st.session_state.selected_pair is None:
                 total_profit = completed_profit_usdt(pair_name)
                 open_trades = open_trade_count(pair_name)
                 
-                # Build complete tile as HTML
+                # Tile: HTML mit Status, Name, Trade-Counts, Profit und Open-Trades
                 st.markdown(f"""
-                <div style="background: #262626; border: 1px solid #404040; border-radius: 8px; padding: 16px; margin: 4px 0;">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <div style="background: #262626; border: 1px solid #404040; border-radius: 8px; padding: 12px 16px; margin: 4px 0;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                         <span style="font-size: 24px;">{status_color}</span>
                         <span style="font-size: 20px; font-weight: bold; color: white;">{pair_name}</span>
                     </div>
+                    <div style="color: #b0b0b0; font-size: 13px; line-height: 1.6;">
+                        <span>📊 Trades: <b style="color:white">{total_trades}</b></span> &nbsp;|&nbsp;
+                        <span>💰 Profit: <b style="color:white">${total_profit:.2f}</b></span> &nbsp;|&nbsp;
+                        <span>📂 Offen: <b style="color:white">{open_trades}</b></span>
+                    </div>
+                </div>
                 """, unsafe_allow_html=True)
+
+                # Click-Button für Detail-View (setzt selected_pair und rerun)
+                if st.button(f"📊 Details: {pair_name}", key=f"pair_btn_{pair_name}", use_container_width=True):
+                    st.session_state.selected_pair = pair_name
+                    _safe_rerun("pair_select")
+
+else:
+    # === Detail-View (wenn ein Pair ausgewählt wurde) ===
+    pair_name = st.session_state.selected_pair
+
+    if st.button("← Zurück zur Übersicht", key="detail_back"):
+        st.session_state.selected_pair = None
+        _safe_rerun("detail_back")
+
+    st.subheader(f"📊 Detail: {pair_name}")
+
+    _detail_total_trades = count_main_trades(pair_name)
+    _detail_total_profit = completed_profit_usdt(pair_name)
+    _detail_open_trades = open_trade_count(pair_name)
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("📊 Trades gesamt", _detail_total_trades)
+    with col2:
+        st.metric("💰 Realisierter Gewinn", f"${_detail_total_profit:.2f}")
+    with col3:
+        st.metric("📂 Offene Trades", _detail_open_trades)
+
+    st.divider()
+
+    try:
+        render_orderbook_spread_view(threshold_start=1.0)
+    except Exception as _e:
+        st.warning(f"Orderbook konnte nicht geladen werden: {_e}")
