@@ -38,10 +38,6 @@ class TradeLoggerService:
     """
     Background service for comprehensive trade data management.
 
-    # Max stale-FILLED re-fetches per service cycle (30s cycle). 792 stale
-    # trades processed in ~40 cycles = ~20 min. (Jonas 2026-10-19 11:47)
-    REFETCH_LIMIT_PER_CYCLE = 20
-
     Responsibilities:
 
 Responsibilities:
@@ -51,7 +47,11 @@ Responsibilities:
     - Fetch KuCoin timestamps via polling
     - Recalculate summary rows when all data is available
     """
-    
+
+    # Max stale-FILLED re-fetches per service cycle (30s cycle). 792 stale
+    # trades processed in ~40 cycles = ~20 min. (Jonas 2026-10-19 11:47)
+    REFETCH_LIMIT_PER_CYCLE = 20
+
     _instance = None
     _lock = threading.Lock()
     
