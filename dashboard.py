@@ -2,7 +2,6 @@
 """
 Arbitrage Bot Dashboard - Multi-Pair + Original Detail View
 """
-
 import streamlit as st
 import streamlit.components.v1 as components
 import requests
@@ -17,9 +16,7 @@ import io
 from trade_logger import *
 import sys
 from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_settings, get_alert_settings, set_alert_settings, get_api_keys, set_api_keys, get_all_pairs, add_pair, remove_pair, get_log_level, set_log_level
-
 import base64
-
 # =============================================================================
 # TRADE-LOG ROW HELPERS (added 2026-10-19 — dashboard counter fix)
 # =============================================================================
@@ -28,7 +25,6 @@ import base64
 # Counter und Summen MÜSSEN nach Suffix filtern, sonst wird jeder Fill als
 # eigener Trade gezählt und ex2_value_usdt mehrfach summiert.
 # =============================================================================
-
 def is_main_trade_row(row: dict) -> bool:
     """Return True if this row is a Main trade row (no fill/sum suffix)."""
     tid = (row.get('trade_id') or '').strip()
@@ -37,11 +33,9 @@ def is_main_trade_row(row: dict) -> bool:
     # Use regex to match ANY number of fills (_ex1p1, _ex1p2, ..., _ex1p99)
     # and the summary row (_ex2sum). The old fixed tuple only went to _ex1p5.
     return not bool(TRADE_ROW_SUFFIX_RE.search(tid))
-
 def is_ex2sum_row(row: dict) -> bool:
     """Return True if this row is an _ex2sum row (contains profit values)."""
     return (row.get('trade_id') or '').endswith('_ex2sum')
-
 # Sound files
 SOUND_FILES = {
     'bis3': '/app/static/bis3prozent.mp3',
@@ -49,7 +43,6 @@ SOUND_FILES = {
     'ab10': '/app/static/ab10prozent.mp3',
     'kaching': '/app/static/kaching.mp3'
 }
-
 def play_sound(sound_key, volume=0.5):
     """Play a sound file with given volume (0-1)"""
     sound_file = SOUND_FILES.get(sound_key)
@@ -64,32 +57,22 @@ def play_sound(sound_key, volume=0.5):
         st.iframe(audio_html, height=1)
     except Exception as e:
         pass
-
 # Exchange price precision
 MEXC_PRICE_PRECISION = 5
 KUCOIN_PRICE_PRECISION = 6
-
 # Dashboard logging to same file as bot
-
-
-
 def fmt_price(price, exchange):
     """Format price with exchange-specific precision"""
     if exchange == 'mexc':
         return f"{price:.{MEXC_PRICE_PRECISION}f}"
     return f"{price:.{KUCOIN_PRICE_PRECISION}f}"
 # Logo paths
-
-
 KUCoin_LOGO = "/app/static/kucoin.jpg"
 MEXC_LOGO = "/app/static/mexc.jpg"
 st.set_page_config(page_title="Arbitrage Bot", page_icon="📊", layout="wide")
-
 # Bot cache base URL — sichtbar in Sidebar für Diagnose
 BOT_CACHE_URL = 'http://arbitrage-bot:8505'
 st.sidebar.info(f"🔗 Bot-Cache: {BOT_CACHE_URL}")
-
-
 # ============================================================================
 # Debug-Helper: st.rerun() mit Sidebar-Toggle (für Full-Reload-Eingrenzung)
 # ============================================================================
@@ -98,8 +81,6 @@ def _safe_rerun(key: str):
     Default True → verhält sich wie st.rerun() wenn keine Checkbox aktiv ist."""
     if st.session_state.get(f'dbg_rerun_{key}', True):
         st.rerun()
-
-
 # ============================================================================
 # Helper: Fetch Level 2 orderbook from MEXC + KuCoin (public APIs, no auth)
 # Used by orderbook/spread render. Extracted for fragment-wrapping.
@@ -115,7 +96,6 @@ def fetch_l2_orderbook(symbol_mexc="MPCUSDT", symbol_kucoin="MPC-USDT"):
         mexc_asks_l2 = [(float(p), float(v)) for p, v in mexc_ob.get('asks', [])[:20]]
     except:
         mexc_bids_l2, mexc_asks_l2 = [], []
-
     try:
         kucoin_ob_resp = requests.get(f"https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol={symbol_kucoin}", timeout=5)
         kucoin_ob = kucoin_ob_resp.json() if kucoin_ob_resp.status_code == 200 else {}
@@ -123,10 +103,7 @@ def fetch_l2_orderbook(symbol_mexc="MPCUSDT", symbol_kucoin="MPC-USDT"):
         kucoin_asks_l2 = [(float(p), float(v)) for p, v in kucoin_ob.get('data', {}).get('asks', [])[:20]]
     except:
         kucoin_bids_l2, kucoin_asks_l2 = [], []
-
     return mexc_bids_l2, mexc_asks_l2, kucoin_bids_l2, kucoin_asks_l2
-
-
 # ============================================================================
 # Fragment: Orderbook + Spread render (syncron, eigene Update-Cycle)
 # Fetches fresh L2 data every 2s, computes spreads from the SAME snapshot,
@@ -136,12 +113,10 @@ def fetch_l2_orderbook(symbol_mexc="MPCUSDT", symbol_kucoin="MPC-USDT"):
 @st.fragment(run_every=1)
 def render_orderbook_spread_view(threshold_start=1.0):
     mexc_bids_l2, mexc_asks_l2, kucoin_bids_l2, kucoin_asks_l2 = fetch_l2_orderbook()
-
     with st.expander("📋 Orderbook", expanded=False):
         if not (mexc_bids_l2 and mexc_asks_l2 and kucoin_bids_l2 and kucoin_asks_l2):
             st.info("Orderbook Daten nicht vollständig verfügbar")
             return
-
         # Syncron: spread calc uses same L2 snapshot as the table below
         k_ask = kucoin_asks_l2[0][0]
         k_bid = kucoin_bids_l2[0][0]
@@ -149,12 +124,10 @@ def render_orderbook_spread_view(threshold_start=1.0):
         m_bid = mexc_bids_l2[0][0]
         spread_pct_km = (m_bid - k_ask) / k_ask * 100 if k_ask > 0 else 0
         spread_pct_mk = (k_bid - m_ask) / m_ask * 100 if m_ask > 0 else 0
-
         mexc_bids = mexc_bids_l2
         mexc_asks = mexc_asks_l2
         kucoin_bids = kucoin_bids_l2
         kucoin_asks = kucoin_asks_l2
-
         # Bot State aus Cache (live via Fragment run_every=2)
         try:
             _bs = requests.get(f"{BOT_CACHE_URL}/state", timeout=2).json()
@@ -163,11 +136,9 @@ def render_orderbook_spread_view(threshold_start=1.0):
         _se = {'WAITING': '🟡', 'RUNNING': '🟢'}.get(_bs.get('state', '?'), '⚪')
         _he = '🟢' if _bs.get('hysteresis_armed') else '⚪'
         _pe = '🟢' if _bs.get('pair_enabled') else '🔴'
-
         st.markdown(f"**Legende:** 🟢 Threshold erfüllt | 🟡 Positiv aber < Threshold | 🔴 Negativ  |  **State:** {_se} {_bs.get('state', '?')}  |  Hyst: {_he}  |  Pair: {_pe}")
         st.markdown("---")
         col_km, col_mk = st.columns(2)
-
         with col_km:
             st.markdown("**KuCoin → MEXC**")
             c1, c2 = st.columns([1, 8])
@@ -183,13 +154,11 @@ def render_orderbook_spread_view(threshold_start=1.0):
                 pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
                 bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                 st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #f44336; font-weight: bold;'>${k_ask_p:.6f}</span> <span style='color: #f44336;'>|</span> <span style='color: #f44336;'>{k_ask_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
-
             km_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_km >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_km > 0 else "rgba(244,67,54,0.2)")
             km_spread_color = "#00c853" if spread_pct_km >= threshold_start else ("#ffc107" if spread_pct_km > 0 else "#f44336")
             st.markdown("---")
             st.markdown(f"<div style='background-color: {km_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {km_spread_color};'>Spread: {spread_pct_km:+.3f}%</div>", unsafe_allow_html=True)
             st.markdown("---")
-
             c1, c2 = st.columns([1, 8])
             with c1:
                 st.image("/app/static/mexc_icon.png", width=20)
@@ -203,7 +172,6 @@ def render_orderbook_spread_view(threshold_start=1.0):
                 pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
                 bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                 st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #00c853; font-weight: bold;'>${m_bid_p:.5f}</span> <span style='color: #00c853;'>|</span> <span style='color: #00c853;'>{m_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
-
         with col_mk:
             st.markdown("**MEXC → KuCoin**")
             c1, c2 = st.columns([1, 8])
@@ -219,13 +187,11 @@ def render_orderbook_spread_view(threshold_start=1.0):
                 pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                 bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                 st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #f44336; font-weight: bold;'>${m_ask_p:.5f}</span> <span style='color: #f44336;'>|</span> <span style='color: #f44336;'>{m_ask_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
-
             mk_spread_bg = "rgba(0,255,0,0.2)" if spread_pct_mk >= threshold_start else ("rgba(255,235,59,0.2)" if spread_pct_mk > 0 else "rgba(244,67,54,0.2)")
             mk_spread_color = "#00c853" if spread_pct_mk >= threshold_start else ("#ffc107" if spread_pct_mk > 0 else "#f44336")
             st.markdown("---")
             st.markdown(f"<div style='background-color: {mk_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {mk_spread_color};'>Spread: {spread_pct_mk:+.3f}%</div>", unsafe_allow_html=True)
             st.markdown("---")
-
             c1, c2 = st.columns([1, 8])
             with c1:
                 st.image("/app/static/kucoin_icon.png", width=20)
@@ -239,9 +205,7 @@ def render_orderbook_spread_view(threshold_start=1.0):
                 pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
                 bg = "rgba(0,255,0,0.15)" if pct >= threshold_start else ("rgba(255,235,59,0.15)" if pct >= 0 else "rgba(244,67,54,0.1)")
                 st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #00c853; font-weight: bold;'>${k_bid_p:.6f}</span> <span style='color: #00c853;'>|</span> <span style='color: #00c853;'>{k_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
-
 CONFIG_FILE = 'config/config.yaml'
-
 def load_config():
     """Load config using settings_sync for real-time sync"""
     config = {
@@ -253,12 +217,9 @@ def load_config():
     for pair in get_all_pairs():
         config['trading']['pairs'][pair] = get_pair_settings(pair)
     return config
-
 def save_config(config):
     """Save config - now a no-op since we save immediately via settings_sync"""
     pass  # All saves now happen immediately via set_setting calls
-
-
 # ============================================================================
 # Fragment: BESTE RICHTUNG — updates alle 2s nach Trade
 # Selbst-enthaltend: holt Orderbook + Balances frisch vom Bot-Cache.
@@ -271,7 +232,6 @@ def render_best_direction():
         mexc_bids, mexc_asks, kucoin_bids, kucoin_asks = fetch_l2_orderbook()
         if not (mexc_bids and mexc_asks and kucoin_bids and kucoin_asks):
             return
-
         # Fresh balances from bot cache
         try:
             bal = requests.get(f"{BOT_CACHE_URL}/balances", timeout=2).json()
@@ -279,12 +239,10 @@ def render_best_direction():
             m_usdt = float(bal.get('mexc', {}).get('USDT', {}).get('free', 0))
         except Exception:
             k_usdt = m_usdt = 0
-
         # Config from session_state (written by main flow)
         cfg = st.session_state.get('bot_pair_config', {})
         current_strategy = cfg.get('strategy', 'coins')
         threshold_start = cfg.get('threshold_start', 1.9)
-
         # Calculate
         k_ask, k_bid = kucoin_asks[0][0], kucoin_bids[0][0]
         m_ask, m_bid = mexc_asks[0][0], mexc_bids[0][0]
@@ -292,21 +250,17 @@ def render_best_direction():
         profit_mk = k_bid - m_ask
         spread_pct_km = (profit_km / k_ask * 100) if k_ask > 0 else 0
         spread_pct_mk = (profit_mk / m_ask * 100) if m_ask > 0 else 0
-
         # Multi-level volume (L1+L2+L3)
         kucoin_vol = sum(q for _, q in kucoin_asks[:3])
         mexc_vol = sum(q for _, q in mexc_asks[:3])
         vol_km = min(kucoin_vol, mexc_vol)
         vol_mk = min(mexc_vol, kucoin_vol)
-
         # Trade possible?
         km_ok = profit_km > 0 and spread_pct_km >= threshold_start
         mk_ok = profit_mk > 0 and spread_pct_mk >= threshold_start
-
         # Coins
         coins_km = (vol_km * profit_km / k_ask) if k_ask > 0 else 0
         coins_mk = (vol_mk * profit_mk / m_ask) if m_ask > 0 else 0
-
         if (km_ok or mk_ok) and max(spread_pct_km, spread_pct_mk) >= threshold_start:
             if current_strategy == 'usdt':
                 pkm_total = profit_km * vol_km
@@ -318,11 +272,8 @@ def render_best_direction():
                 show_direction = "K→M" if coins_km >= coins_mk else "M→K"
                 show_volume = vol_km if show_direction == "K→M" else vol_mk
                 show_profit_txt = f"{abs(coins_km if show_direction == 'K→M' else coins_mk):.2f} MPC"
-
             st.success(f"🟢 **BESTE RICHTUNG: {show_direction}** | Gewinn: {show_profit_txt} | Vol: {show_volume:.0f} Coins")
-
             col_buy, col_sell, col_profit = st.columns(3)
-
             with col_buy:
                 st.markdown("### 📥 KAUFEN")
                 if show_direction == "K→M":
@@ -347,7 +298,6 @@ def render_best_direction():
                         st.metric("Preis (Ask)", f"${m_ask:.6f}")
                         st.metric("Verfügbar USDT", f"${avail:.2f}")
                         st.error("KEINE USDT!")
-
             with col_sell:
                 st.markdown("### 📤 VERKAUFEN")
                 if show_direction == "K→M":
@@ -360,7 +310,6 @@ def render_best_direction():
                     st.metric("Preis (Bid)", f"${k_bid:.6f}")
                     st.metric("Max verkaufbar", f"{max_coins:.0f} MPC")
                     st.metric("Ertrag (USD)", f"${k_bid * max_coins:.4f}")
-
             with col_profit:
                 st.markdown("### 💰 GEWINN")
                 if show_direction == "K→M":
@@ -391,12 +340,9 @@ def render_best_direction():
                         st.metric("💵 NETTO-GEWINN", f"{coins_profit:.2f} MPC", delta=f"+{coins_profit:.2f}")
     except Exception as e:
         st.error(f"Fragment-Fehler: {e}")
-
-
 # ============================================================================
 # API Functions
 # ============================================================================
-
 def get_kucoin_orderbook(pair: str):
     try:
         resp = requests.get(f"https://api.kucoin.com/api/v1/market/orderbook/level1?symbol={pair}", timeout=5)
@@ -413,7 +359,6 @@ def get_kucoin_orderbook(pair: str):
                 }
     except: pass
     return {'ok': False}
-
 def get_mexc_orderbook(pair: str):
     try:
         symbol = pair.replace('-', '')
@@ -431,7 +376,6 @@ def get_mexc_orderbook(pair: str):
             }
     except: pass
     return {'ok': False}
-
 def get_kucoin_balances(api_key: str, api_secret: str, passphrase: str, wallet_type: str = None):
     """Get KuCoin account balances filtered by wallet type.
     
@@ -493,7 +437,6 @@ def get_kucoin_balances(api_key: str, api_secret: str, passphrase: str, wallet_t
             return {'ok': False, 'balances': {}, 'error': f'HTTP {resp.status_code}'}
     except Exception as e:
         return {'ok': False, 'balances': {}, 'error': str(e)}
-
 def get_kucoin_all_wallets_detailed(api_key: str, api_secret: str, passphrase: str):
     """Get KuCoin wallets with type breakdown for wallet selection UI."""
     try:
@@ -541,7 +484,6 @@ def get_kucoin_all_wallets_detailed(api_key: str, api_secret: str, passphrase: s
             return {'ok': False, 'wallets': {}, 'error': f'HTTP {resp.status_code}'}
     except Exception as e:
         return {'ok': False, 'wallets': {}, 'error': str(e)}
-
 def get_kucoin_trades(api_key: str, api_secret: str, passphrase: str, symbol: str = 'MPC-USDT', limit: int = 10):
     """Get KuCoin trade/fill history"""
     try:
@@ -593,7 +535,6 @@ def get_kucoin_trades(api_key: str, api_secret: str, passphrase: str, symbol: st
             return {'ok': False, 'trades': [], 'error': f'HTTP {resp.status_code}'}
     except Exception as e:
         return {'ok': False, 'trades': [], 'error': str(e)}
-
 def get_mexc_balances(api_key: str, api_secret: str):
     """Get MEXC account balances"""
     try:
@@ -627,7 +568,6 @@ def get_mexc_balances(api_key: str, api_secret: str):
             return {'ok': False, 'balances': {}, 'error': f'HTTP {resp.status_code}'}
     except Exception as e:
         return {'ok': False, 'balances': {}, 'error': str(e)}
-
 def get_mexc_trades(api_key: str, api_secret: str, symbol: str = 'MPCUSDT', limit: int = 10):
     """Get MEXC trade/fill history using myTrades endpoint"""
     try:
@@ -665,7 +605,6 @@ def get_mexc_trades(api_key: str, api_secret: str, symbol: str = 'MPCUSDT', limi
             return {'ok': False, 'trades': [], 'error': f'HTTP {resp.status_code}: {resp.text}'}
     except Exception as e:
         return {'ok': False, 'trades': [], 'error': str(e)}
-
 def get_kucoin_fees(api_key: str, api_secret: str, passphrase: str, symbol: str = 'MPC-USDT'):
     """Get KuCoin actual fee rates for a symbol"""
     try:
@@ -704,7 +643,6 @@ def get_kucoin_fees(api_key: str, api_secret: str, passphrase: str, symbol: str 
         return {'ok': False, 'maker_fee_rate': 0.001, 'taker_fee_rate': 0.001}
     except:
         return {'ok': False, 'maker_fee_rate': 0.001, 'taker_fee_rate': 0.001}
-
 def get_kucoin_token_fees(api_key: str, api_secret: str, passphrase: str):
     """Get KuCoin actual token fees (maker/taker for all symbols)"""
     try:
@@ -745,7 +683,6 @@ def get_kucoin_token_fees(api_key: str, api_secret: str, passphrase: str):
         return {'ok': False, 'fees': {}}
     except:
         return {'ok': False, 'fees': {}}
-
 def get_mexc_fees(api_key: str, api_secret: str, symbol: str = 'MPCUSDT'):
     """Get MEXC actual fee rates via API"""
     try:
@@ -774,34 +711,25 @@ def get_mexc_fees(api_key: str, api_secret: str, symbol: str = 'MPCUSDT'):
         return {'ok': False, 'maker_fee_rate': 0.002, 'taker_fee_rate': 0.002}
     except:
         return {'ok': False, 'maker_fee_rate': 0.002, 'taker_fee_rate': 0.002}
-
 # ============================================================================
 # Session State
 # ============================================================================
-
 if 'selected_pair' not in st.session_state:
     st.session_state.selected_pair = None
-
 if 'price_history' not in st.session_state:
     st.session_state.price_history = {}
-
 if 'max_points' not in st.session_state:
     st.session_state.max_points = 60
-
-
 # ============================================================================
 # Main App
 # ============================================================================
-
 st.title("📊 Arbitrage Bot")
-
 config = load_config()
 pairs_config = config.get('trading', {}).get('pairs', {})
 # Handle both list and dict format for backwards compatibility
 if isinstance(pairs_config, list):
     # Convert list to dict format
     pairs_config = {p: {'enabled': True, 'strategy': 'usdt', 'threshold_start': 1.0, 'threshold_stop': 0.5, 'alert_enabled': True} for p in pairs_config}
-
 # ENFORCE INAKTIV on redeploy - ALWAYS start disabled for safety!
 # The active flag is NOT used to enable the bot - user must enable manually in dashboard
 # This prevents the bot from auto-starting after a crash/restart
@@ -809,19 +737,15 @@ if os.path.exists('/app/logs/arb_active.flag'):
     # Flag exists but DON'T use it to enable - just log it
     # The flag was set when user last enabled via dashboard, but bot should still start disabled
     pass  # Do nothing with the flag - bot always starts disabled
-
 # Ensure config is INAKTIV on redeploy (SAFETY FIRST)
 for p in pairs_config:
     pairs_config[p]['enabled'] = False
 config['trading']['pairs'] = pairs_config
 save_config(config)
-
 thresholds = config['trading'].get('thresholds', {'start': 0.2, 'stop': 0.1})
-
 # ============================================================================
 # SIDEBAR
 # ============================================================================
-
 with st.sidebar:
     st.header("⚙️ Einstellungen")
     
@@ -1061,7 +985,6 @@ with st.sidebar:
             _safe_rerun('pair_remove')
     else:
         st.info("Keine Paare vorhanden!")
-
     # ========================================================================
     # 🐛 DEBUG: st.rerun() Trigger-Toggles (Full-Reload-Eingrenzung)
     # ========================================================================
@@ -1076,11 +999,9 @@ with st.sidebar:
         st.checkbox("📊 Anzeigen Pair (Z.1083)", value=True, key="dbg_rerun_pair_view")
         st.checkbox("← Home (Z.1094)", value=True, key="dbg_rerun_home")
         st.checkbox("Bot AKTIV Toggle (Z.1108)", value=True, key="dbg_rerun_bot_toggle")
-
 # ============================================================================
 # TILE OVERVIEW
 # ============================================================================
-
 if st.session_state.selected_pair is None:
     st.subheader("📋 Home")
     
@@ -1088,7 +1009,6 @@ if st.session_state.selected_pair is None:
         st.info("Fuege oben ein Paar hinzu!")
     else:
         # CSS for tile borders
-
         cols = st.columns(3)
         
         # Use columns with styled containers
@@ -1123,7 +1043,6 @@ if st.session_state.selected_pair is None:
                 if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
                     st.session_state.selected_pair = pair_name
                     _safe_rerun('pair_view')
-
         # ============================================================
         # MAINTENANCE: Backfill Profits (Jonas 2026-10-19 12:30)
         # ============================================================
@@ -1141,29 +1060,24 @@ if st.session_state.selected_pair is None:
             )
         with col_bf2:
             st.caption("Updates profit_usdt_actual in MPCUSDT_trades.csv for FILLED orders where profit=0. Idempotent (safe to re-run).")
-
         if backfill_clicked:
             _bf_log = []
             with st.spinner("Running backfill... (~3 min for 792 trades)"):
                 try:
                     _cfg_path = '/app/config/config.yaml'
                     _csv_path = '/app/logs/MPCUSDT_trades.csv'
-
                     with open(_cfg_path) as _f:
                         _cfg = yaml.safe_load(_f)
                     _mexc_cfg = _cfg.get('mexc', {})
                     _kucoin_cfg = _cfg.get('kucoin', {})
-
                     with open(_csv_path, 'r', newline='') as _f:
                         _reader = csv.DictReader(_f, delimiter=';')
                         _rows = list(_reader)
                         _cols = _reader.fieldnames
-
                     def _bf_f2(v):
                         if not v: return 0.0
                         try: return float(str(v).replace(',', '.'))
                         except: return 0.0
-
                     # Group by trade_id
                     _blocks = {}
                     for _r in _rows:
@@ -1177,7 +1091,6 @@ if st.session_state.selected_pair is None:
                             '_ex1p1','_ex1p2','_ex1p3','_ex1p4','_ex1p5',
                             '_ex2p1','_ex2p2','_ex2p3','_ex2p4','_ex2p5','_ex2sum')):
                             _blocks[_tid]['main'] = _r
-
                     # Find stale FILLED
                     _stale = []
                     for _tid, _b in _blocks.items():
@@ -1191,15 +1104,12 @@ if st.session_state.selected_pair is None:
                         if not _ex: continue
                         _stale.append((_tid, _m, _e, _oid, _ex,
                                        (_e.get('ex2_create_ts') or '').strip()))
-
                     _bf_log.append(f"Found {len(_stale)} stale FILLED trades")
-
                     def _bf_iso_ms(s):
                         if not s: return 0
                         try:
                             return int(datetime.strptime(s[:19], '%Y-%m-%d %H:%M:%S').timestamp() * 1000)
                         except: return 0
-
                     def _bf_mexc_fills(oid, sym, st_ms):
                         ts = str(int(_time_mod.time() * 1000))
                         end = st_ms + 48*3600*1000
@@ -1217,7 +1127,6 @@ if st.session_state.selected_pair is None:
                         except Exception as e:
                             _bf_log.append(f"  [MEXC] {oid[:16]}..: {e}")
                             return []
-
                     def _bf_kucoin_fills(oid, st_ms):
                         ts = str(int(_time_mod.time() * 1000))
                         end = st_ms + 48*3600*1000
@@ -1246,7 +1155,6 @@ if st.session_state.selected_pair is None:
                         except Exception as e:
                             _bf_log.append(f"  [KuCoin] {oid[:16]}..: {e}")
                             return []
-
                     def _bf_calc(fills, ex):
                         val, fees = 0.0, 0.0
                         for f in fills:
@@ -1257,7 +1165,6 @@ if st.session_state.selected_pair is None:
                                 val += _bf_f2(f.get('funds', 0))
                                 fees += _bf_f2(f.get('fee', 0)) * _bf_f2(f.get('price', 0))
                         return val, fees
-
                     _upd, _fail = 0, 0
                     for _tid, _m, _e, _oid, _ex, _cts in _stale:
                         _st = _bf_iso_ms(_cts) or int(datetime(2026, 9, 1).timestamp() * 1000)
@@ -1280,7 +1187,6 @@ if st.session_state.selected_pair is None:
                         _e['ex2_qty_filled'] = f"{_q:.4f}".replace('.', ',')
                         _upd += 1
                         _time_mod.sleep(0.2)
-
                     _bf_log.append(f"=== Summary === Updated: {_upd} Failed: {_fail}")
                     if _upd > 0:
                         with open(_csv_path, 'w', newline='') as _f:
@@ -1292,7 +1198,6 @@ if st.session_state.selected_pair is None:
                         _bf_log.append("Nothing written.")
                 except Exception as e:
                     _bf_log.append(f"ERROR: {e}")
-
             with st.expander("📜 Backfill log", expanded=True):
                 st.code('
 '.join(_bf_log) if _bf_log else "(no output)", language="text")
@@ -1300,7 +1205,6 @@ if st.session_state.selected_pair is None:
 # ============================================================================
 # DETAIL VIEW - ORIGINAL DASHBOARD
 # ============================================================================
-
 else:
     pair = st.session_state.selected_pair
     
@@ -1325,7 +1229,6 @@ else:
     # Get data
     kucoin = get_kucoin_orderbook(pair)
     mexc = get_mexc_orderbook(pair)
-
     # Also fetch Level 2 orderbook for accurate spread calculation (same data as orderbook table)
     mexc_bids_l2, mexc_asks_l2, kucoin_bids_l2, kucoin_asks_l2 = fetch_l2_orderbook()
     
@@ -1409,13 +1312,11 @@ else:
         
         coins_km = (vol_km * profit_km / k_ask) if k_ask > 0 else 0
         coins_mk = (vol_mk * profit_mk / m_ask) if m_ask > 0 else 0
-
         # Store pair config in session_state for fragment access
         st.session_state['bot_pair_config'] = {
             'strategy': current_strategy,
             'threshold_start': threshold_start,
         }
-
         # =========================================================================
         # SECTIONS
         # =========================================================================
@@ -2034,7 +1935,6 @@ else:
                 if trades_resp.status_code == 200:
                     trades_data = trades_resp.json()
                     current_trade_count = trades_data.get('count', 0)
-
                     # First run: nur Count speichern, KEIN Sound (sonst bei jedem Dashboard-Render)
                     if 'last_trade_count' not in st.session_state:
                         st.session_state.last_trade_count = current_trade_count
@@ -2075,9 +1975,5 @@ else:
 #     import time
 #     time.sleep(2)
 #     st.rerun()
-
-
 # =============================================================================
 # LIVE LOG VIEWER (SIDEBAR)
-
-
