@@ -1060,7 +1060,6 @@ if st.session_state.selected_pair is None:
             )
         with col_bf2:
             st.caption("Updates profit_usdt_actual in MPCUSDT_trades.csv for FILLED orders where profit=0. Idempotent (safe to re-run).")
-
         # Diagnose button (Jonas 2026-10-19 13:50) - shows raw CSV state for debugging
         col_d1, col_d2 = st.columns([1, 2])
         with col_d1:
@@ -1071,7 +1070,6 @@ if st.session_state.selected_pair is None:
             )
         with col_d2:
             st.caption("Liest die CSV direkt und zeigt FILLED-Row-Count + erste 5 Profit-Werte + Summe. Nuetzlich wenn Dashboard ↔ Backfill-Log unterschiedlich aussieht.")
-
         if diagnose_clicked:
             _diag_log = []
             try:
@@ -1099,7 +1097,6 @@ if st.session_state.selected_pair is None:
             _NL = chr(10)
             with st.expander("📊 Diagnose log", expanded=True):
                 st.code(_NL.join(_diag_log), language="text")
-
         # Diagnose button (Jonas 2026-10-19 13:50) - shows raw CSV state for debugging
         col_d1, col_d2 = st.columns([1, 2])
         with col_d1:
@@ -1110,7 +1107,6 @@ if st.session_state.selected_pair is None:
             )
         with col_d2:
             st.caption("Liest die CSV direkt und zeigt FILLED-Row-Count + erste 5 Profit-Werte + Summe. Nuetzlich wenn Dashboard ↔ Backfill-Log unterschiedlich aussieht.")
-
         if diagnose_clicked:
             _diag_log = []
             try:
@@ -1138,7 +1134,6 @@ if st.session_state.selected_pair is None:
             _NL = chr(10)  # avoid heredoc eating \n
             with st.expander("📊 Diagnose log", expanded=True):
                 st.code(_NL.join(_diag_log), language="text")
-
         # Diagnose button (Jonas 2026-10-19 13:50) — shows raw CSV state for debugging
         col_d1, col_d2 = st.columns([1, 2])
         with col_d1:
@@ -1149,7 +1144,6 @@ if st.session_state.selected_pair is None:
             )
         with col_d2:
             st.caption("Liest die CSV direkt und zeigt FILLED-Row-Count + erste 5 Profit-Werte + Summe. Nützlich wenn Dashboard ↔ Backfill-Log unterschiedlich aussieht.")
-
         if diagnose_clicked:
             _diag_log = []
             try:
@@ -1177,7 +1171,6 @@ if st.session_state.selected_pair is None:
             with st.expander("📊 Diagnose log", expanded=True):
                 st.code("
 ".join(_diag_log), language="text")
-
         # Diagnose button (Jonas 2026-10-19 13:50) — shows raw CSV state for debugging
         col_d1, col_d2 = st.columns([1, 2])
         with col_d1:
@@ -1188,7 +1181,6 @@ if st.session_state.selected_pair is None:
             )
         with col_d2:
             st.caption("Liest die CSV direkt und zeigt FILLED-Row-Count + erste 5 Profit-Werte + Summe. Nützlich wenn Dashboard ↔ Backfill-Log unterschiedlich aussieht.")
-
         if diagnose_clicked:
             _diag_log = []
             try:
