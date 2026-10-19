@@ -1124,6 +1124,65 @@ def total_profit_usdt(pair: str) -> float:
     return total
 
 
+def completed_profit_usdt(pair: str) -> float:
+    """
+    Summe profit_usdt_actual aus _ex2sum-Rows mit ex2_status='FILLED'.
+
+    "Realisierter Gewinn" — nur vollständige Trades (Limit-Order gefüllt).
+    Offene Trades (ex2_status='OPEN') werden NICHT mitgezählt, weil dort
+    profit_usdt_actual initial negativ ist (ex2_value=0, ex1_value bezahlt).
+    Der Background-Service updated den Wert, sobald der Limit fillt.
+
+    Iteriert über ALLE CSV-Zeilen (kein 1000-Limit).
+    Siehe: docs/TRADE_LOG_CALCULATIONS.md
+    """
+    csv_path = get_trade_csv_path(pair)
+    if not csv_path.exists():
+        return 0.0
+
+    total = 0.0
+    with open(csv_path, 'r', newline='') as f:
+        reader = csv.DictReader(f, delimiter=';')
+        for row in reader:
+            tid = (row.get('trade_id') or '').strip()
+            if not tid.endswith('_ex2sum'):
+                continue
+            if (row.get('ex2_status') or '').strip().upper() != 'FILLED':
+                continue
+            raw = row.get('profit_usdt_actual', '0') or '0'
+            try:
+                total += float(str(raw).replace(',', '.'))
+            except (ValueError, TypeError):
+                pass
+    return total
+
+
+def open_trade_count(pair: str) -> int:
+    """
+    Anzahl _ex2sum-Rows mit ex2_status='OPEN' (Limit noch nicht gefüllt).
+
+    Für Dashboard-Tile: zeigt nur die Anzahl offener Trades, NICHT den
+    "Verlust" (siehe Jonas 2026-10-19).
+
+    Iteriert über ALLE CSV-Zeilen (kein 1000-Limit).
+    Siehe: docs/TRADE_LOG_CALCULATIONS.md
+    """
+    csv_path = get_trade_csv_path(pair)
+    if not csv_path.exists():
+        return 0
+
+    count = 0
+    with open(csv_path, 'r', newline='') as f:
+        reader = csv.DictReader(f, delimiter=';')
+        for row in reader:
+            tid = (row.get('trade_id') or '').strip()
+            if not tid.endswith('_ex2sum'):
+                continue
+            if (row.get('ex2_status') or '').strip().upper() == 'OPEN':
+                count += 1
+    return count
+
+
 def get_pending_limit_orders(pair: str = None) -> List[Dict]:
     """Get all trades with pending limit orders."""
     pending = []

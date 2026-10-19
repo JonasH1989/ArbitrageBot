@@ -2,17 +2,17 @@
 Tests for Dashboard Trade-Counter (Multi-Row-Pattern).
 
 Verifies the fix for the bug where:
-- Dashboard counted CSV rows instead of unique trade_ids (4-7× too many)
+- Dashboard counted CSV rows instead of unique trade_ids (4-7x too many)
 - Profit sums included ex2_value_usdt from ex2p* rows (massive over-counting)
 - get_trades(limit=1000) capped visible trades at ~166
+- Open trades' negative initial profit was counted as realized loss
 
 The fix introduces:
 - count_main_trades() in trade_logger.py: iterates ALL rows, dedupes by trade_id
 - total_profit_usdt() in trade_logger.py: sums profit_usdt_actual from _ex2sum rows
+- completed_profit_usdt() in trade_logger.py: only FILLED trades (Jonas 2026-10-19)
+- open_trade_count() in trade_logger.py: count of OPEN trades (Jonas 2026-10-19)
 - is_main_trade_row() / is_ex2sum_row() in dashboard.py: suffix filters for detail view
-
-These tests verify the production functions in trade_logger.py and mirror the
-dashboard.py helper logic (kept in sync manually — see test_is_*_row tests).
 """
 
 import csv
@@ -26,6 +26,8 @@ from trade_logger import (
     TRADE_ROW_SUFFIXES,
     count_main_trades,
     total_profit_usdt,
+    completed_profit_usdt,
+    open_trade_count,
     UNIFIED_COLUMNS,
 )
 
@@ -211,3 +213,93 @@ def test_total_profit_usdt_no_1000_limit(tmp_path, monkeypatch):
     make_test_csv(tmp_path / "TESTUSDT_trades.csv", rows)
     # 2000 × 0.01 = 20.0 (would be capped at ~10.0 with 1000-row limit)
     assert abs(total_profit_usdt("TEST-USDT") - 20.0) < 1e-6
+
+
+# =============================================================================
+# completed_profit_usdt — integration tests (Jonas 2026-10-19)
+# =============================================================================
+
+def test_completed_profit_usdt_no_csv():
+    """Returns 0.0 if CSV does not exist."""
+    assert completed_profit_usdt("NONEXISTENT-PAIR-FAKE") == 0.0
+
+
+def test_completed_profit_usdt_filters_open_trades(tmp_path, monkeypatch):
+    """Sums profit only from _ex2sum rows with ex2_status='FILLED'.
+    Open trades (initial negative profit) must NOT be counted."""
+    monkeypatch.setattr("trade_logger.LOG_DIR", tmp_path)
+    rows = [
+        # Trade 1: FILLED, profit 0.10
+        {"trade_id": "t1_ex2sum", "ex2_status": "FILLED", "profit_usdt_actual": "0.10"},
+        # Trade 2: OPEN, profit -3.21 (initial, before limit fill)
+        {"trade_id": "t2_ex2sum", "ex2_status": "OPEN", "profit_usdt_actual": "-3.21"},
+        # Trade 3: FILLED, profit 0.20
+        {"trade_id": "t3_ex2sum", "ex2_status": "FILLED", "profit_usdt_actual": "0.20"},
+        # Trade 4: PARTIAL (in progress) — also not counted
+        {"trade_id": "t4_ex2sum", "ex2_status": "PARTIAL", "profit_usdt_actual": "-1.50"},
+    ]
+    make_test_csv(tmp_path / "TESTUSDT_trades.csv", rows)
+    # Should be 0.10 + 0.20 = 0.30 (FILLED only)
+    # NOT 0.10 - 3.21 + 0.20 - 1.50 = -4.41 (all rows including OPEN)
+    assert abs(completed_profit_usdt("TEST-USDT") - 0.30) < 1e-9
+
+
+def test_completed_profit_usdt_no_open_trades(tmp_path, monkeypatch):
+    """When all trades are FILLED, sum equals total_profit_usdt for FILLED rows."""
+    monkeypatch.setattr("trade_logger.LOG_DIR", tmp_path)
+    rows = [
+        {"trade_id": "t1_ex2sum", "ex2_status": "FILLED", "profit_usdt_actual": "0.10"},
+        {"trade_id": "t2_ex2sum", "ex2_status": "FILLED", "profit_usdt_actual": "0.25"},
+    ]
+    make_test_csv(tmp_path / "TESTUSDT_trades.csv", rows)
+    assert abs(completed_profit_usdt("TEST-USDT") - 0.35) < 1e-9
+
+
+def test_completed_profit_usdt_handles_lowercase_status(tmp_path, monkeypatch):
+    """ex2_status is compared case-insensitive (some rows may have 'filled' lowercase)."""
+    monkeypatch.setattr("trade_logger.LOG_DIR", tmp_path)
+    rows = [
+        {"trade_id": "t1_ex2sum", "ex2_status": "filled", "profit_usdt_actual": "0.10"},
+        {"trade_id": "t2_ex2sum", "ex2_status": "open", "profit_usdt_actual": "-3.0"},
+    ]
+    make_test_csv(tmp_path / "TESTUSDT_trades.csv", rows)
+    assert abs(completed_profit_usdt("TEST-USDT") - 0.10) < 1e-9
+
+
+# =============================================================================
+# open_trade_count — integration tests (Jonas 2026-10-19)
+# =============================================================================
+
+def test_open_trade_count_no_csv():
+    """Returns 0 if CSV does not exist."""
+    assert open_trade_count("NONEXISTENT-PAIR-FAKE") == 0
+
+
+def test_open_trade_count_only_ex2sum(tmp_path, monkeypatch):
+    """Only counts _ex2sum rows with ex2_status='OPEN'.
+    OPEN status in ex2p* rows must NOT be counted (those are fills, not pending limits)."""
+    monkeypatch.setattr("trade_logger.LOG_DIR", tmp_path)
+    rows = [
+        # 2 OPEN trades
+        {"trade_id": "t1_ex2sum", "ex2_status": "OPEN"},
+        {"trade_id": "t2_ex2sum", "ex2_status": "OPEN"},
+        # 1 FILLED
+        {"trade_id": "t3_ex2sum", "ex2_status": "FILLED"},
+        # ex2p* row with OPEN — must NOT count
+        {"trade_id": "t1_ex2p1", "ex2_status": "OPEN"},
+        # Main row with OPEN status — must NOT count
+        {"trade_id": "t1", "ex2_status": "OPEN"},
+    ]
+    make_test_csv(tmp_path / "TESTUSDT_trades.csv", rows)
+    assert open_trade_count("TEST-USDT") == 2
+
+
+def test_open_trade_count_no_open(tmp_path, monkeypatch):
+    """Returns 0 when no trades are open."""
+    monkeypatch.setattr("trade_logger.LOG_DIR", tmp_path)
+    rows = [
+        {"trade_id": "t1_ex2sum", "ex2_status": "FILLED"},
+        {"trade_id": "t2_ex2sum", "ex2_status": "CANCELLED"},
+    ]
+    make_test_csv(tmp_path / "TESTUSDT_trades.csv", rows)
+    assert open_trade_count("TEST-USDT") == 0

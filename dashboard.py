@@ -1094,10 +1094,11 @@ if st.session_state.selected_pair is None:
                 enabled = pair_data.get('enabled', True)
                 status_color = "🟢" if enabled else "🔴"
                 # Counter + Profit iterieren über ALLE CSV-Zeilen (kein 1000-Limit).
-                # Die Helper in trade_logger.py deduplizieren nach trade_id — siehe
-                # docs/TRADE_LOG_CALCULATIONS.md
+                # Realisierter Gewinn = nur FILLED Trades; offene nur als Anzahl
+                # (Jonas 2026-10-19 09:59). Siehe docs/TRADE_LOG_CALCULATIONS.md.
                 total_trades = count_main_trades(pair_name)
-                total_profit = total_profit_usdt(pair_name)
+                total_profit = completed_profit_usdt(pair_name)
+                open_trades = open_trade_count(pair_name)
                 
                 # Build complete tile as HTML
                 st.markdown(f"""
@@ -1108,7 +1109,8 @@ if st.session_state.selected_pair is None:
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 12px; color: #aaa;">
                         <span>Trades: {total_trades}</span>
-                        <span>Gewinn: ${total_profit:.4f}</span>
+                        <span>Realisiert: ${total_profit:.4f}</span>
+                        <span>Offen: {open_trades}</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
