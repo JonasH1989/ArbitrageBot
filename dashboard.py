@@ -1006,12 +1006,6 @@ section.debug-sideboard {
     padding: 1rem;
     box-shadow: -2px 0 8px rgba(0,0,0,0.3);
 }
-div[data-testid="stButton"] button[kind="secondary"]:has(p:contains("🐛 Debug")) {
-    position: fixed !important;
-    top: 0.5rem !important;
-    right: 0.5rem !important;
-    z-index: 1001 !important;
-}
 </style>""", unsafe_allow_html=True)
 
     # Toggle-Button (immer sichtbar; per CSS oben rechts fixiert)
