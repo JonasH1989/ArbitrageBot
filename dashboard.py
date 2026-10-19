@@ -1123,6 +1123,179 @@ if st.session_state.selected_pair is None:
                 if st.button("📊 Anzeigen", key=f"view_{pair_name}"):
                     st.session_state.selected_pair = pair_name
                     _safe_rerun('pair_view')
+
+        # ============================================================
+        # MAINTENANCE: Backfill Profits (Jonas 2026-10-19 12:30)
+        # ============================================================
+        # Inline backfill logic — runs in dashboard process, no external file needed.
+        # Re-fetches stale FILLED trade profits from MEXC + KuCoin with date range
+        # (their myTrades/fills APIs return only last 7 days by default).
+        st.markdown("---")
+        st.subheader("🔧 Maintenance")
+        col_bf1, col_bf2 = st.columns([1, 2])
+        with col_bf1:
+            backfill_clicked = st.button(
+                "🔄 Backfill Profits",
+                key="backfill_btn",
+                help="Re-fetch stale FILLED trade profits from MEXC + KuCoin with date range. ~3 min for 792 trades."
+            )
+        with col_bf2:
+            st.caption("Updates profit_usdt_actual in MPCUSDT_trades.csv for FILLED orders where profit=0. Idempotent (safe to re-run).")
+
+        if backfill_clicked:
+            _bf_log = []
+            with st.spinner("Running backfill... (~3 min for 792 trades)"):
+                try:
+                    _cfg_path = '/app/config/config.yaml'
+                    _csv_path = '/app/logs/MPCUSDT_trades.csv'
+
+                    with open(_cfg_path) as _f:
+                        _cfg = yaml.safe_load(_f)
+                    _mexc_cfg = _cfg.get('mexc', {})
+                    _kucoin_cfg = _cfg.get('kucoin', {})
+
+                    with open(_csv_path, 'r', newline='') as _f:
+                        _reader = csv.DictReader(_f, delimiter=';')
+                        _rows = list(_reader)
+                        _cols = _reader.fieldnames
+
+                    def _bf_f2(v):
+                        if not v: return 0.0
+                        try: return float(str(v).replace(',', '.'))
+                        except: return 0.0
+
+                    # Group by trade_id
+                    _blocks = {}
+                    for _r in _rows:
+                        _tid = (_r.get('trade_id') or '').strip()
+                        if not _tid: continue
+                        if _tid not in _blocks:
+                            _blocks[_tid] = {'main': None, 'ex2sum': None}
+                        if _tid.endswith('_ex2sum'):
+                            _blocks[_tid]['ex2sum'] = _r
+                        elif not any(_tid.endswith(s) for s in (
+                            '_ex1p1','_ex1p2','_ex1p3','_ex1p4','_ex1p5',
+                            '_ex2p1','_ex2p2','_ex2p3','_ex2p4','_ex2p5','_ex2sum')):
+                            _blocks[_tid]['main'] = _r
+
+                    # Find stale FILLED
+                    _stale = []
+                    for _tid, _b in _blocks.items():
+                        _m, _e = _b.get('main'), _b.get('ex2sum')
+                        if not _m or not _e: continue
+                        if (_e.get('ex2_status') or '').strip().upper() != 'FILLED': continue
+                        if _bf_f2(_e.get('profit_usdt_actual', 0)) != 0: continue
+                        _oid = (_e.get('ex2_order_id') or '').strip()
+                        if not _oid or _oid in ('FAILED', 'NOT_PLACED', ''): continue
+                        _ex = (_e.get('ex2') or '').strip().upper()
+                        if not _ex: continue
+                        _stale.append((_tid, _m, _e, _oid, _ex,
+                                       (_e.get('ex2_create_ts') or '').strip()))
+
+                    _bf_log.append(f"Found {len(_stale)} stale FILLED trades")
+
+                    def _bf_iso_ms(s):
+                        if not s: return 0
+                        try:
+                            return int(datetime.strptime(s[:19], '%Y-%m-%d %H:%M:%S').timestamp() * 1000)
+                        except: return 0
+
+                    def _bf_mexc_fills(oid, sym, st_ms):
+                        ts = str(int(_time_mod.time() * 1000))
+                        end = st_ms + 48*3600*1000
+                        p = f"symbol={sym}&orderId={oid}&startTime={st_ms}&endTime={end}&timestamp={ts}"
+                        sig = hmac.new(_mexc_cfg['api_secret'].encode(),
+                                       p.encode(), hashlib.sha256).hexdigest()
+                        try:
+                            r = requests.get(
+                                f"https://api.mexc.com/api/v3/myTrades?{p}&signature={sig}",
+                                headers={'X-MEXC-APIKEY': _mexc_cfg['api_key']},
+                                timeout=15)
+                            if r.status_code != 200: return []
+                            t = r.json()
+                            return [x for x in t if str(x.get('orderId','')) == str(oid)] if isinstance(t, list) else []
+                        except Exception as e:
+                            _bf_log.append(f"  [MEXC] {oid[:16]}..: {e}")
+                            return []
+
+                    def _bf_kucoin_fills(oid, st_ms):
+                        ts = str(int(_time_mod.time() * 1000))
+                        end = st_ms + 48*3600*1000
+                        path = f"/api/v1/fills?orderId={oid}&startAt={st_ms}&endAt={end}"
+                        msg = f"{ts}GET{path}"
+                        sig = base64.b64encode(
+                            hmac.new(_kucoin_cfg['api_secret'].encode(),
+                                    msg.encode(), hashlib.sha256).digest()
+                        ).decode()
+                        hdrs = {
+                            'KC-API-KEY': _kucoin_cfg['api_key'],
+                            'KC-API-SIGN': sig,
+                            'KC-API-TIMESTAMP': ts,
+                            'KC-API-PASSPHRASE': _kucoin_cfg['api_passphrase'],
+                            'KC-API-KEY-VERSION': '2'
+                        }
+                        try:
+                            r = requests.get(f"https://api.kucoin.com{path}",
+                                             headers=hdrs, timeout=15)
+                            d = r.json()
+                            if d.get('code') != '200000': return []
+                            df = d.get('data', {})
+                            if isinstance(df, dict): return df.get('items', [])
+                            if isinstance(df, list): return df
+                            return []
+                        except Exception as e:
+                            _bf_log.append(f"  [KuCoin] {oid[:16]}..: {e}")
+                            return []
+
+                    def _bf_calc(fills, ex):
+                        val, fees = 0.0, 0.0
+                        for f in fills:
+                            if ex == 'MXC':
+                                val += _bf_f2(f.get('quoteQty', 0))
+                                fees += _bf_f2(f.get('commission', 0)) * _bf_f2(f.get('price', 0))
+                            elif ex == 'KCN':
+                                val += _bf_f2(f.get('funds', 0))
+                                fees += _bf_f2(f.get('fee', 0)) * _bf_f2(f.get('price', 0))
+                        return val, fees
+
+                    _upd, _fail = 0, 0
+                    for _tid, _m, _e, _oid, _ex, _cts in _stale:
+                        _st = _bf_iso_ms(_cts) or int(datetime(2026, 9, 1).timestamp() * 1000)
+                        _bf_log.append(f"[{_tid}] {_ex} order={_oid[:18]}...")
+                        _fills = (_bf_mexc_fills(_oid, 'MPCUSDT', _st)
+                                 if _ex == 'MXC' else _bf_kucoin_fills(_oid, _st))
+                        if not _fills:
+                            _bf_log.append(f"  → no fills, skipping")
+                            _fail += 1
+                            _time_mod.sleep(0.2)
+                            continue
+                        _ev, _ef = _bf_calc(_fills, _ex)
+                        _p = (_ev - _bf_f2(_m.get('ex1_value_usdt', 0))
+                              - _bf_f2(_m.get('ex1_fees', 0)) - _ef)
+                        _q = sum(_bf_f2(f.get('size', f.get('qty', 0))) for f in _fills)
+                        _bf_log.append(f"  fills={len(_fills)} ex2_val={_ev:.4f} profit={_p:.4f}")
+                        _e['profit_usdt_actual'] = f"{_p:.4f}".replace('.', ',')
+                        _e['ex2_value_usdt'] = f"{_ev:.4f}".replace('.', ',')
+                        _e['ex2_fees'] = f"{_ef:.4f}".replace('.', ',')
+                        _e['ex2_qty_filled'] = f"{_q:.4f}".replace('.', ',')
+                        _upd += 1
+                        _time_mod.sleep(0.2)
+
+                    _bf_log.append(f"=== Summary === Updated: {_upd} Failed: {_fail}")
+                    if _upd > 0:
+                        with open(_csv_path, 'w', newline='') as _f:
+                            _w = csv.DictWriter(_f, fieldnames=_cols, delimiter=';')
+                            _w.writeheader()
+                            for _r in _rows: _w.writerow(_r)
+                        _bf_log.append(f"CSV written: {_csv_path}")
+                    else:
+                        _bf_log.append("Nothing written.")
+                except Exception as e:
+                    _bf_log.append(f"ERROR: {e}")
+
+            with st.expander("📜 Backfill log", expanded=True):
+                st.code('
+'.join(_bf_log) if _bf_log else "(no output)", language="text")
             
 # ============================================================================
 # DETAIL VIEW - ORIGINAL DASHBOARD
