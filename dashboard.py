@@ -1169,8 +1169,7 @@ if st.session_state.selected_pair is None:
             except Exception as e:
                 _diag_log.append(f"ERROR: {e}")
             with st.expander("📊 Diagnose log", expanded=True):
-                st.code("
-".join(_diag_log), language="text")
+                st.code(chr(10).join(_diag_log), language="text")
         # Diagnose button (Jonas 2026-10-19 13:50) — shows raw CSV state for debugging
         col_d1, col_d2 = st.columns([1, 2])
         with col_d1:
