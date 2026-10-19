@@ -19,6 +19,24 @@ from settings_sync import get_setting, set_setting, get_pair_settings, set_pair_
 
 import base64
 
+# =============================================================================
+# TRADE-LOG ROW HELPERS (added 2026-10-19 — dashboard counter fix)
+# =============================================================================
+# TRADE_ROW_SUFFIXES wird via 'from trade_logger import *' importiert.
+#
+# Counter und Summen MÜSSEN nach Suffix filtern, sonst wird jeder Fill als
+# eigener Trade gezählt und ex2_value_usdt mehrfach summiert.
+# =============================================================================
+
+def is_main_trade_row(row: dict) -> bool:
+    """Return True if this row is a Main trade row (no fill/sum suffix)."""
+    tid = (row.get('trade_id') or '').strip()
+    return bool(tid) and not any(tid.endswith(s) for s in TRADE_ROW_SUFFIXES)
+
+def is_ex2sum_row(row: dict) -> bool:
+    """Return True if this row is an _ex2sum row (contains profit values)."""
+    return (row.get('trade_id') or '').endswith('_ex2sum')
+
 # Sound files
 SOUND_FILES = {
     'bis3': '/app/static/bis3prozent.mp3',
@@ -1075,19 +1093,11 @@ if st.session_state.selected_pair is None:
                 pair_data = get_pair_settings(pair_name)
                 enabled = pair_data.get('enabled', True)
                 status_color = "🟢" if enabled else "🔴"
-                
-                trades = get_trades(pair_name, limit=1000)
-                total_trades = len(trades)
-                def to_float(val):
-                    if isinstance(val, str):
-                        val = val.replace(',', '.')
-                    return float(val or 0)
-                
-                total_profit = sum(
-                    (to_float(t.get('ex2_value_usdt', 0)) - to_float(t.get('ex1_value_usdt', 0)) - 
-                     to_float(t.get('ex1_fees', 0)) - to_float(t.get('ex2_fees', 0)))
-                    for t in trades
-                )
+                # Counter + Profit iterieren über ALLE CSV-Zeilen (kein 1000-Limit).
+                # Die Helper in trade_logger.py deduplizieren nach trade_id — siehe
+                # docs/TRADE_LOG_CALCULATIONS.md
+                total_trades = count_main_trades(pair_name)
+                total_profit = total_profit_usdt(pair_name)
                 
                 # Build complete tile as HTML
                 st.markdown(f"""
@@ -1561,7 +1571,7 @@ else:
                         ex1_val = to_float(t.get('ex1_value_usdt', 0))
                         ex2_val = to_float(t.get('ex2_value_usdt', 0))
                         fees = to_float(t.get('ex1_fees', 0)) + to_float(t.get('ex2_fees', 0))
-                        status = t.get('limit_watch_status', 'UNKNOWN')
+                        status = t.get('ex2_status', 'UNKNOWN')
                         
                         # For WATCHING/PENDING trades, ex2_val is 0 (limit not filled)
                         # Calculate EXPECTED profit instead of showing false negative
@@ -1625,17 +1635,19 @@ else:
                 
                 if True:  # Always run
                     # Summary stats
-                    # Count ONLY main trades (no suffixes like _ex1p, _ex2p, _ex2sum)
-                    main_trade_ids = set()
-                    for r in rows:
-                        tid = r.get('trade_id', '')
-                        # Only count main trade IDs (those without fill/sum suffixes)
-                        if tid and not any(tid.endswith(s) for s in ['_ex1p1', '_ex1p2', '_ex1p3', '_ex2p1', '_ex2p2', '_ex2p3', '_ex2sum']):
-                            main_trade_ids.add(tid)
-                    total_trades = len(main_trade_ids)
-                    filled_trades = len([r for r in rows if r['status'] == 'FILLED'])
-                    winning_trades = len([r for r in rows if r['net'] > 0])
-                    total_profit = sum(r['net'] for r in rows)
+                    # Multi-Row-Pattern: nach Suffix filtern (Helper oben), sonst
+                    # wird jeder Fill als eigener Trade gezählt.
+                    main_rows = [r for r in rows if is_main_trade_row(r)]
+                    total_trades = len(main_rows)
+                    filled_trades = sum(1 for r in main_rows if r['status'] == 'FILLED')
+                    winning_trades = sum(1 for r in main_rows if r['net'] > 0)
+                    # Profit aus ex2sum-Rows (genau eine pro Trade) — vermeidet
+                    # Doppelzählung von ex2_value_usdt in ex1p*/ex2p* Rows.
+                    ex2sum_profits = [
+                        r['profit_usdt'] for r in rows
+                        if (r.get('trade_id') or '').endswith('_ex2sum')
+                    ]
+                    total_profit = sum(ex2sum_profits)
                     
                     st.markdown("#### 📊 Trade Übersicht")
                     col1, col2, col3, col4 = st.columns(4)
@@ -1738,7 +1750,7 @@ else:
                         # ===== COLUMN 6: Qty @ Limit =====
                         # Line 1: Σ TotalQty @ AvgPrice (or status indicator)
                         # Lines 2+: Individual fill Menge @ Preis (NO trade ID)
-                        ls_status = r.get('limit_watch_status', '') or ''
+                        ls_status = r.get('ex2_status', '') or ''
                         ls_qty = r.get('ex2_qty_filled', 0) or r.get('ex2_qty_ordered', 0)
                         ls_price = r.get('ex2_price_actual', 0) or r.get('ex2_price_expected', 0)
                         

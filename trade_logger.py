@@ -23,6 +23,20 @@ from typing import Dict, Optional, List, Tuple
 LOG_DIR = Path("/app/logs")
 
 # =============================================================================
+# MULTI-ROW-PATTERN CONSTANTS
+# =============================================================================
+# Ein Trade erzeugt 4-7 CSV-Zeilen (siehe docs/TRADE_LOG_CALCULATIONS.md):
+#   - 1x Main Row  (Summen, trade_id ohne Suffix)
+#   - Nx ex1p*    (Market-Fills, ein Fill pro Zeile)
+#   - 1x ex2sum   (Limit-Order-Zusammenfassung MIT Profit)
+#   - Mx ex2p*    (Limit-Fills, ein Fill pro Zeile)
+TRADE_ROW_SUFFIXES = (
+    '_ex1p1', '_ex1p2', '_ex1p3', '_ex1p4', '_ex1p5',
+    '_ex2p1', '_ex2p2', '_ex2p3', '_ex2p4', '_ex2p5',
+    '_ex2sum',
+)
+
+# =============================================================================
 # LOGGING TOGGLE (re-enabled 2026-09-26 19:04 by Jonas)
 # =============================================================================
 # Set to False to disable all file/CSV writes (no-op, returns dummy value).
@@ -1056,6 +1070,58 @@ def get_trades(pair: str, limit: int = 100) -> List[Dict]:
         trades.append(row)
 
     return trades
+
+
+def count_main_trades(pair: str) -> int:
+    """
+    Count unique main trades (ohne _ex1p*, _ex2p*, _ex2sum Suffix-Rows).
+
+    Iteriert über ALLE CSV-Zeilen (kein 1000-Limit wie get_trades()).
+    Für Dashboard-Tile-Counter: zeigt ALLE echten Trades, nicht nur die
+    letzten 1000 CSV-Zeilen (= ca. 166 echte Trades bei Multi-Row).
+
+    Siehe: docs/TRADE_LOG_CALCULATIONS.md
+    """
+    csv_path = get_trade_csv_path(pair)
+    if not csv_path.exists():
+        return 0
+
+    main_ids = set()
+    with open(csv_path, 'r', newline='') as f:
+        reader = csv.DictReader(f, delimiter=';')
+        for row in reader:
+            tid = (row.get('trade_id') or '').strip()
+            if tid and not any(tid.endswith(s) for s in TRADE_ROW_SUFFIXES):
+                main_ids.add(tid)
+    return len(main_ids)
+
+
+def total_profit_usdt(pair: str) -> float:
+    """
+    Summe profit_usdt_actual aus _ex2sum-Rows (genau eine pro Trade).
+
+    Iteriert über ALLE CSV-Zeilen (kein 1000-Limit). Nimmt nur _ex2sum-Rows,
+    weil dort ex2_value_usdt korrekt befüllt ist — vermeidet Doppelzählung
+    in ex1p*/ex2p* Rows.
+
+    Siehe: docs/TRADE_LOG_CALCULATIONS.md
+    """
+    csv_path = get_trade_csv_path(pair)
+    if not csv_path.exists():
+        return 0.0
+
+    total = 0.0
+    with open(csv_path, 'r', newline='') as f:
+        reader = csv.DictReader(f, delimiter=';')
+        for row in reader:
+            tid = (row.get('trade_id') or '').strip()
+            if tid.endswith('_ex2sum'):
+                raw = row.get('profit_usdt_actual', '0') or '0'
+                try:
+                    total += float(str(raw).replace(',', '.'))
+                except (ValueError, TypeError):
+                    pass
+    return total
 
 
 def get_pending_limit_orders(pair: str = None) -> List[Dict]:
