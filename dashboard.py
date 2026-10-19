@@ -1199,8 +1199,7 @@ if st.session_state.selected_pair is None:
                 except Exception as e:
                     _bf_log.append(f"ERROR: {e}")
             with st.expander("📜 Backfill log", expanded=True):
-                st.code('
-'.join(_bf_log) if _bf_log else "(no output)", language="text")
+                st.code('\n'.join(_bf_log) if _bf_log else "(no output)", language="text")
             
 # ============================================================================
 # DETAIL VIEW - ORIGINAL DASHBOARD
