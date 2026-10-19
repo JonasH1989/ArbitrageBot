@@ -28,6 +28,7 @@ from trade_logger import (
     total_profit_usdt,
     completed_profit_usdt,
     open_trade_count,
+    get_trades,
     UNIFIED_COLUMNS,
 )
 
@@ -303,3 +304,89 @@ def test_open_trade_count_no_open(tmp_path, monkeypatch):
     ]
     make_test_csv(tmp_path / "TESTUSDT_trades.csv", rows)
     assert open_trade_count("TEST-USDT") == 0
+
+
+# =============================================================================
+# HEADER-LESS CSV POSITIONAL ACCESS (Jonas 2026-10-19 code-fix)
+# =============================================================================
+# CSVs without header rows broke csv.DictReader (it used the first DATA row
+# as fieldnames, so row['trade_id'] returned '' for all subsequent rows).
+# This caused 0/0/0 in the dashboard and 0.0 profit for all FILLED trades.
+# The fix uses positional access via the COL map (trade_logger.COL).
+
+def test_get_trades_no_header(tmp_path, monkeypatch):
+    """get_trades() must work with CSV that has NO header row."""
+    monkeypatch.setattr("trade_logger.LOG_DIR", tmp_path)
+    pair = "TEST-USDT"
+    csv_path = tmp_path / "TESTUSDT_trades.csv"
+    with open(csv_path, 'w', newline='') as f:
+        w = csv.writer(f, delimiter=';')
+        # Main row t1: M->K, FILLED, 100 MPC, 1.0 USDT, fees 0.001
+        # 43 columns per docs/TRADE_LOG_STRUCTURE.md
+        w.writerow(["t1", "2026-01-01", "M->K", "TEST-USDT", "USDT", "1.0",
+                    "MXC", "ord1", "market", "buy", "100", "100", "0.01", "0.01", "1.0", "0.001",
+                    "2026-01-01", "", "FILLED",
+                    "KCN", "ord2", "limit", "sell", "100", "0", "0.012", "0", "0", "0",
+                    "2026-01-01", "", "OPEN",
+                    "0.1", "0", "-1.001", "100",
+                    "2026-01-01", "", "",
+                    "{}", "", "{}", ""])
+    trades = get_trades(pair, limit=100)
+    assert len(trades) == 1
+    t = trades[0]
+    assert t['trade_id'] == 't1'
+    assert t['ex1_status'] == 'FILLED'
+    assert t['ex2_status'] == 'OPEN'
+    assert t['ex1_value_usdt'] == '1.0'
+    assert t['ex1_fees'] == '0.001'
+    assert t['profit_usdt_actual'] == '-1.001'
+    assert t['direction'] == 'M->K'
+
+
+def test_count_main_trades_no_header(tmp_path, monkeypatch):
+    """count_main_trades() must work with header-less CSV (3 trades)."""
+    monkeypatch.setattr("trade_logger.LOG_DIR", tmp_path)
+    pair = "TEST-USDT"
+    csv_path = tmp_path / "TESTUSDT_trades.csv"
+    with open(csv_path, 'w', newline='') as f:
+        w = csv.writer(f, delimiter=';')
+        for tid in ["t1", "t2", "t3"]:
+            w.writerow([tid, "2026-01-01", "M->K", "TEST-USDT", "USDT", "1.0",
+                        "MXC", "ord", "market", "buy", "100", "100", "0.01", "0.01", "1.0", "0",
+                        "", "", "FILLED",
+                        "", "", "", "", "", "", "", "", "", "",
+                        "", "", "FILLED",
+                        "0", "0", "0", "0",
+                        "", "", "",
+                        "", "", "", ""])
+            w.writerow([f"{tid}_ex2sum", "", "", "", "", "",
+                        "", "", "", "", "", "", "", "", "", "",
+                        "", "", "",
+                        "KCN", "ord2", "limit", "sell", "100", "100", "0.012", "3.2", "0.01", "",
+                        "", "", "FILLED",
+                        "0.1", "0", "0.2", "0",
+                        "", "", "",
+                        "", "", "", ""])
+    assert count_main_trades(pair) == 3
+
+
+def test_completed_profit_usdt_no_header(tmp_path, monkeypatch):
+    """completed_profit_usdt() must work with header-less CSV."""
+    monkeypatch.setattr("trade_logger.LOG_DIR", tmp_path)
+    pair = "TEST-USDT"
+    csv_path = tmp_path / "TESTUSDT_trades.csv"
+    with open(csv_path, 'w', newline='') as f:
+        w = csv.writer(f, delimiter=';')
+        for tid, profit, status in [("t1", "0.10", "FILLED"),
+                                     ("t2", "0.20", "FILLED"),
+                                     ("t3", "-1.50", "OPEN")]:  # OPEN should NOT be counted
+            w.writerow([f"{tid}_ex2sum", "", "", "", "", "",
+                        "", "", "", "", "", "", "", "", "", "",
+                        "", "", "",
+                        "KCN", "ord", "limit", "sell", "100", "100", "0.012", "3.2", "0.01", "",
+                        "", "", status,
+                        "0.1", "0", profit, "0",
+                        "", "", "",
+                        "", "", "", ""])
+    # Should be 0.10 + 0.20 = 0.30 (FILLED only, not the -1.50 OPEN)
+    assert abs(completed_profit_usdt(pair) - 0.30) < 1e-9

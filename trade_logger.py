@@ -37,6 +37,60 @@ TRADE_ROW_SUFFIXES = (
 )
 
 # =============================================================================
+# COLUMN INDEX MAP (0-based, matches docs/TRADE_LOG_STRUCTURE.md)
+# =============================================================================
+# Used for positional CSV access — robust against missing header rows.
+# Without a header, csv.DictReader uses the first DATA row as fieldnames,
+# which makes row['trade_id'] etc. return '' for all subsequent rows.
+# This caused the 0/0/0 in the dashboard and 0.0 profit for all FILLED trades.
+COL = {
+    'trade_id': 0, 'internal_ts': 1, 'direction': 2, 'pair': 3, 'strategy': 4,
+    'spread_pct': 5, 'ex1': 6, 'ex1_order_id': 7, 'ex1_type': 8, 'ex1_side': 9,
+    'ex1_qty_ordered': 10, 'ex1_qty_filled': 11, 'ex1_price_expected': 12,
+    'ex1_price_actual': 13, 'ex1_value_usdt': 14, 'ex1_fees': 15,
+    'ex1_create_ts': 16, 'ex1_fill_ts': 17, 'ex1_status': 18,
+    'ex2': 19, 'ex2_order_id': 20, 'ex2_type': 21, 'ex2_side': 22,
+    'ex2_qty_ordered': 23, 'ex2_qty_filled': 24, 'ex2_price_expected': 25,
+    'ex2_price_actual': 26, 'ex2_value_usdt': 27, 'ex2_fees': 28,
+    'ex2_create_ts': 29, 'ex2_fill_ts': 30, 'ex2_status': 31,
+    'profit_usdt_expected': 32, 'profit_mpc_expected': 33,
+    'profit_usdt_actual': 34, 'profit_mpc_actual': 35,
+    'limit_last_check': 36, 'error_code': 37, 'error_message': 38,
+    'raw_ex1_response': 39, 'raw_ex1_response_ts': 40,
+    'raw_ex2_response': 41, 'raw_ex2_response_ts': 42,
+}
+
+def _row_to_dict(row: list) -> dict:
+    """Convert a CSV row (list) to dict using COL mapping.
+    Robust against missing/short rows — missing columns default to ''."""
+    result = {}
+    for col_name, idx in COL.items():
+        if idx < len(row):
+            result[col_name] = str(row[idx]).strip()
+        else:
+            result[col_name] = ''
+    return result
+
+def _read_csv_data_rows(csv_path) -> list:
+    """Read CSV and return list of dicts (data rows only, header skipped if present).
+    Uses positional access via COL map. Robust against missing/short rows.
+    New files have a header row ('trade_id' in first col); old files don't.
+    This helper handles both cases."""
+    rows = []
+    if not csv_path.exists():
+        return rows
+    with open(csv_path, 'r', newline='') as f:
+        reader = csv.reader(f, delimiter=';')
+        for i, row in enumerate(reader):
+            if len(row) <= COL['trade_id']:
+                continue
+            # Skip header row if present (first row where trade_id col = 'trade_id')
+            if i == 0 and str(row[COL['trade_id']]).strip() == 'trade_id':
+                continue
+            rows.append(_row_to_dict(row))
+    return rows
+
+# =============================================================================
 # LOGGING TOGGLE (re-enabled 2026-09-26 19:04 by Jonas)
 # =============================================================================
 # Set to False to disable all file/CSV writes (no-op, returns dummy value).
@@ -1050,26 +1104,23 @@ def update_limit_watch(
 # =============================================================================
 
 def get_trades(pair: str, limit: int = 100) -> List[Dict]:
-    """Get all trades for a trading pair (newest first)"""
+    """Get all trades for a trading pair (newest first).
+    Uses positional CSV access (COL map) — robust against missing header rows.
+    Without a header, csv.DictReader would use the first DATA row as fieldnames
+    and return '' for all named lookups."""
     csv_path = get_trade_csv_path(pair)
 
     if not csv_path.exists():
         return []
 
-    trades = []
-    with open(csv_path, 'r', newline='') as f:
-        reader = csv.DictReader(f, delimiter=';')
-        rows = list(reader)
+    rows = _read_csv_data_rows(csv_path)
 
     # Reverse to get newest first
     rows = rows[::-1]
 
-    for i, row in enumerate(rows):
-        if i >= limit:
-            break
-        trades.append(row)
-
-    return trades
+    if limit and limit > 0:
+        rows = rows[:limit]
+    return rows
 
 
 def count_main_trades(pair: str) -> int:
@@ -1087,12 +1138,10 @@ def count_main_trades(pair: str) -> int:
         return 0
 
     main_ids = set()
-    with open(csv_path, 'r', newline='') as f:
-        reader = csv.DictReader(f, delimiter=';')
-        for row in reader:
-            tid = (row.get('trade_id') or '').strip()
-            if tid and not any(tid.endswith(s) for s in TRADE_ROW_SUFFIXES):
-                main_ids.add(tid)
+    for row in _read_csv_data_rows(csv_path):
+        tid = row.get('trade_id', '')
+        if tid and not any(tid.endswith(s) for s in TRADE_ROW_SUFFIXES):
+            main_ids.add(tid)
     return len(main_ids)
 
 
@@ -1111,16 +1160,13 @@ def total_profit_usdt(pair: str) -> float:
         return 0.0
 
     total = 0.0
-    with open(csv_path, 'r', newline='') as f:
-        reader = csv.DictReader(f, delimiter=';')
-        for row in reader:
-            tid = (row.get('trade_id') or '').strip()
-            if tid.endswith('_ex2sum'):
-                raw = row.get('profit_usdt_actual', '0') or '0'
-                try:
-                    total += float(str(raw).replace(',', '.'))
-                except (ValueError, TypeError):
-                    pass
+    for row in _read_csv_data_rows(csv_path):
+        if row.get('trade_id', '').endswith('_ex2sum'):
+            raw = row.get('profit_usdt_actual', '') or '0'
+            try:
+                total += float(raw.replace(',', '.'))
+            except (ValueError, TypeError):
+                pass
     return total
 
 
@@ -1141,19 +1187,16 @@ def completed_profit_usdt(pair: str) -> float:
         return 0.0
 
     total = 0.0
-    with open(csv_path, 'r', newline='') as f:
-        reader = csv.DictReader(f, delimiter=';')
-        for row in reader:
-            tid = (row.get('trade_id') or '').strip()
-            if not tid.endswith('_ex2sum'):
-                continue
-            if (row.get('ex2_status') or '').strip().upper() != 'FILLED':
-                continue
-            raw = row.get('profit_usdt_actual', '0') or '0'
-            try:
-                total += float(str(raw).replace(',', '.'))
-            except (ValueError, TypeError):
-                pass
+    for row in _read_csv_data_rows(csv_path):
+        if not row.get('trade_id', '').endswith('_ex2sum'):
+            continue
+        if row.get('ex2_status', '').strip().upper() != 'FILLED':
+            continue
+        raw = row.get('profit_usdt_actual', '') or '0'
+        try:
+            total += float(raw.replace(',', '.'))
+        except (ValueError, TypeError):
+            pass
     return total
 
 
@@ -1172,14 +1215,11 @@ def open_trade_count(pair: str) -> int:
         return 0
 
     count = 0
-    with open(csv_path, 'r', newline='') as f:
-        reader = csv.DictReader(f, delimiter=';')
-        for row in reader:
-            tid = (row.get('trade_id') or '').strip()
-            if not tid.endswith('_ex2sum'):
-                continue
-            if (row.get('ex2_status') or '').strip().upper() == 'OPEN':
-                count += 1
+    for row in _read_csv_data_rows(csv_path):
+        if not row.get('trade_id', '').endswith('_ex2sum'):
+            continue
+        if row.get('ex2_status', '').strip().upper() == 'OPEN':
+            count += 1
     return count
 
 

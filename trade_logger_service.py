@@ -128,9 +128,8 @@ class TradeLoggerService:
         """Process a single CSV file - update pending trades"""
         with self._csv_lock:
             try:
-                with open(csv_path, 'r', newline='') as f:
-                    reader = csv.DictReader(f, delimiter=';')
-                    rows = list(reader)
+                from trade_logger import _read_csv_data_rows
+                rows = _read_csv_data_rows(csv_path)
                 
                 if not rows:
                     return
@@ -458,25 +457,52 @@ class TradeLoggerService:
         
         # Update ex2sum row
         ex2sum_row['ex2_status'] = new_status
-        ex2sum_row['ex2_status'] = new_status
         ex2sum_row['limit_last_check'] = datetime.now().isoformat()
         
+        # CRITICAL: Update ex2_value_usdt, ex2_qty_filled, ex2_fees, ex2_price_actual
+        # from the ACTUAL fills BEFORE calculating profit.
+        # Bug fix 2026-10-19: previously profit was calculated as
+        # qty_filled * ex2_price_actual (= 0 because ex2_price_actual was 0),
+        # which produced 0 profit for all FILLED trades.
+        if fills:
+            total_funds = sum(
+                float(f.get('funds', 0) or f.get('quoteQty', 0) or 0)
+                for f in fills
+            )
+            total_fees_fills = sum(
+                float(f.get('fee', 0) or f.get('commission', 0) or 0)
+                for f in fills
+            )
+            total_qty_fills = sum(
+                float(f.get('size', 0) or f.get('qty', 0) or 0)
+                for f in fills
+            )
+            if total_funds > 0:
+                ex2sum_row['ex2_value_usdt'] = total_funds
+            if total_fees_fills > 0:
+                ex2sum_row['ex2_fees'] = total_fees_fills
+            if total_qty_fills > 0:
+                ex2sum_row['ex2_qty_filled'] = total_qty_fills
+                ex2sum_row['ex2_price_actual'] = total_funds / total_qty_fills
+
         if qty_filled > 0:
             ex2sum_row['ex2_qty_filled'] = qty_filled
         if fees > 0:
             ex2sum_row['ex2_fees'] = fees
         
-        # Recalculate actual profit
+        # Recalculate actual profit using UPDATED ex2_value_usdt
         ex1_value = to_float(main_row.get('ex1_value_usdt', 0) or 0)
         ex1_fees = to_float(main_row.get('ex1_fees', 0) or 0)
-        ex2_value = qty_filled * to_float(ex2sum_row.get('ex2_price_actual', 0) or 0)
+        ex2_value = to_float(ex2sum_row.get('ex2_value_usdt', 0) or 0)
+        ex2_fees = to_float(ex2sum_row.get('ex2_fees', 0) or 0)
         
-        profit_usdt_actual = ex2_value - ex1_value - ex1_fees - fees
+        profit_usdt_actual = ex2_value - ex1_value - ex1_fees - ex2_fees
         ex2sum_row['profit_usdt_actual'] = profit_usdt_actual
         
         # Calculate profit_mpc_actual
         ex1_qty_filled = to_float(main_row.get('ex1_qty_filled', 0) or 0)
-        ex2sum_row['profit_mpc_actual'] = ex1_qty_filled - qty_filled
+        ex2_qty_filled = to_float(ex2sum_row.get('ex2_qty_filled', 0) or 0)
+        ex2sum_row['profit_mpc_actual'] = ex1_qty_filled - ex2_qty_filled
         
         # Insert fill rows if we have fills
         if fills and new_status == 'FILLED':
@@ -642,8 +668,13 @@ class TradeLoggerService:
         
         with self._csv_lock:
             with open(csv_path, 'r', newline='') as f:
-                reader = csv.DictReader(f, delimiter=';')
-                rows = list(reader)
+                reader = csv.reader(f, delimiter=';')
+                raw_rows = list(reader)
+        
+        # Convert to dicts via positional access (COL map) — robust against
+        # missing header rows. See trade_logger.COL and _row_to_dict.
+        from trade_logger import _read_csv_data_rows
+        rows = _read_csv_data_rows(csv_path)
         
         return list(reversed(rows))[:limit]
     
