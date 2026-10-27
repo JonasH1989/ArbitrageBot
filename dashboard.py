@@ -241,7 +241,7 @@ def render_best_direction():
             k_usdt = m_usdt = 0
         # Config from session_state (written by main flow)
         cfg = st.session_state.get('bot_pair_config', {})
-        current_strategy = cfg.get('strategy', 'coins')
+        strategy = cfg.get('strategy', 'usdt')
         threshold_start = cfg.get('threshold_start', 1.9)
         # Calculate
         k_ask, k_bid = kucoin_asks[0][0], kucoin_bids[0][0]
@@ -262,7 +262,7 @@ def render_best_direction():
         coins_km = (vol_km * profit_km / k_ask) if k_ask > 0 else 0
         coins_mk = (vol_mk * profit_mk / m_ask) if m_ask > 0 else 0
         if (km_ok or mk_ok) and max(spread_pct_km, spread_pct_mk) >= threshold_start:
-            if current_strategy == 'usdt':
+            if strategy == 'usdt':
                 pkm_total = profit_km * vol_km
                 pmk_total = profit_mk * vol_mk
                 show_direction = "K→M" if pkm_total >= pmk_total else "M→K"
@@ -316,7 +316,7 @@ def render_best_direction():
                     cost = k_ask * max_coins
                     revenue = m_bid * max_coins
                     profit = revenue - cost
-                    if current_strategy == 'usdt':
+                    if strategy == 'usdt':
                         st.metric("Kosten", f"${cost:.4f}")
                         st.metric("Erlös", f"${revenue:.4f}")
                         st.metric("💵 NETTO-GEWINN", f"${profit:.4f}", delta=f"+{profit:.4f}")
@@ -329,7 +329,7 @@ def render_best_direction():
                     cost = m_ask * max_coins
                     revenue = k_bid * max_coins
                     profit = revenue - cost
-                    if current_strategy == 'usdt':
+                    if strategy == 'usdt':
                         st.metric("Kosten", f"${cost:.4f}")
                         st.metric("Erlös", f"${revenue:.4f}")
                         st.metric("💵 NETTO-GEWINN", f"${profit:.4f}", delta=f"+{profit:.4f}")
@@ -1169,7 +1169,7 @@ else:
         m_usdt = mexc_balances.get('USDT', {}).get('available', 0)
         m_mpc = mexc_balances.get(base_coin, {}).get('available', 0)
         
-        current_strategy = pair_data.get('strategy', 'usdt')
+        strategy = pair_data.get('strategy', 'usdt')
         threshold_start = pair_data.get('threshold_start', 1.0)
         threshold_stop = pair_data.get('threshold_stop', 0.5)
         
@@ -1208,7 +1208,7 @@ else:
         coins_mk = (vol_mk * profit_mk / m_ask) if m_ask > 0 else 0
         # Store pair config in session_state for fragment access
         st.session_state['bot_pair_config'] = {
-            'strategy': current_strategy,
+            'strategy': strategy,
             'threshold_start': threshold_start,
         }
         # =========================================================================
@@ -1411,11 +1411,10 @@ else:
                     set_pair_settings(pair, alert_enabled=ae_new)
             
             with s4:
-                strat = pair_data.get('strategy', 'usdt')
-                strat_idx = 0 if strat == 'usdt' else 1
+                strat_idx = 0 if strategy == 'usdt' else 1
                 new_strat = st.radio("Gewinn Strategie", ["USDT", "Coins"], index=strat_idx, key=f"pstr_{pair}")
                 new_strat_val = 'usdt' if new_strat == "USDT" else 'coins'
-                if new_strat_val != strat:
+                if new_strat_val != strategy:
                     set_pair_settings(pair, strategy=new_strat_val)
             
             # Fee-Empfehlung
@@ -1584,7 +1583,7 @@ else:
                             'market_qty': float(t.get('ex1_qty_filled', 0) or 0),
                             'fill_price': float(t.get('ex1_price_actual', 0) or 0),
                             'direction': 'K→M' if 'K->M' in direction else 'M→K',
-                            'strategy': t.get('strategy', current_strategy),
+                            'strategy': t.get('strategy', strategy),
                             'spread': float(t.get('spread_pct', 0) or 0),
                             'ex1_exchange': t.get('ex1', ''),
                             'ex1_order_id': t.get('ex1_order_id', ''),

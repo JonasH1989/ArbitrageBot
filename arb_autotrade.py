@@ -1456,7 +1456,7 @@ def fmt_price(price, exchange):
     return f"{price:.{KUCOIN_PRICE_PRECISION}f}"
 
 def get_trading_strategy(pair):
-    """Get trading strategy for pair (usdt or mpc)"""
+    """Get trading strategy for pair (usdt or coins)"""
     return get_setting(f'trading.pairs.{pair}.strategy', 'usdt')
 
 def execute_market_buy_kucoin(qty):
@@ -3387,18 +3387,19 @@ def main():
         
         # Re-read all settings from config each cycle
         pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
-        current_strategy = get_setting(f'trading.pairs.{TRADING_PAIR}.strategy', 'usdt')
+        # Einheitlicher Name fuer die Strategie: 'strategy' (Werte: 'usdt' | 'coins')
+        strategy = get_trading_strategy(TRADING_PAIR)
         threshold_start = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_start', 1.0)
         threshold_stop = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_stop', 0.5)
         current_log_level = get_log_level()
 
         # Check if any setting changed - log immediately if so
         import hashlib
-        config_hash = f"{pair_enabled}|{current_strategy}|{threshold_start}|{threshold_stop}|{current_log_level}"
+        config_hash = f"{pair_enabled}|{strategy}|{threshold_start}|{threshold_stop}|{current_log_level}"
         if config_hash != last_config_hash:
             log_decision("CONFIG_CHANGED",
                 pair_enabled=str(pair_enabled),
-                strategy=current_strategy,
+                strategy=strategy,
                 log_level=f"Level {current_log_level}",
                 threshold=f"{threshold_start:.2f}%",
                 threshold_stop=f"{threshold_stop:.2f}%"
@@ -3457,7 +3458,6 @@ def main():
 
         # Find best tradeable spread using BIDIRECTIONAL VOLUME ACCUMULATION
         # This replaces the old sweep that fixed one side - now both sides accumulate!
-        strategy = get_trading_strategy(TRADING_PAIR)
         best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=True)
 
         # Log sweep results every 30 seconds
@@ -3465,7 +3465,6 @@ def main():
             if ob_data:
                 total_mexc = sum(x['qty'] for x in ob_data['mexc_asks'][:5])
                 total_kucoin = sum(x['qty'] for x in ob_data['kucoin_bids'][:5])
-                strategy = get_trading_strategy(TRADING_PAIR)
                 coin = COIN_SYMBOL.split('-')[0]
                 log(f"Sweep: {strategy.upper()} strategy | MEXC top5={total_mexc:.0f} {coin}, KuCoin top5={total_kucoin:.0f} {coin}, min={min_trade_qty}")
                 if best_trade:
@@ -3530,7 +3529,7 @@ def main():
             log_decision("STATUS_CHECK",
                 state=state,
                 pair_enabled=str(pair_enabled),
-                strategy=current_strategy,
+                strategy=strategy,
                 log_level=f"Level {get_log_level()}",
                 spread_mk=f"{spread_pct_mk:.3f}%",
                 spread_km=f"{spread_pct_km:.3f}%",
@@ -3620,9 +3619,9 @@ def main():
                     # For Limit SELL orders (creates new order on book) -> can use round()
                     vol_for_mexc = math.floor(best_trade['vol'])
                     vol_for_kucoin = math.floor(best_trade['vol'])
-                    trade_strategy = best_trade.get('strategy', current_strategy)
+                    strategy = best_trade.get('strategy', strategy)
                     coin = COIN_SYMBOL.split('-')[0]
-                    log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
+                    log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={strategy}")
                     # CRITICAL FIX 2026-10-14: Use dynamic market/limit from best_trade (not hardcoded by direction)
                     # thinner_side tells us which side has the thinner order book → that side gets the market order
                     _thinner_side = best_trade.get('thinner_side', 'SELL')
@@ -3640,14 +3639,14 @@ def main():
                     success, trade_id = execute_trade_market_buy_limit_sell(
                         _market_ex, _limit_ex, _vol,
                         best_trade['buy'], best_trade['sell'],
-                        trade_strategy, best_trade['pct'],
+                        strategy, best_trade['pct'],
                         market_side=_market_side
                     )
                 elif spread_pct_km >= spread_pct_mk:
                     # Fallback: no best_trade, use raw orderbook. Market is always on the buy side.
-                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', math.floor(vol_for_kucoin), k['ask'], m['bid'], current_strategy, spread_pct_km, market_side='BUY')
+                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', math.floor(vol_for_kucoin), k['ask'], m['bid'], strategy, spread_pct_km, market_side='BUY')
                 else:
-                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], current_strategy, spread_pct_mk, market_side='BUY')
+                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], strategy, spread_pct_mk, market_side='BUY')
                 
                 # Only complete trade if SUCCESS=True
                 if success:
@@ -3720,7 +3719,7 @@ def main():
                 # NO state change, NO continue: fall through to calculate_best_trade()
             
             # Recalculate best trade with fresh orderbook data
-            best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, current_strategy, for_follow_up_trade=True)
+            best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=True)
             
             if not best_trade:
                 log(f"No tradeable spread found (spread below thresholds or insufficient volume)")
@@ -3737,9 +3736,9 @@ def main():
             trade_in_progress = True
             vol_for_mexc = math.floor(best_trade['vol'])
             vol_for_kucoin = math.floor(best_trade['vol'])
-            trade_strategy = best_trade.get('strategy', current_strategy)
+            strategy = best_trade.get('strategy', strategy)
             coin = COIN_SYMBOL.split('-')[0]
-            log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={trade_strategy}")
+            log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={strategy}")
             # CRITICAL FIX 2026-10-14: Use dynamic market/limit from best_trade (not hardcoded by direction)
             # thinner_side tells us which side has the thinner order book → that side gets the market order
             _thinner_side = best_trade.get('thinner_side', 'SELL')
@@ -3757,7 +3756,7 @@ def main():
             success, trade_id = execute_trade_market_buy_limit_sell(
                 _market_ex, _limit_ex, _vol,
                 best_trade['buy'], best_trade['sell'],
-                trade_strategy, best_trade['pct'],
+                strategy, best_trade['pct'],
                 market_side=_market_side
             )
             
