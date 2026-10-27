@@ -3499,7 +3499,25 @@ def main():
 
             # Find best tradeable spread using BIDIRECTIONAL VOLUME ACCUMULATION
             # This replaces the old sweep that fixed one side - now both sides accumulate!
-            best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=True)
+            #
+            # THRESHOLD-WAHL (Jonas): der Plan muss gegen die Schwelle geplant
+            # werden, gegen die danach auch gehandelt wird.
+            #   hysteresis_armed == False -> Erstmaktivierung -> threshold_start
+            #   hysteresis_armed == True  -> Folge-Trade im Hysterese-Fenster -> threshold_stop
+            # Vorher stand hier IMMER for_follow_up_trade=True. Der Bot plante
+            # damit durchgehend gegen threshold_stop (0.5%) und konnte unterhalb
+            # threshold_start (1.0%) handeln, obwohl das Gate in der
+            # WAITING-Verzweigung >= threshold_start verlangt.
+            # Die Plan-Schwelle muss exakt der Schwelle entsprechen, gegen die
+            # das Gate in der WAITING-Verzweigung (Zeile ~3622) entscheidet:
+            #   Gate: (spread >= threshold_start) OR (hysteresis_armed AND spread >= threshold_stop)
+            # also:
+            #   spread >= threshold_start  -> gegen threshold_start planen
+            #   spread <  threshold_start  -> nur im Hysterese-Fenster (armed) gegen
+            #                                  threshold_stop planen, sonst gar kein Plan
+            _spread_now = max(spread_pct_km, spread_pct_mk)
+            _plan_as_follow_up = hysteresis_armed and _spread_now < threshold_start
+            best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=_plan_as_follow_up)
 
             # Log sweep results every 30 seconds
             if int(time.time()) % 10 == 0:
@@ -3766,7 +3784,13 @@ def main():
                     # NO state change, NO continue: fall through to calculate_best_trade()
             
                 # Recalculate best trade with fresh orderbook data
-                best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=True)
+                # Gleiche Schwellen-Regel wie im WAITING-Zweig: geplant wird
+                # gegen die Schwelle, gegen die danach gehandelt wird.
+                # Im RUNNING-Zweig ist die Hysterese bereits armed; der
+                # Stop-Check oben (Zeile ~3752) hat bereits geprueft, dass der
+                # Spread >= threshold_stop ist.
+                _plan_as_follow_up = fresh_profitable_spread < threshold_start
+                best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=_plan_as_follow_up)
             
                 if not best_trade:
                     log(f"No tradeable spread found (spread below thresholds or insufficient volume)")
