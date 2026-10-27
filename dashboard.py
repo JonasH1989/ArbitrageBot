@@ -302,19 +302,13 @@ def render_best_direction():
         coins_km = (vol_km * profit_km / k_ask) if k_ask > 0 else 0
         coins_mk = (vol_mk * profit_mk / m_ask) if m_ask > 0 else 0
         _max_spread = max(spread_pct_km, spread_pct_mk)
+        _dir_txt = 'K→M' if spread_pct_km >= spread_pct_mk else 'M→K'
+        # Diese Anzeige unterscheidet bewusst nur an/aus (Jonas). Die
+        # detaillierten Schwellen-Baender (gruen/hellgruen/gelb/rot) zeigt
+        # die Orderbook-Tabelle weiterhin unten.
         if not ((km_ok or mk_ok) and _max_spread >= threshold_start):
-            # Nicht im gruenen Band (>= threshold_start). Die weiteren Baender:
-            # hellgruen = Hysterese-Fenster (stop..start) - dort handelt der Bot
-            # nur, wenn die Hysterese bereits armed ist.
-            # gelb = positiv, aber unter stop. rot = negativ.
-            _band = _spread_band(_max_spread, threshold_start, threshold_stop)
-            _dir_txt = 'K→M' if spread_pct_km >= spread_pct_mk else 'M→K'
-            if _band == 'lightgreen':
-                st.info(f"🟩 **Hysterese-Fenster** ({threshold_stop:.1f}–{threshold_start:.1f}%) | "
-                        f"Beste Richtung: {_dir_txt} | Spread: {_max_spread:.3f}%")
-            elif _band == 'yellow':
-                st.info(f"🟡 **Positiv, aber unter Stop** ({threshold_stop:.1f}%) | "
-                        f"Beste Richtung: {_dir_txt} | Spread: {_max_spread:.3f}%")
+            st.error(f"🔴 **KEIN TRADE** | Beste Richtung: {_dir_txt} | "
+                     f"Spread: {_max_spread:.3f}% (unter {threshold_start:.1f}%)")
         if (km_ok or mk_ok) and max(spread_pct_km, spread_pct_mk) >= threshold_start:
             if strategy == 'usdt':
                 pkm_total = profit_km * vol_km
@@ -1907,14 +1901,11 @@ else:
                 play_sound('bis3', vol)
                 st.warning("🚨 Spread 1-3%!")
         elif pair_alert and alert_enabled and (spread_pct_km > 0 or spread_pct_mk > 0):
-            # Positive spread but below threshold - Farbstufe nach Band (Jonas):
-            # hellgruen = Hysterese-Fenster (stop..start), gelb = positiv unter stop
+            # Spread positiv, aber unter threshold_start -> kein Trade.
+            # Wie die Anzeige oben: nur an/aus, keine Band-Differenzierung.
+            # Die detaillierten Baender zeigt die Orderbook-Tabelle.
             spread_pct = max(spread_pct_km, spread_pct_mk)
-            _band = _spread_band(spread_pct, threshold_start, threshold_stop)
-            if _band == 'lightgreen':
-                st.info(f"🟩 Spread im Hysterese-Fenster ({threshold_stop:.1f}–{threshold_start:.1f}%): {spread_pct:.2f}%")
-            else:
-                st.info(f"🟡 Spread positiv, aber unter Stop ({threshold_stop:.1f}%): {spread_pct:.2f}%")
+            st.info(f"🔴 Spread positiv, aber unter Threshold ({threshold_start:.1f}%): {spread_pct:.2f}%")
         else:
             # Show current state
             spread_pct = max(spread_pct_km, spread_pct_mk)
