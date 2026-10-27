@@ -164,10 +164,22 @@ def render_orderbook_spread_view(threshold_start=1.0, threshold_stop=0.5):
             _bs = requests.get(f"{BOT_CACHE_URL}/state", timeout=2).json()
         except:
             _bs = {}
-        _se = {'WAITING': '🟡', 'RUNNING': '🟢', 'ERROR': '🔴'}.get(_bs.get('state', '?'), '⚪')
-        _he = '🟢' if _bs.get('hysteresis_armed') else '⚪'
-        _pe = '🟢' if _bs.get('pair_enabled') else '🔴'
-        st.markdown(f"**Legende:** 🟢 ≥ Start ({threshold_start:.1f}%) | 🟩 Hysterese-Fenster ({threshold_stop:.1f}–{threshold_start:.1f}%) | 🟡 positiv (< {threshold_stop:.1f}%) | 🔴 negativ  |  **State:** {_se} {_bs.get('state', '?')}  |  Hyst: {_he}  |  Pair: {_pe}")
+        # ------------------------------------------------------------------
+        # Drei getrennte Statuskategorien (Jonas):
+        #  1) Bot an/aus  -> Checkbox-Punkt ganz oben (nicht hier, redundant)
+        #  2) Spread-Band -> ausschliesslich die Orderbook-Tabelle
+        #  3) Bot-Zustand -> State/Hysterese/Trade in diesem Kopf
+        # Die Symbole der Kategorie 3 sind bewusst NICHT die Band-Farben,
+        # sonst waere 'gruen' zweideutig (Spread-Band vs. Bot laeuft).
+        # ------------------------------------------------------------------
+        _se = {'WAITING': '⏸️', 'RUNNING': '▶️', 'ERROR': '⚠️'}.get(_bs.get('state', '?'), '❔')
+        _he = '🔒' if _bs.get('hysteresis_armed') else '⚪'
+        _tp = _bs.get('trade_in_progress')
+        # Kategorie 2: nur die Tabelle nutzt diese Farben -> Legende der Tabelle
+        st.markdown(f"**Spread-Bänder (nur Orderbook-Tabelle):** 🟢 ≥ Start ({threshold_start:.1f}%) | 🟩 Hysterese-Fenster ({threshold_stop:.1f}–{threshold_start:.1f}%) | 🟡 positiv (< {threshold_stop:.1f}%) | 🔴 negativ")
+        # Kategorie 3: Zustand des Bots
+        _trade_txt = 'ja' if _tp else 'nein'
+        st.markdown(f"**Bot-Zustand:** {_se} {_bs.get('state', '?')} | Hysterese: {_he} {'armed' if _bs.get('hysteresis_armed') else 'nicht armed'} | Trade läuft: {_trade_txt}")
         # Loop-Waechter: Fehler seit Bot-Start und letzter Fehler
         _ec = _bs.get('error_count', 0) or 0
         _ce = _bs.get('consecutive_errors', 0) or 0

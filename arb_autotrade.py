@@ -434,6 +434,7 @@ def start_http_log_server(port: int = 8503):
                 'state': state,
                 'pair_enabled': pair_enabled,
                 'hysteresis_armed': hysteresis_armed,
+                'trade_in_progress': trade_in_progress,
                 'threshold_start': threshold_start,
                 'threshold_stop': threshold_stop,
                 # Loop-Waechter: Fehler seit Start und letzter Fehler
@@ -1025,6 +1026,11 @@ _last_loop_iteration_ts = 0.0
 _last_error = None
 _error_count = 0
 _consecutive_errors = 0
+
+# trade_in_progress (Module-Scope, damit /state sie lesen kann).
+# Kategorie 3 der GUI: "laeuft gerade ein Trade" - von der Bot-an/aus-
+# Anzeige (Checkbox) und vom Spread-Band zu unterscheiden (Jonas).
+trade_in_progress = False
 
 _diag = {
     'last_step': 'init',
@@ -3324,6 +3330,7 @@ def main():
     # Make these module-scope so Flask /state endpoint can read them
     global state, pair_enabled, hysteresis_armed, threshold_start, threshold_stop
     global _last_error, _error_count, _consecutive_errors
+    global trade_in_progress
     log("=== AUTO-TRADE BOT STARTED ===")
     log("Strategy: Coin-Gewinn (COIN akkumulieren)")
     log("Principle: ONE TRADE AT A TIME")
@@ -3360,7 +3367,7 @@ def main():
     STATE_RUNNING = 'RUNNING'
     STATE_ERROR = 'ERROR'
     state = STATE_WAITING
-    trade_in_progress = False
+    # trade_in_progress ist global (siehe Modul-Scope) - /state liest sie.
     hysteresis_armed = False  # Hysteresis flag for start/stop behavior
     last_spread_ok = None  # Track spread condition changes
     last_pair_enabled = None  # Track pair enabled changes
