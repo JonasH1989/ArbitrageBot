@@ -436,6 +436,10 @@ def start_http_log_server(port: int = 8503):
                 'hysteresis_armed': hysteresis_armed,
                 'threshold_start': threshold_start,
                 'threshold_stop': threshold_stop,
+                # Loop-Waechter: Fehler seit Start und letzter Fehler
+                'error_count': _error_count,
+                'consecutive_errors': _consecutive_errors,
+                'last_error': _last_error,
             })
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)})
@@ -1017,6 +1021,11 @@ _last_loop_iteration_ts = 0.0
 
 # Diagnostic dict — exposed via /debug/internal-state endpoint
 # (Jonas wants remote diagnostics instead of docker logs)
+# Loop-Waechter: Fehlerzaehler (Module-Scope, damit /state sie lesen kann)
+_last_error = None
+_error_count = 0
+_consecutive_errors = 0
+
 _diag = {
     'last_step': 'init',
     'loop_iterations': 0,
@@ -3300,6 +3309,7 @@ def prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strat
 def main():
     # Make these module-scope so Flask /state endpoint can read them
     global state, pair_enabled, hysteresis_armed, threshold_start, threshold_stop
+    global _last_error, _error_count, _consecutive_errors
     log("=== AUTO-TRADE BOT STARTED ===")
     log("Strategy: Coin-Gewinn (COIN akkumulieren)")
     log("Principle: ONE TRADE AT A TIME")
@@ -3334,6 +3344,7 @@ def main():
     # State machine
     STATE_WAITING = 'WAITING'
     STATE_RUNNING = 'RUNNING'
+    STATE_ERROR = 'ERROR'
     state = STATE_WAITING
     trade_in_progress = False
     hysteresis_armed = False  # Hysteresis flag for start/stop behavior
@@ -3352,6 +3363,9 @@ def main():
     last_heartbeat_ts = time.time()
     last_cpu_mem = (0, 0)
     last_limit_check = 0
+    _last_error = None
+    _error_count = 0
+    _consecutive_errors = 0
 
     # NOTE: pair_enabled is READ-ONLY from config!
     # It can ONLY be changed by:
@@ -3373,413 +3387,460 @@ def main():
     log(f"SAFETY: Bot started in disabled state", "CONFIG")
 
     while True:
-        global _diag, _latest_spreads, _latest_orderbook
-        _diag['last_step'] = 'loop_start'
-        _diag['loop_iterations'] += 1
-        # Heartbeat log every 30s - shows bot is alive + Mem/CPU
-        heartbeat_counter += 1
-        if time.time() - last_heartbeat_ts >= 30:
-            proc = psutil.Process()
-            mem_mb = proc.memory_info().rss / 1024 / 1024
-            cpu_pct = proc.cpu_percent(interval=0.1)
-            last_heartbeat_ts = time.time()
-            log(f"HEARTBEAT alive=30s | mem={mem_mb:.1f}MB | cpu={cpu_pct:.1f}% | threads={threading.active_count()}", "INFO")
+        # Nach einem Fehler war der State ERROR. Damit die State-Machine
+        # (WAITING/RUNNING) wieder greift, zurueck auf WAITING.
+        if state == STATE_ERROR:
+            state = STATE_WAITING
+        _iteration_failed = False
+        # ========================================================
+        # LOOP-WAECHTER (Ebene 2): ein Fehler in der Iteration darf
+        # den Bot nicht beenden. Vorher fuehrte eine unbehandelte
+        # Exception zum Prozess-Exit, Docker startete neu und der
+        # SAFETY-Block setzte enabled=False - der Bot war damit
+        # faktisch nur zwischen zwei Restarts aktiv.
+        # ========================================================
+        try:
+            global _diag, _latest_spreads, _latest_orderbook
+            _diag['last_step'] = 'loop_start'
+            _diag['loop_iterations'] += 1
+            # Heartbeat log every 30s - shows bot is alive + Mem/CPU
+            heartbeat_counter += 1
+            if time.time() - last_heartbeat_ts >= 30:
+                proc = psutil.Process()
+                mem_mb = proc.memory_info().rss / 1024 / 1024
+                cpu_pct = proc.cpu_percent(interval=0.1)
+                last_heartbeat_ts = time.time()
+                log(f"HEARTBEAT alive=30s | mem={mem_mb:.1f}MB | cpu={cpu_pct:.1f}% | threads={threading.active_count()}", "INFO")
         
-        # Re-read all settings from config each cycle
-        pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
-        # Einheitlicher Name fuer die Strategie: 'strategy' (Werte: 'usdt' | 'coins')
-        strategy = get_trading_strategy(TRADING_PAIR)
-        threshold_start = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_start', 1.0)
-        threshold_stop = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_stop', 0.5)
-        current_log_level = get_log_level()
+            # Re-read all settings from config each cycle
+            pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
+            # Einheitlicher Name fuer die Strategie: 'strategy' (Werte: 'usdt' | 'coins')
+            strategy = get_trading_strategy(TRADING_PAIR)
+            threshold_start = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_start', 1.0)
+            threshold_stop = get_setting(f'trading.pairs.{TRADING_PAIR}.threshold_stop', 0.5)
+            current_log_level = get_log_level()
 
-        # Check if any setting changed - log immediately if so
-        import hashlib
-        config_hash = f"{pair_enabled}|{strategy}|{threshold_start}|{threshold_stop}|{current_log_level}"
-        if config_hash != last_config_hash:
-            log_decision("CONFIG_CHANGED",
-                pair_enabled=str(pair_enabled),
-                strategy=strategy,
-                log_level=f"Level {current_log_level}",
-                threshold=f"{threshold_start:.2f}%",
-                threshold_stop=f"{threshold_stop:.2f}%"
-            )
-            last_config_hash = config_hash
+            # Check if any setting changed - log immediately if so
+            import hashlib
+            config_hash = f"{pair_enabled}|{strategy}|{threshold_start}|{threshold_stop}|{current_log_level}"
+            if config_hash != last_config_hash:
+                log_decision("CONFIG_CHANGED",
+                    pair_enabled=str(pair_enabled),
+                    strategy=strategy,
+                    log_level=f"Level {current_log_level}",
+                    threshold=f"{threshold_start:.2f}%",
+                    threshold_stop=f"{threshold_stop:.2f}%"
+                )
+                last_config_hash = config_hash
 
-        try:
-            prices = get_prices()
-        except Exception as e:
-            _diag['last_loop_error'] = f"get_prices: {type(e).__name__}: {e}"
-            prices = None
-        if not prices:
-            time.sleep(1)
-            continue
-        _diag['last_step'] = 'after_prices'
+            try:
+                prices = get_prices()
+            except Exception as e:
+                _diag['last_loop_error'] = f"get_prices: {type(e).__name__}: {e}"
+                prices = None
+            if not prices:
+                time.sleep(1)
+                continue
+            _diag['last_step'] = 'after_prices'
 
-        try:
-            k = prices['kucoin']
-            m = prices['mexc']
+            try:
+                k = prices['kucoin']
+                m = prices['mexc']
 
-            # Check M->K (Buy MEXC, Sell KuCoin)
-            spread_mk = k['bid'] - m['ask']
-            spread_pct_mk = (spread_mk / m['ask']) * 100 if m['ask'] > 0 else 0
+                # Check M->K (Buy MEXC, Sell KuCoin)
+                spread_mk = k['bid'] - m['ask']
+                spread_pct_mk = (spread_mk / m['ask']) * 100 if m['ask'] > 0 else 0
 
-            # Check K->M (Buy KuCoin, Sell MEXC)
-            spread_km = m['bid'] - k['ask']
-            spread_pct_km = (spread_km / k['ask']) * 100 if k['ask'] > 0 else 0
-            _diag['last_step'] = 'after_spread_calc'
-        except Exception as e:
-            _diag['last_loop_error'] = f"spread_calc: {type(e).__name__}: {e} | k={k if 'k' in dir() else 'N/A'} | m={m if 'm' in dir() else 'N/A'} | prices={prices}"
+                # Check K->M (Buy KuCoin, Sell MEXC)
+                spread_km = m['bid'] - k['ask']
+                spread_pct_km = (spread_km / k['ask']) * 100 if k['ask'] > 0 else 0
+                _diag['last_step'] = 'after_spread_calc'
+            except Exception as e:
+                _diag['last_loop_error'] = f"spread_calc: {type(e).__name__}: {e} | k={k if 'k' in dir() else 'N/A'} | m={m if 'm' in dir() else 'N/A'} | prices={prices}"
 
-        # Get real orderbook levels
-        try:
-            ob_data = get_orderbook_levels()
-        except Exception as e:
-            _diag['last_loop_error'] = f"get_orderbook_levels: {type(e).__name__}: {e}"
-            ob_data = None
-        _diag['last_step'] = 'after_orderbook_call'
-        _diag['last_step'] = 'after_orderbook'
+            # Get real orderbook levels
+            try:
+                ob_data = get_orderbook_levels()
+            except Exception as e:
+                _diag['last_loop_error'] = f"get_orderbook_levels: {type(e).__name__}: {e}"
+                ob_data = None
+            _diag['last_step'] = 'after_orderbook_call'
+            _diag['last_step'] = 'after_orderbook'
 
-        # Phase 1b: Cache latest orderbook for Dashboard (/latest/orderbook)
-        if ob_data:
+            # Phase 1b: Cache latest orderbook for Dashboard (/latest/orderbook)
+            if ob_data:
+                with _latest_data_lock:
+                    _latest_orderbook = {
+                        "kucoin_bids": ob_data.get('kucoin_bids', []),
+                        "kucoin_asks": ob_data.get('kucoin_asks', []),
+                        "mexc_bids": ob_data.get('mexc_bids', []),
+                        "mexc_asks": ob_data.get('mexc_asks', []),
+                        "ts": time.time()
+                    }
+
+            # Calculate minimum trade quantity (dynamically from exchange APIs)
+            mexc_min_qty = round((MEXC_MIN_USDT + 0.1) / m['ask']) if m['ask'] > 0 else 10
+            kucoin_min_qty = get_kucoin_min_qty(k['bid']) if k['bid'] > 0 else 10
+            min_trade_qty = max(mexc_min_qty, kucoin_min_qty)
+
+            # Find best tradeable spread using BIDIRECTIONAL VOLUME ACCUMULATION
+            # This replaces the old sweep that fixed one side - now both sides accumulate!
+            best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=True)
+
+            # Log sweep results every 30 seconds
+            if int(time.time()) % 10 == 0:
+                if ob_data:
+                    total_mexc = sum(x['qty'] for x in ob_data['mexc_asks'][:5])
+                    total_kucoin = sum(x['qty'] for x in ob_data['kucoin_bids'][:5])
+                    coin = COIN_SYMBOL.split('-')[0]
+                    log(f"Sweep: {strategy.upper()} strategy | MEXC top5={total_mexc:.0f} {coin}, KuCoin top5={total_kucoin:.0f} {coin}, min={min_trade_qty}")
+                    if best_trade:
+                        coin = COIN_SYMBOL.split('-')[0]
+                        log(f"  Best: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | profit_usdt=${best_trade['profit_usdt']:.4f} | profit_{coin}={best_trade['profit_mpc']:.4f}")
+                    else:
+                        log(f"  No tradeable spread found (spread below thresholds or insufficient volume)")
+
+            # Log volume check every 15s
+            if int(time.time()) % 15 == 0 and ob_data:
+                total_mexc_vol = sum(x['qty'] for x in ob_data['mexc_asks'][:5])
+                total_kucoin_vol = sum(x['qty'] for x in ob_data['kucoin_bids'][:5])
+                coin = COIN_SYMBOL.split('-')[0]
+                log(f"Orderbook: MEXC top5={total_mexc_vol:.0f} {coin}, KuCoin top5={total_kucoin_vol:.0f} {coin}, min_needed={min_trade_qty}")
+                coin = COIN_SYMBOL.split('-')[0]
+                log(f"Best trade: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin}" if best_trade else "No tradeable spread")
+
+            if not ob_data:
+                # Fallback when orderbook fetch fails
+                vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 10
+                vol_for_kucoin = max(get_kucoin_min_qty(k['bid']), vol_for_mexc)
+            else:
+                # Always define these for logging
+                vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 10
+                vol_for_kucoin = max(get_kucoin_min_qty(k['bid']), vol_for_mexc)
+
+
+            # Log every 30 seconds
+            if int(time.time()) % 10 == 0:
+                log(f"Prices: K={fmt_price(k['bid'],'kucoin')}/{fmt_price(k['ask'],'kucoin')} | M={fmt_price(m['bid'],'mexc')}/{fmt_price(m['ask'],'mexc')}")
+                log(f"  M->K spread: {spread_pct_mk:.2f}% | K->M spread: {spread_pct_km:.2f}%")
+
+            # Check limit order fills every 10 seconds
+            if time.time() - last_limit_check > 10:
+                check_limit_order_fills()
+                last_limit_check = time.time()
+
+            # Determine which spread direction is profitable
+            profitable_spread = max(spread_pct_km, spread_pct_mk)
+            direction = "K→M" if spread_pct_km >= spread_pct_mk else "M→K"
+            _diag['last_step'] = 'after_profitable_spread'
+            _diag['last_step'] = 'after_profitable'
+
+            # Phase 1b: Cache latest spreads for Dashboard (/latest/spreads)
             with _latest_data_lock:
-                _latest_orderbook = {
-                    "kucoin_bids": ob_data.get('kucoin_bids', []),
-                    "kucoin_asks": ob_data.get('kucoin_asks', []),
-                    "mexc_bids": ob_data.get('mexc_bids', []),
-                    "mexc_asks": ob_data.get('mexc_asks', []),
+                _latest_spreads = {
+                    "kucoin": {"bid": k['bid'], "ask": k['ask']},
+                    "mexc": {"bid": m['bid'], "ask": m['ask']},
+                    "spread_mk_pct": spread_pct_mk,
+                    "spread_km_pct": spread_pct_km,
+                    "profitable_spread": profitable_spread,
+                    "direction": direction,
                     "ts": time.time()
                 }
+                _diag['cache_update_count'] = _diag.get('cache_update_count', 0) + 1
+                _diag['last_cache_ts'] = _latest_spreads['ts']
+                _diag['last_cache_k_bid'] = k['bid']
+                _diag['last_step'] = 'after_cache_update'
 
-        # Calculate minimum trade quantity (dynamically from exchange APIs)
-        mexc_min_qty = round((MEXC_MIN_USDT + 0.1) / m['ask']) if m['ask'] > 0 else 10
-        kucoin_min_qty = get_kucoin_min_qty(k['bid']) if k['bid'] > 0 else 10
-        min_trade_qty = max(mexc_min_qty, kucoin_min_qty)
-
-        # Find best tradeable spread using BIDIRECTIONAL VOLUME ACCUMULATION
-        # This replaces the old sweep that fixed one side - now both sides accumulate!
-        best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=True)
-
-        # Log sweep results every 30 seconds
-        if int(time.time()) % 10 == 0:
-            if ob_data:
-                total_mexc = sum(x['qty'] for x in ob_data['mexc_asks'][:5])
-                total_kucoin = sum(x['qty'] for x in ob_data['kucoin_bids'][:5])
-                coin = COIN_SYMBOL.split('-')[0]
-                log(f"Sweep: {strategy.upper()} strategy | MEXC top5={total_mexc:.0f} {coin}, KuCoin top5={total_kucoin:.0f} {coin}, min={min_trade_qty}")
-                if best_trade:
-                    coin = COIN_SYMBOL.split('-')[0]
-                    log(f"  Best: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | profit_usdt=${best_trade['profit_usdt']:.4f} | profit_{coin}={best_trade['profit_mpc']:.4f}")
-                else:
-                    log(f"  No tradeable spread found (spread below thresholds or insufficient volume)")
-
-        # Log volume check every 15s
-        if int(time.time()) % 15 == 0 and ob_data:
-            total_mexc_vol = sum(x['qty'] for x in ob_data['mexc_asks'][:5])
-            total_kucoin_vol = sum(x['qty'] for x in ob_data['kucoin_bids'][:5])
-            coin = COIN_SYMBOL.split('-')[0]
-            log(f"Orderbook: MEXC top5={total_mexc_vol:.0f} {coin}, KuCoin top5={total_kucoin_vol:.0f} {coin}, min_needed={min_trade_qty}")
-            coin = COIN_SYMBOL.split('-')[0]
-            log(f"Best trade: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin}" if best_trade else "No tradeable spread")
-
-        if not ob_data:
-            # Fallback when orderbook fetch fails
-            vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 10
-            vol_for_kucoin = max(get_kucoin_min_qty(k['bid']), vol_for_mexc)
-        else:
-            # Always define these for logging
-            vol_for_mexc = round((MEXC_MIN_USDT + 1) / m['ask']) if m['ask'] > 0 else 10
-            vol_for_kucoin = max(get_kucoin_min_qty(k['bid']), vol_for_mexc)
-
-
-        # Log every 30 seconds
-        if int(time.time()) % 10 == 0:
-            log(f"Prices: K={fmt_price(k['bid'],'kucoin')}/{fmt_price(k['ask'],'kucoin')} | M={fmt_price(m['bid'],'mexc')}/{fmt_price(m['ask'],'mexc')}")
-            log(f"  M->K spread: {spread_pct_mk:.2f}% | K->M spread: {spread_pct_km:.2f}%")
-
-        # Check limit order fills every 10 seconds
-        if time.time() - last_limit_check > 10:
-            check_limit_order_fills()
-            last_limit_check = time.time()
-
-        # Determine which spread direction is profitable
-        profitable_spread = max(spread_pct_km, spread_pct_mk)
-        direction = "K→M" if spread_pct_km >= spread_pct_mk else "M→K"
-        _diag['last_step'] = 'after_profitable_spread'
-        _diag['last_step'] = 'after_profitable'
-
-        # Phase 1b: Cache latest spreads for Dashboard (/latest/spreads)
-        with _latest_data_lock:
-            _latest_spreads = {
-                "kucoin": {"bid": k['bid'], "ask": k['ask']},
-                "mexc": {"bid": m['bid'], "ask": m['ask']},
-                "spread_mk_pct": spread_pct_mk,
-                "spread_km_pct": spread_pct_km,
-                "profitable_spread": profitable_spread,
-                "direction": direction,
-                "ts": time.time()
-            }
-            _diag['cache_update_count'] = _diag.get('cache_update_count', 0) + 1
-            _diag['last_cache_ts'] = _latest_spreads['ts']
-            _diag['last_cache_k_bid'] = k['bid']
-            _diag['last_step'] = 'after_cache_update'
-
-        # Log periodic status every 30 seconds for monitoring
-        if int(time.time()) % 10 == 0:
-            log_decision("STATUS_CHECK",
-                state=state,
-                pair_enabled=str(pair_enabled),
-                strategy=strategy,
-                log_level=f"Level {get_log_level()}",
-                spread_mk=f"{spread_pct_mk:.3f}%",
-                spread_km=f"{spread_pct_km:.3f}%",
-                best_spread=f"{profitable_spread:.3f}%",
-                direction=direction,
-                threshold=f"{threshold_start:.2f}%",
-                threshold_stop=f"{threshold_stop:.2f}%",
-                vol_mexc=f"{vol_for_mexc:.0f}",
-                vol_kucoin=f"{vol_for_kucoin:.0f}"
-            )
-
-        # Trade BOTH directions when profitable!
-        # Check for hourly wallet snapshot (BEFORE spread check, so it runs every loop)
-        take_wallet_snapshot()
-        
-        if not pair_enabled or not is_active():
-            state = STATE_WAITING
+            # Log periodic status every 30 seconds for monitoring
             if int(time.time()) % 10 == 0:
-                log(f"INAKTIV - keine Trades")
-            time.sleep(1)
-            continue
+                log_decision("STATUS_CHECK",
+                    state=state,
+                    pair_enabled=str(pair_enabled),
+                    strategy=strategy,
+                    log_level=f"Level {get_log_level()}",
+                    spread_mk=f"{spread_pct_mk:.3f}%",
+                    spread_km=f"{spread_pct_km:.3f}%",
+                    best_spread=f"{profitable_spread:.3f}%",
+                    direction=direction,
+                    threshold=f"{threshold_start:.2f}%",
+                    threshold_stop=f"{threshold_stop:.2f}%",
+                    vol_mexc=f"{vol_for_mexc:.0f}",
+                    vol_kucoin=f"{vol_for_kucoin:.0f}"
+                )
 
-        # Log condition check only when state CHANGES (reduce spam)
-        current_spread_ok = profitable_spread >= threshold_start
-        if current_spread_ok != last_spread_ok:
-            log_condition("Spread >= START_THRESHOLD",
-                current_spread_ok,
-                expected=f"{threshold_start}%",
-                details=f"actual={profitable_spread:.3f}%"
-            )
-            last_spread_ok = current_spread_ok
+            # Trade BOTH directions when profitable!
+            # Check for hourly wallet snapshot (BEFORE spread check, so it runs every loop)
+            take_wallet_snapshot()
+        
+            if not pair_enabled or not is_active():
+                state = STATE_WAITING
+                if int(time.time()) % 10 == 0:
+                    log(f"INAKTIV - keine Trades")
+                time.sleep(1)
+                continue
 
-        # State machine logic
-        # IMPORTANT: Check balance BEFORE setting trade_in_progress=True
-        # This prevents the flag from being set when we can't actually trade
-        # Hysteresis logic: Once activated by threshold_start, stay active until threshold_stop is breached
-        # Check if we need to arm or disarm hysteresis
-        if not hysteresis_armed and profitable_spread >= threshold_start:
-            # First trigger - arm hysteresis
-            hysteresis_armed = True
-            log(f"🔘 HYSTERESIS ARMED: spread={profitable_spread:.2f}% >= {threshold_start}%", "DECISION")
-        elif hysteresis_armed and profitable_spread < threshold_stop:
-            # Breach of stop threshold - disarm hysteresis
-            hysteresis_armed = False
-            log(f"🔴 HYSTERESIS DISARMED: spread={profitable_spread:.2f}% < {threshold_stop}%", "DECISION")
+            # Log condition check only when state CHANGES (reduce spam)
+            current_spread_ok = profitable_spread >= threshold_start
+            if current_spread_ok != last_spread_ok:
+                log_condition("Spread >= START_THRESHOLD",
+                    current_spread_ok,
+                    expected=f"{threshold_start}%",
+                    details=f"actual={profitable_spread:.3f}%"
+                )
+                last_spread_ok = current_spread_ok
 
-        if state == STATE_WAITING:
-            # Trade if: spread >= threshold_start (initial activation) OR (hysteresis armed AND spread >= threshold_stop)
-            trade_condition = (profitable_spread >= threshold_start) or (hysteresis_armed and profitable_spread >= threshold_stop)
-            if trade_condition and not trade_in_progress:
+            # State machine logic
+            # IMPORTANT: Check balance BEFORE setting trade_in_progress=True
+            # This prevents the flag from being set when we can't actually trade
+            # Hysteresis logic: Once activated by threshold_start, stay active until threshold_stop is breached
+            # Check if we need to arm or disarm hysteresis
+            if not hysteresis_armed and profitable_spread >= threshold_start:
+                # First trigger - arm hysteresis
+                hysteresis_armed = True
+                log(f"🔘 HYSTERESIS ARMED: spread={profitable_spread:.2f}% >= {threshold_start}%", "DECISION")
+            elif hysteresis_armed and profitable_spread < threshold_stop:
+                # Breach of stop threshold - disarm hysteresis
+                hysteresis_armed = False
+                log(f"🔴 HYSTERESIS DISARMED: spread={profitable_spread:.2f}% < {threshold_stop}%", "DECISION")
+
+            if state == STATE_WAITING:
+                # Trade if: spread >= threshold_start (initial activation) OR (hysteresis armed AND spread >= threshold_stop)
+                trade_condition = (profitable_spread >= threshold_start) or (hysteresis_armed and profitable_spread >= threshold_stop)
+                if trade_condition and not trade_in_progress:
                 
-                # Pre-flight balance check BEFORE entering trade
-                # Determine direction and simulate balance check
-                if best_trade:
-                    dir_check = best_trade['dir']  # e.g. 'M→K' or 'K→M'
-                elif spread_pct_km >= spread_pct_mk:
-                    dir_check = 'K→M'
-                else:
-                    dir_check = 'M→K'
+                    # Pre-flight balance check BEFORE entering trade
+                    # Determine direction and simulate balance check
+                    if best_trade:
+                        dir_check = best_trade['dir']  # e.g. 'M→K' or 'K→M'
+                    elif spread_pct_km >= spread_pct_mk:
+                        dir_check = 'K→M'
+                    else:
+                        dir_check = 'M→K'
                 
-                # Estimate quantities
-                if best_trade:
-                    check_qty = math.floor(best_trade['vol'])
-                    check_buy = best_trade['buy']
-                    check_sell = best_trade['sell']
-                else:
-                    check_qty = min(vol_for_mexc, vol_for_kucoin)
-                    check_buy = m['ask'] if dir_check == 'M→K' else k['ask']
-                    check_sell = k['bid'] if dir_check == 'M→K' else m['bid']
+                    # Estimate quantities
+                    if best_trade:
+                        check_qty = math.floor(best_trade['vol'])
+                        check_buy = best_trade['buy']
+                        check_sell = best_trade['sell']
+                    else:
+                        check_qty = min(vol_for_mexc, vol_for_kucoin)
+                        check_buy = m['ask'] if dir_check == 'M→K' else k['ask']
+                        check_sell = k['bid'] if dir_check == 'M→K' else m['bid']
                 
+                    # prepare_trade() already wallet-capped vol. Skip if no viable trade.
+                    if not best_trade:
+                        # ACHTUNG: 'return' wuerde main() BEENDEN (Prozess-Exit ->
+                        # Docker-Neustart -> SAFETY-Block). BUG-FIX: nur diese
+                        # Iteration ueberspringen, der Bot laeuft weiter.
+                        log(f"No viable trade plan despite spread >= threshold_start - skipping cycle", "WARNING")
+                        state = STATE_WAITING
+                        trade_in_progress = False
+                        continue
+                
+                    # Balance OK - proceed with trade
+                    log(f"🚀 TRIGGER: spread={profitable_spread:.2f}% >= threshold={threshold_start}%", "DECISION")
+                    state = STATE_RUNNING
+                    trade_in_progress = True
+                    # Hysteresis stays armed - we already set it above
+
+                    # Execute best trade found by sweep
+                    if best_trade:
+                        # KuCoin requires WHOLE NUMBER quantities (baseIncrement=1 for MPC-USDT)
+                        # Fractional quantities like 119.34 cause 'Order size increment invalid' error
+                        # IMPORTANT: For Market BUY orders (takes liquidity from orderbook)
+                        # -> use math.floor() to NEVER exceed available volume
+                        # For Limit SELL orders (creates new order on book) -> can use round()
+                        vol_for_mexc = math.floor(best_trade['vol'])
+                        vol_for_kucoin = math.floor(best_trade['vol'])
+                        strategy = best_trade.get('strategy', strategy)
+                        coin = COIN_SYMBOL.split('-')[0]
+                        log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={strategy}")
+                        # CRITICAL FIX 2026-10-14: Use dynamic market/limit from best_trade (not hardcoded by direction)
+                        # thinner_side tells us which side has the thinner order book → that side gets the market order
+                        _thinner_side = best_trade.get('thinner_side', 'SELL')
+                        if _thinner_side == 'SELL':
+                            # Sell side thinner → Market BUY on sell side, Limit SELL on buy side
+                            _market_ex = best_trade['sell_ex']
+                            _limit_ex = best_trade['buy_ex']
+                            _market_side = 'BUY'
+                        else:  # _thinner_side == 'BUY'
+                            # Buy side thinner → Market SELL on buy side, Limit BUY on sell side
+                            _market_ex = best_trade['buy_ex']
+                            _limit_ex = best_trade['sell_ex']
+                            _market_side = 'SELL'
+                        _vol = vol_for_kucoin if _market_ex == 'KUCOIN' else vol_for_mexc
+                        success, trade_id = execute_trade_market_buy_limit_sell(
+                            _market_ex, _limit_ex, _vol,
+                            best_trade['buy'], best_trade['sell'],
+                            strategy, best_trade['pct'],
+                            market_side=_market_side
+                        )
+                    elif spread_pct_km >= spread_pct_mk:
+                        # Fallback: no best_trade, use raw orderbook. Market is always on the buy side.
+                        success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', math.floor(vol_for_kucoin), k['ask'], m['bid'], strategy, spread_pct_km, market_side='BUY')
+                    else:
+                        success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], strategy, spread_pct_mk, market_side='BUY')
+                
+                    # Only complete trade if SUCCESS=True
+                    if success:
+                        log(f"✅ Trade executed - Limit Order placed successfully")
+                        # CRITICAL: Re-fetch orderbook BEFORE checking for next trade
+                        # The market buy changed the orderbook - we need fresh data
+                        log(f"📡 Refreshing orderbook after trade execution...")
+                        ob_data = get_orderbook_levels()
+                        if ob_data:
+                            log(f"📡 Orderbook refreshed - checking for next trade")
+                        else:
+                            log(f"⚠️ Orderbook refresh failed - waiting...")
+                            time.sleep(2)
+                    
+                        # Reset trade_in_progress to allow next trade check
+                        trade_in_progress = False
+                        state = STATE_RUNNING  # Stay in RUNNING to check for next trade
+                    else:
+                        log(f"⚠️ Trade execution failed (API error). Resetting.")
+                        trade_in_progress = False
+                        state = STATE_WAITING
+        
+            # Re-check spread before EACH trade in RUNNING state (critical bug fix!)
+            # Re-check spread before EACH trade in RUNNING state
+            # IMPORTANT: Use FRESH orderbook data (not stale get_prices data)!
+            if state == STATE_RUNNING and not trade_in_progress:
+                # Get FRESH orderbook data for spread check (not stale prices from get_prices)
+                ob_data = get_orderbook_levels()
+                if not ob_data:
+                    # No fresh data - pause and retry next cycle
+                    time.sleep(1)
+                    continue
+            
+                # Calculate fresh spread from orderbook data
+                # SAFEGUARD: Check all list accesses to prevent IndexError crashes
+                kucoin_bids = ob_data.get('kucoin_bids', [])
+                mexc_asks = ob_data.get('mexc_asks', [])
+                mexc_bids = ob_data.get('mexc_bids', [])
+                kucoin_asks = ob_data.get('kucoin_asks', [])
+            
+                if not kucoin_bids or not mexc_asks:
+                    log(f"⚠️ Orderbook empty - pausing and retrying next cycle")
+                    time.sleep(1)
+                    continue
+            
+                best_k_bid = kucoin_bids[0]['price'] if kucoin_bids else 0
+                best_m_ask = mexc_asks[0]['price'] if mexc_asks else 0
+                best_m_bid = mexc_bids[0]['price'] if mexc_bids else 0
+                best_k_ask = kucoin_asks[0]['price'] if kucoin_asks else 0
+            
+                fresh_spread_pct_mk = ((best_k_bid - best_m_ask) / best_m_ask * 100) if best_m_ask > 0 else 0
+                fresh_spread_pct_km = ((best_m_bid - best_k_ask) / best_k_ask * 100) if best_k_ask > 0 else 0
+                fresh_profitable_spread = max(fresh_spread_pct_mk, fresh_spread_pct_km)
+            
+                # STOP if spread below stop threshold
+                if fresh_profitable_spread < threshold_stop:
+                    log(f"⏹ STOPPING: fresh spread={fresh_profitable_spread:.3f}% < STOP_THRESHOLD={threshold_stop}%")
+                    state = STATE_WAITING
+                    trade_in_progress = False
+                    continue
+            
+                # START check removed: hysteresis handles spread between stop and start.
+                # Once hysteresis is armed (spread crossed threshold_start once), bot
+                # stays in RUNNING until fresh spread falls below threshold_stop.
+                # This enables true hysteresis behavior — trades continue across the
+                # spread-band between threshold_stop and threshold_start.
+                if fresh_profitable_spread < threshold_start:
+                    log(f"⏸ START-Below ({fresh_profitable_spread:.3f}% < {threshold_start}%) — hysteresis armed, stay in RUNNING, fall through to trade check")
+                    trade_in_progress = False
+                    # NO state change, NO continue: fall through to calculate_best_trade()
+            
+                # Recalculate best trade with fresh orderbook data
+                best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=True)
+            
+                if not best_trade:
+                    log(f"No tradeable spread found (spread below thresholds or insufficient volume)")
+                    state = STATE_WAITING
+                    trade_in_progress = False
+                    continue
+            
                 # prepare_trade() already wallet-capped vol. Skip if no viable trade.
                 if not best_trade:
-                    return
-                
-                # Balance OK - proceed with trade
-                log(f"🚀 TRIGGER: spread={profitable_spread:.2f}% >= threshold={threshold_start}%", "DECISION")
-                state = STATE_RUNNING
+                    state = STATE_WAITING
+                    trade_in_progress = False
+                    continue
+            
                 trade_in_progress = True
-                # Hysteresis stays armed - we already set it above
-
-                # Execute best trade found by sweep
-                if best_trade:
-                    # KuCoin requires WHOLE NUMBER quantities (baseIncrement=1 for MPC-USDT)
-                    # Fractional quantities like 119.34 cause 'Order size increment invalid' error
-                    # IMPORTANT: For Market BUY orders (takes liquidity from orderbook)
-                    # -> use math.floor() to NEVER exceed available volume
-                    # For Limit SELL orders (creates new order on book) -> can use round()
-                    vol_for_mexc = math.floor(best_trade['vol'])
-                    vol_for_kucoin = math.floor(best_trade['vol'])
-                    strategy = best_trade.get('strategy', strategy)
-                    coin = COIN_SYMBOL.split('-')[0]
-                    log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={strategy}")
-                    # CRITICAL FIX 2026-10-14: Use dynamic market/limit from best_trade (not hardcoded by direction)
-                    # thinner_side tells us which side has the thinner order book → that side gets the market order
-                    _thinner_side = best_trade.get('thinner_side', 'SELL')
-                    if _thinner_side == 'SELL':
-                        # Sell side thinner → Market BUY on sell side, Limit SELL on buy side
-                        _market_ex = best_trade['sell_ex']
-                        _limit_ex = best_trade['buy_ex']
-                        _market_side = 'BUY'
-                    else:  # _thinner_side == 'BUY'
-                        # Buy side thinner → Market SELL on buy side, Limit BUY on sell side
-                        _market_ex = best_trade['buy_ex']
-                        _limit_ex = best_trade['sell_ex']
-                        _market_side = 'SELL'
-                    _vol = vol_for_kucoin if _market_ex == 'KUCOIN' else vol_for_mexc
-                    success, trade_id = execute_trade_market_buy_limit_sell(
-                        _market_ex, _limit_ex, _vol,
-                        best_trade['buy'], best_trade['sell'],
-                        strategy, best_trade['pct'],
-                        market_side=_market_side
-                    )
-                elif spread_pct_km >= spread_pct_mk:
-                    # Fallback: no best_trade, use raw orderbook. Market is always on the buy side.
-                    success, trade_id = execute_trade_market_buy_limit_sell('KUCOIN', 'MEXC', math.floor(vol_for_kucoin), k['ask'], m['bid'], strategy, spread_pct_km, market_side='BUY')
-                else:
-                    success, trade_id = execute_trade_market_buy_limit_sell('MEXC', 'KUCOIN', math.floor(vol_for_mexc), m['ask'], k['bid'], strategy, spread_pct_mk, market_side='BUY')
-                
+                vol_for_mexc = math.floor(best_trade['vol'])
+                vol_for_kucoin = math.floor(best_trade['vol'])
+                strategy = best_trade.get('strategy', strategy)
+                coin = COIN_SYMBOL.split('-')[0]
+                log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={strategy}")
+                # CRITICAL FIX 2026-10-14: Use dynamic market/limit from best_trade (not hardcoded by direction)
+                # thinner_side tells us which side has the thinner order book → that side gets the market order
+                _thinner_side = best_trade.get('thinner_side', 'SELL')
+                if _thinner_side == 'SELL':
+                    # Sell side thinner → Market BUY on sell side, Limit SELL on buy side
+                    _market_ex = best_trade['sell_ex']
+                    _limit_ex = best_trade['buy_ex']
+                    _market_side = 'BUY'
+                else:  # _thinner_side == 'BUY'
+                    # Buy side thinner → Market SELL on buy side, Limit BUY on sell side
+                    _market_ex = best_trade['buy_ex']
+                    _limit_ex = best_trade['sell_ex']
+                    _market_side = 'SELL'
+                _vol = vol_for_kucoin if _market_ex == 'KUCOIN' else vol_for_mexc
+                success, trade_id = execute_trade_market_buy_limit_sell(
+                    _market_ex, _limit_ex, _vol,
+                    best_trade['buy'], best_trade['sell'],
+                    strategy, best_trade['pct'],
+                    market_side=_market_side
+                )
+            
                 # Only complete trade if SUCCESS=True
                 if success:
-                    log(f"✅ Trade executed - Limit Order placed successfully")
-                    # CRITICAL: Re-fetch orderbook BEFORE checking for next trade
-                    # The market buy changed the orderbook - we need fresh data
-                    log(f"📡 Refreshing orderbook after trade execution...")
-                    ob_data = get_orderbook_levels()
-                    if ob_data:
-                        log(f"📡 Orderbook refreshed - checking for next trade")
-                    else:
-                        log(f"⚠️ Orderbook refresh failed - waiting...")
-                        time.sleep(2)
-                    
-                    # Reset trade_in_progress to allow next trade check
-                    trade_in_progress = False
-                    state = STATE_RUNNING  # Stay in RUNNING to check for next trade
+                    log(f"✅ Trade executed - staying in RUNNING for next trade check (hysteresis-consistent)")
+                    state = STATE_RUNNING  # Consistent with Pfad A (Z. 3539)
+                    trade_in_progress = False  # Allow next trade to start
                 else:
                     log(f"⚠️ Trade execution failed (API error). Resetting.")
                     trade_in_progress = False
                     state = STATE_WAITING
-        
-        # Re-check spread before EACH trade in RUNNING state (critical bug fix!)
-        # Re-check spread before EACH trade in RUNNING state
-        # IMPORTANT: Use FRESH orderbook data (not stale get_prices data)!
-        if state == STATE_RUNNING and not trade_in_progress:
-            # Get FRESH orderbook data for spread check (not stale prices from get_prices)
-            ob_data = get_orderbook_levels()
-            if not ob_data:
-                # No fresh data - pause and retry next cycle
-                time.sleep(1)
-                continue
-            
-            # Calculate fresh spread from orderbook data
-            # SAFEGUARD: Check all list accesses to prevent IndexError crashes
-            kucoin_bids = ob_data.get('kucoin_bids', [])
-            mexc_asks = ob_data.get('mexc_asks', [])
-            mexc_bids = ob_data.get('mexc_bids', [])
-            kucoin_asks = ob_data.get('kucoin_asks', [])
-            
-            if not kucoin_bids or not mexc_asks:
-                log(f"⚠️ Orderbook empty - pausing and retrying next cycle")
-                time.sleep(1)
-                continue
-            
-            best_k_bid = kucoin_bids[0]['price'] if kucoin_bids else 0
-            best_m_ask = mexc_asks[0]['price'] if mexc_asks else 0
-            best_m_bid = mexc_bids[0]['price'] if mexc_bids else 0
-            best_k_ask = kucoin_asks[0]['price'] if kucoin_asks else 0
-            
-            fresh_spread_pct_mk = ((best_k_bid - best_m_ask) / best_m_ask * 100) if best_m_ask > 0 else 0
-            fresh_spread_pct_km = ((best_m_bid - best_k_ask) / best_k_ask * 100) if best_k_ask > 0 else 0
-            fresh_profitable_spread = max(fresh_spread_pct_mk, fresh_spread_pct_km)
-            
-            # STOP if spread below stop threshold
-            if fresh_profitable_spread < threshold_stop:
-                log(f"⏹ STOPPING: fresh spread={fresh_profitable_spread:.3f}% < STOP_THRESHOLD={threshold_stop}%")
-                state = STATE_WAITING
-                trade_in_progress = False
-                continue
-            
-            # START check removed: hysteresis handles spread between stop and start.
-            # Once hysteresis is armed (spread crossed threshold_start once), bot
-            # stays in RUNNING until fresh spread falls below threshold_stop.
-            # This enables true hysteresis behavior — trades continue across the
-            # spread-band between threshold_stop and threshold_start.
-            if fresh_profitable_spread < threshold_start:
-                log(f"⏸ START-Below ({fresh_profitable_spread:.3f}% < {threshold_start}%) — hysteresis armed, stay in RUNNING, fall through to trade check")
-                trade_in_progress = False
-                # NO state change, NO continue: fall through to calculate_best_trade()
-            
-            # Recalculate best trade with fresh orderbook data
-            best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=True)
-            
-            if not best_trade:
-                log(f"No tradeable spread found (spread below thresholds or insufficient volume)")
-                state = STATE_WAITING
-                trade_in_progress = False
-                continue
-            
-            # prepare_trade() already wallet-capped vol. Skip if no viable trade.
-            if not best_trade:
-                state = STATE_WAITING
-                trade_in_progress = False
-                continue
-            
-            trade_in_progress = True
-            vol_for_mexc = math.floor(best_trade['vol'])
-            vol_for_kucoin = math.floor(best_trade['vol'])
-            strategy = best_trade.get('strategy', strategy)
-            coin = COIN_SYMBOL.split('-')[0]
-            log(f"🚀 Executing: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | strategy={strategy}")
-            # CRITICAL FIX 2026-10-14: Use dynamic market/limit from best_trade (not hardcoded by direction)
-            # thinner_side tells us which side has the thinner order book → that side gets the market order
-            _thinner_side = best_trade.get('thinner_side', 'SELL')
-            if _thinner_side == 'SELL':
-                # Sell side thinner → Market BUY on sell side, Limit SELL on buy side
-                _market_ex = best_trade['sell_ex']
-                _limit_ex = best_trade['buy_ex']
-                _market_side = 'BUY'
-            else:  # _thinner_side == 'BUY'
-                # Buy side thinner → Market SELL on buy side, Limit BUY on sell side
-                _market_ex = best_trade['buy_ex']
-                _limit_ex = best_trade['sell_ex']
-                _market_side = 'SELL'
-            _vol = vol_for_kucoin if _market_ex == 'KUCOIN' else vol_for_mexc
-            success, trade_id = execute_trade_market_buy_limit_sell(
-                _market_ex, _limit_ex, _vol,
-                best_trade['buy'], best_trade['sell'],
-                strategy, best_trade['pct'],
-                market_side=_market_side
-            )
-            
-            # Only complete trade if SUCCESS=True
-            if success:
-                log(f"✅ Trade executed - staying in RUNNING for next trade check (hysteresis-consistent)")
-                state = STATE_RUNNING  # Consistent with Pfad A (Z. 3539)
-                trade_in_progress = False  # Allow next trade to start
-            else:
-                log(f"⚠️ Trade execution failed (API error). Resetting.")
-                trade_in_progress = False
-                state = STATE_WAITING
 
-        # Check for hourly wallet snapshot
-        take_wallet_snapshot()
+            # Check for hourly wallet snapshot
+            take_wallet_snapshot()
 
-        # Phase 1b diagnostic: mark iteration as complete (only reached if no crash above)
-        _last_loop_iteration_ts = time.time()
-        _diag['last_iteration_ts'] = _last_loop_iteration_ts
-        _diag['last_step'] = 'complete'
+            # Phase 1b diagnostic: mark iteration as complete (only reached if no crash above)
+            _last_loop_iteration_ts = time.time()
+            _diag['last_iteration_ts'] = _last_loop_iteration_ts
+            _diag['last_step'] = 'complete'
 
-        # F3: faster polling when actively scanning for opportunities
-        time.sleep(LOOP_SLEEP_SEC)
+            # F3: faster polling when actively scanning for opportunities
+            time.sleep(LOOP_SLEEP_SEC)
+        except Exception as e:
+            # Fehler protokollieren, State markieren, mit der naechsten
+            # Iteration fortfahren. Der Bot bleibt aktiv.
+            _iteration_failed = True
+            _error_count += 1
+            _consecutive_errors += 1
+            _last_error = f"{type(e).__name__}: {e}"
+            state = STATE_ERROR
+            trade_in_progress = False
+            log(f"LOOP ERROR #{_error_count} (konsekutiv: {_consecutive_errors}): {_last_error}", "ERROR")
+            try:
+                import traceback as _tb
+                for _t in _tb.format_exc().splitlines()[-6:]:
+                    log(f"    | {_t}", "ERROR")
+            except Exception:
+                pass
+            # Cooldown, damit ein dauerhaft fehlerhafter Zustand nicht
+            # die CPU frisst. Danach naechster Versuch.
+            time.sleep(LOOP_SLEEP_SEC)
+            continue
+        finally:
+            # laeuft auch bei 'continue' - der Recovery-Reset darf nicht
+            # durch die 7 continue-Stellen im Rumpf uebersprungen werden.
+            if not _iteration_failed and _consecutive_errors:
+                log(f"Loop recovered after {_consecutive_errors} error(s)", "INFO")
+                _consecutive_errors = 0
+                _last_error = None
+
 
 if __name__ == '__main__':
     main()

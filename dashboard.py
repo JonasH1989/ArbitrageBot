@@ -133,10 +133,16 @@ def render_orderbook_spread_view(threshold_start=1.0):
             _bs = requests.get(f"{BOT_CACHE_URL}/state", timeout=2).json()
         except:
             _bs = {}
-        _se = {'WAITING': '🟡', 'RUNNING': '🟢'}.get(_bs.get('state', '?'), '⚪')
+        _se = {'WAITING': '🟡', 'RUNNING': '🟢', 'ERROR': '🔴'}.get(_bs.get('state', '?'), '⚪')
         _he = '🟢' if _bs.get('hysteresis_armed') else '⚪'
         _pe = '🟢' if _bs.get('pair_enabled') else '🔴'
         st.markdown(f"**Legende:** 🟢 Threshold erfüllt | 🟡 Positiv aber < Threshold | 🔴 Negativ  |  **State:** {_se} {_bs.get('state', '?')}  |  Hyst: {_he}  |  Pair: {_pe}")
+        # Loop-Waechter: Fehler seit Bot-Start und letzter Fehler
+        _ec = _bs.get('error_count', 0) or 0
+        _ce = _bs.get('consecutive_errors', 0) or 0
+        _le = _bs.get('last_error')
+        if _ec:
+            st.warning(f"⚠️ Loop-Fehler: {_ec} gesamt, {_ce} aufeinanderfolgend | letzter: {_le}")
         st.markdown("---")
         col_km, col_mk = st.columns(2)
         with col_km:
