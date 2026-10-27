@@ -112,15 +112,33 @@ def fetch_l2_orderbook(symbol_mexc="MPCUSDT", symbol_kucoin="MPC-USDT"):
 # ============================================================================
 def _spread_band(pct, threshold_start, threshold_stop):
     """Farbstufe fuer einen Spread (Jonas):
-       gruen  ab threshold_start   (Trade moeglich)
-       gelb   zwischen stop und start (Hysterese-Fenster)
-       rot    unter threshold_stop (kein Trade)
+       gruen      ab threshold_start        - Trade moeglich
+       hellgruen  zwischen stop und start   - Hysterese-Fenster
+       gelb       ab 0% bis stop            - positiv, aber zu gering
+       rot        unter 0%                  - negativ
     """
     if pct >= threshold_start:
         return 'green'
     if pct >= threshold_stop:
+        return 'lightgreen'
+    if pct >= 0:
         return 'yellow'
     return 'red'
+
+
+# Farbtabelle je Band: Level-Hintergrund, Spread-Box-Hintergrund, Schriftfarbe
+_SPREAD_BAND_COLORS = {
+    'green':      ('rgba(0,255,0,0.15)',   'rgba(0,255,0,0.2)',   '#00c853'),
+    'lightgreen': ('rgba(76,175,80,0.18)', 'rgba(76,175,80,0.25)', '#4caf50'),
+    'yellow':     ('rgba(255,235,59,0.15)','rgba(255,235,59,0.2)', '#ffc107'),
+    'red':        ('rgba(244,67,54,0.1)',  'rgba(244,67,54,0.2)',  '#f44336'),
+}
+_SPREAD_BAND_EMOJI = {
+    'green': '🟢',      # 🟢 gruener Kreis
+    'lightgreen': '🟩',  # 🟩 gruener Wuerfel (hellgruen)
+    'yellow': '🟡',     # 🟡 gelber Kreis
+    'red': '🔴',        # 🔴 roter Kreis
+}
 
 
 @st.fragment(run_every=1)
@@ -149,7 +167,7 @@ def render_orderbook_spread_view(threshold_start=1.0, threshold_stop=0.5):
         _se = {'WAITING': '🟡', 'RUNNING': '🟢', 'ERROR': '🔴'}.get(_bs.get('state', '?'), '⚪')
         _he = '🟢' if _bs.get('hysteresis_armed') else '⚪'
         _pe = '🟢' if _bs.get('pair_enabled') else '🔴'
-        st.markdown(f"**Legende:** 🟢 ≥ Start ({threshold_start:.1f}%) | 🟡 Hysterese-Fenster ({threshold_stop:.1f}–{threshold_start:.1f}%) | 🔴 < Stop ({threshold_stop:.1f}%)  |  **State:** {_se} {_bs.get('state', '?')}  |  Hyst: {_he}  |  Pair: {_pe}")
+        st.markdown(f"**Legende:** 🟢 ≥ Start ({threshold_start:.1f}%) | 🟩 Hysterese-Fenster ({threshold_stop:.1f}–{threshold_start:.1f}%) | 🟡 positiv (< {threshold_stop:.1f}%) | 🔴 negativ  |  **State:** {_se} {_bs.get('state', '?')}  |  Hyst: {_he}  |  Pair: {_pe}")
         # Loop-Waechter: Fehler seit Bot-Start und letzter Fehler
         _ec = _bs.get('error_count', 0) or 0
         _ce = _bs.get('consecutive_errors', 0) or 0
@@ -171,11 +189,11 @@ def render_orderbook_spread_view(threshold_start=1.0, threshold_stop=0.5):
                 m_bid_p = mexc_bids[0][0] if mexc_bids else 0
                 profit = m_bid_p - k_ask_p
                 pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
-                bg = {"green": "rgba(0,255,0,0.15)", "yellow": "rgba(255,235,59,0.15)", "red": "rgba(244,67,54,0.1)"}[_spread_band(pct, threshold_start, threshold_stop)]
+                bg = _SPREAD_BAND_COLORS[_spread_band(pct, threshold_start, threshold_stop)][0]
                 st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #f44336; font-weight: bold;'>${k_ask_p:.6f}</span> <span style='color: #f44336;'>|</span> <span style='color: #f44336;'>{k_ask_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
             _km_band = _spread_band(spread_pct_km, threshold_start, threshold_stop)
-            km_spread_bg = {"green": "rgba(0,255,0,0.2)", "yellow": "rgba(255,235,59,0.2)", "red": "rgba(244,67,54,0.2)"}[_km_band]
-            km_spread_color = {"green": "#00c853", "yellow": "#ffc107", "red": "#f44336"}[_km_band]
+            km_spread_bg = _SPREAD_BAND_COLORS[_km_band][1]
+            km_spread_color = _SPREAD_BAND_COLORS[_km_band][2]
             st.markdown("---")
             st.markdown(f"<div style='background-color: {km_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {km_spread_color};'>Spread: {spread_pct_km:+.3f}%</div>", unsafe_allow_html=True)
             st.markdown("---")
@@ -190,7 +208,7 @@ def render_orderbook_spread_view(threshold_start=1.0, threshold_stop=0.5):
                 k_ask_p = kucoin_asks[0][0] if kucoin_asks else k_ask
                 profit = m_bid_p - k_ask_p
                 pct = (profit / k_ask_p * 100) if k_ask_p > 0 else 0
-                bg = {"green": "rgba(0,255,0,0.15)", "yellow": "rgba(255,235,59,0.15)", "red": "rgba(244,67,54,0.1)"}[_spread_band(pct, threshold_start, threshold_stop)]
+                bg = _SPREAD_BAND_COLORS[_spread_band(pct, threshold_start, threshold_stop)][0]
                 st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #00c853; font-weight: bold;'>${m_bid_p:.5f}</span> <span style='color: #00c853;'>|</span> <span style='color: #00c853;'>{m_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
         with col_mk:
             st.markdown("**MEXC → KuCoin**")
@@ -205,11 +223,11 @@ def render_orderbook_spread_view(threshold_start=1.0, threshold_stop=0.5):
                 k_bid_p = kucoin_bids[0][0] if kucoin_bids else 0
                 profit = k_bid_p - m_ask_p
                 pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
-                bg = {"green": "rgba(0,255,0,0.15)", "yellow": "rgba(255,235,59,0.15)", "red": "rgba(244,67,54,0.1)"}[_spread_band(pct, threshold_start, threshold_stop)]
+                bg = _SPREAD_BAND_COLORS[_spread_band(pct, threshold_start, threshold_stop)][0]
                 st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #f44336; font-weight: bold;'>${m_ask_p:.5f}</span> <span style='color: #f44336;'>|</span> <span style='color: #f44336;'>{m_ask_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
             _mk_band = _spread_band(spread_pct_mk, threshold_start, threshold_stop)
-            mk_spread_bg = {"green": "rgba(0,255,0,0.2)", "yellow": "rgba(255,235,59,0.2)", "red": "rgba(244,67,54,0.2)"}[_mk_band]
-            mk_spread_color = {"green": "#00c853", "yellow": "#ffc107", "red": "#f44336"}[_mk_band]
+            mk_spread_bg = _SPREAD_BAND_COLORS[_mk_band][1]
+            mk_spread_color = _SPREAD_BAND_COLORS[_mk_band][2]
             st.markdown("---")
             st.markdown(f"<div style='background-color: {mk_spread_bg}; padding: 8px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; color: {mk_spread_color};'>Spread: {spread_pct_mk:+.3f}%</div>", unsafe_allow_html=True)
             st.markdown("---")
@@ -224,7 +242,7 @@ def render_orderbook_spread_view(threshold_start=1.0, threshold_stop=0.5):
                 m_ask_p = mexc_asks[0][0] if mexc_asks else m_ask
                 profit = k_bid_p - m_ask_p
                 pct = (profit / m_ask_p * 100) if m_ask_p > 0 else 0
-                bg = {"green": "rgba(0,255,0,0.15)", "yellow": "rgba(255,235,59,0.15)", "red": "rgba(244,67,54,0.1)"}[_spread_band(pct, threshold_start, threshold_stop)]
+                bg = _SPREAD_BAND_COLORS[_spread_band(pct, threshold_start, threshold_stop)][0]
                 st.markdown(f"<div style='background-color: {bg}; padding: 2px 8px; border-radius: 4px; margin: 1px 0;'><span style='color: #00c853; font-weight: bold;'>${k_bid_p:.6f}</span> <span style='color: #00c853;'>|</span> <span style='color: #00c853;'>{k_bid_v:.0f} MPC</span> <span style='color: #888; margin-left: 10px;'>{pct:+.3f}%</span></div>", unsafe_allow_html=True)
 CONFIG_FILE = 'config/config.yaml'
 def load_config():
@@ -285,14 +303,18 @@ def render_best_direction():
         coins_mk = (vol_mk * profit_mk / m_ask) if m_ask > 0 else 0
         _max_spread = max(spread_pct_km, spread_pct_mk)
         if not ((km_ok or mk_ok) and _max_spread >= threshold_start):
-            # NICHT im gruenen Band (>= threshold_start). Im Hysterese-Fenster
-            # (zwischen threshold_stop und threshold_start) ist die Richtung
-            # gelb markiert - dort handelt der Bot nur, wenn die Hysterese
-            # bereits armed ist. Darunter rot.
-            if _max_spread >= threshold_stop:
-                st.info(f"🟡 **Hysterese-Fenster** ({threshold_stop:.1f}–{threshold_start:.1f}%) | "
-                        f"Beste Richtung: {'K→M' if spread_pct_km >= spread_pct_mk else 'M→K'} | "
-                        f"Spread: {_max_spread:.3f}%")
+            # Nicht im gruenen Band (>= threshold_start). Die weiteren Baender:
+            # hellgruen = Hysterese-Fenster (stop..start) - dort handelt der Bot
+            # nur, wenn die Hysterese bereits armed ist.
+            # gelb = positiv, aber unter stop. rot = negativ.
+            _band = _spread_band(_max_spread, threshold_start, threshold_stop)
+            _dir_txt = 'K→M' if spread_pct_km >= spread_pct_mk else 'M→K'
+            if _band == 'lightgreen':
+                st.info(f"🟩 **Hysterese-Fenster** ({threshold_stop:.1f}–{threshold_start:.1f}%) | "
+                        f"Beste Richtung: {_dir_txt} | Spread: {_max_spread:.3f}%")
+            elif _band == 'yellow':
+                st.info(f"🟡 **Positiv, aber unter Stop** ({threshold_stop:.1f}%) | "
+                        f"Beste Richtung: {_dir_txt} | Spread: {_max_spread:.3f}%")
         if (km_ok or mk_ok) and max(spread_pct_km, spread_pct_mk) >= threshold_start:
             if strategy == 'usdt':
                 pkm_total = profit_km * vol_km
@@ -1886,12 +1908,13 @@ else:
                 st.warning("🚨 Spread 1-3%!")
         elif pair_alert and alert_enabled and (spread_pct_km > 0 or spread_pct_mk > 0):
             # Positive spread but below threshold - Farbstufe nach Band (Jonas):
-            # gelb = Hysterese-Fenster (zwischen stop und start), rot = unter stop
+            # hellgruen = Hysterese-Fenster (stop..start), gelb = positiv unter stop
             spread_pct = max(spread_pct_km, spread_pct_mk)
-            if spread_pct >= threshold_stop:
-                st.info(f"🟡 Spread im Hysterese-Fenster ({threshold_stop:.1f}–{threshold_start:.1f}%): {spread_pct:.2f}%")
+            _band = _spread_band(spread_pct, threshold_start, threshold_stop)
+            if _band == 'lightgreen':
+                st.info(f"🟩 Spread im Hysterese-Fenster ({threshold_stop:.1f}–{threshold_start:.1f}%): {spread_pct:.2f}%")
             else:
-                st.caption(f"🔴 Spread {spread_pct:.2f}% unter Stop-Threshold ({threshold_stop:.1f}%)")
+                st.info(f"🟡 Spread positiv, aber unter Stop ({threshold_stop:.1f}%): {spread_pct:.2f}%")
         else:
             # Show current state
             spread_pct = max(spread_pct_km, spread_pct_mk)
