@@ -3131,177 +3131,191 @@ def prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strat
                      buy_price, sell_price, spread_pct, profit_usdt, profit_mpc,
                      thinner_side, cum_sell, cum_buy, direction, strategy
     """
-    if not ob_data:
-        return None
-    
-    threshold = threshold_stop if for_follow_up_trade else threshold_start
-    coin = COIN_SYMBOL.split('-')[0]
-    
-    # 1. Orderbook levels
-    kucoin_bids = ob_data.get('kucoin_bids', [])
-    kucoin_asks = ob_data.get('kucoin_asks', [])
-    mexc_asks = ob_data.get('mexc_asks', [])
-    mexc_bids = ob_data.get('mexc_bids', [])
-    
-    # 2. Wallet snapshot (BOTH exchanges, einmalig am Anfang)
+    # Rumpf abgesichert: ein Fehler liefert None statt den Bot zu beenden.
+    # (Ebene 1 - Loop-Waechter in main() ist die aeussere Sicherung)
     try:
-        kucoin_bal = get_kucoin_balances()
-        mexc_bal = get_mexc_balances()
-    except Exception as e:
-        log(f"prepare_trade: balance fetch failed: {e}", "ERROR")
-        return None
+        if not ob_data:
+            return None
     
-    wallets = {
-        'KUCOIN': {
-            'USDT': kucoin_bal.get('USDT', {}).get('free', 0) if kucoin_bal else 0,
-            coin: kucoin_bal.get(coin, {}).get('free', 0) if kucoin_bal else 0,
-        },
-        'MEXC': {
-            'USDT': mexc_bal.get('USDT', {}).get('free', 0) if mexc_bal else 0,
-            coin: mexc_bal.get(coin, {}).get('free', 0) if mexc_bal else 0,
-        },
-    }
+        threshold = threshold_stop if for_follow_up_trade else threshold_start
+        coin = COIN_SYMBOL.split('-')[0]
     
-    best_trade = None
+        # 1. Orderbook levels
+        kucoin_bids = ob_data.get('kucoin_bids', [])
+        kucoin_asks = ob_data.get('kucoin_asks', [])
+        mexc_asks = ob_data.get('mexc_asks', [])
+        mexc_bids = ob_data.get('mexc_bids', [])
     
-    # 3. Sweep mit Wallet-Check pro Iteration
-    def sweep(sell_levels, buy_levels, direction, limit_ex, market_ex):
-        nonlocal best_trade
-        if not sell_levels or not buy_levels:
-            return
+        # 2. Wallet snapshot (BOTH exchanges, einmalig am Anfang)
+        try:
+            kucoin_bal = get_kucoin_balances()
+            mexc_bal = get_mexc_balances()
+        except Exception as e:
+            log(f"prepare_trade: balance fetch failed: {e}", "ERROR")
+            return None
+    
+        wallets = {
+            'KUCOIN': {
+                'USDT': kucoin_bal.get('USDT', {}).get('free', 0) if kucoin_bal else 0,
+                coin: kucoin_bal.get(coin, {}).get('free', 0) if kucoin_bal else 0,
+            },
+            'MEXC': {
+                'USDT': mexc_bal.get('USDT', {}).get('free', 0) if mexc_bal else 0,
+                coin: mexc_bal.get(coin, {}).get('free', 0) if mexc_bal else 0,
+            },
+        }
+    
+        best_trade = None
+    
+        # 3. Sweep mit Wallet-Check pro Iteration
+        def sweep(sell_levels, buy_levels, direction, limit_ex, market_ex):
+            nonlocal best_trade
+            if not sell_levels or not buy_levels:
+                return
         
-        cum_sell = 0
-        cum_buy = 0
-        cum_sell_value = 0.0  # USDT-Wert akkumuliert
-        cum_buy_value = 0.0
-        
-        for sell_level in sell_levels:
-            cum_sell += sell_level['qty']
-            cum_sell_value += sell_level['qty'] * sell_level['price']
-            avg_sell_price = cum_sell_value / cum_sell if cum_sell > 0 else 0
-            
+            cum_sell = 0
             cum_buy = 0
+            cum_sell_value = 0.0  # USDT-Wert akkumuliert
             cum_buy_value = 0.0
-            for buy_level in buy_levels:
-                cum_buy += buy_level['qty']
-                cum_buy_value += buy_level['qty'] * buy_level['price']
-                avg_buy_price = cum_buy_value / cum_buy if cum_buy > 0 else 0
+        
+            for sell_level in sell_levels:
+                cum_sell += sell_level['qty']
+                cum_sell_value += sell_level['qty'] * sell_level['price']
+                avg_sell_price = cum_sell_value / cum_sell if cum_sell > 0 else 0
+            
+                cum_buy = 0
+                cum_buy_value = 0.0
+                for buy_level in buy_levels:
+                    cum_buy += buy_level['qty']
+                    cum_buy_value += buy_level['qty'] * buy_level['price']
+                    avg_buy_price = cum_buy_value / cum_buy if cum_buy > 0 else 0
                 
-                # Spread-Check (per level pair)
-                spread = sell_level['price'] - buy_level['price']
-                spread_pct = (spread / buy_level['price']) * 100 if buy_level['price'] > 0 else 0
-                if spread_pct < threshold:
-                    break  # nächstes buy_level hat evtl. besseren spread
+                    # Spread-Check (per level pair)
+                    spread = sell_level['price'] - buy_level['price']
+                    spread_pct = (spread / buy_level['price']) * 100 if buy_level['price'] > 0 else 0
+                    if spread_pct < threshold:
+                        break  # nächstes buy_level hat evtl. besseren spread
                 
-                # Dünnere Seite = Market-Order
-                if cum_sell <= cum_buy:
-                    # Sell-Side dünner → Market BUY auf sell-ex (limit_ex)
-                    actual_market_ex = limit_ex
-                    actual_limit_ex = market_ex
-                    actual_market_side = 'BUY'
-                else:
-                    # Buy-Side dünner → Market SELL auf buy-ex (market_ex)
-                    actual_market_ex = market_ex
-                    actual_limit_ex = limit_ex
-                    actual_market_side = 'SELL'
-                
-                # === WALLET-CHECK (EFFEKTIVE PREISE) ===
-                # Market-Seite: braucht USDT (BUY) oder Coins (SELL)
-                if actual_market_side == 'BUY':
-                    wallet_market_usdt = wallets[actual_market_ex]['USDT']
-                    max_from_market = wallet_market_usdt / avg_buy_price if avg_buy_price > 0 else 0
-                else:  # SELL market
-                    wallet_market_coin = wallets[actual_market_ex][coin]
-                    max_from_market = wallet_market_coin
-                
-                # Limit-Seite: braucht Coins (SELL) oder USDT (BUY), je nach Strategie
-                if strategy == 'coins':
-                    # 'coins': gleicher USDT-Wert auf beiden Seiten
-                    # Market-Value = avg_market_price * orderbook_vol
-                    # Limit-qty = market_value / avg_limit_price
-                    if actual_market_side == 'BUY':
-                        # BUY market: market_value = avg_sell_price * orderbook_vol
-                        #            (avg_sell_price ist der Preis auf der Market-Exchange für BUY)
-                        market_value_per_vol = avg_sell_price
+                    # Dünnere Seite = Market-Order
+                    if cum_sell <= cum_buy:
+                        # Sell-Side dünner → Market BUY auf sell-ex (limit_ex)
+                        actual_market_ex = limit_ex
+                        actual_limit_ex = market_ex
+                        actual_market_side = 'BUY'
                     else:
-                        # SELL market: market_value = avg_buy_price * orderbook_vol
-                        market_value_per_vol = avg_buy_price
-                    
-                    # Limit-qty pro trade_vol:
-                    #   limit_qty = market_value / avg_limit_price
-                    #   = orderbook_vol * market_value_per_vol / avg_limit_price
-                    
-                    # Need: limit_qty <= wallet_limit (coins für SELL-limit, USDT für BUY-limit)
-                    # → orderbook_vol * market_value_per_vol / avg_limit_price <= wallet_limit
-                    # → orderbook_vol <= wallet_limit * avg_limit_price / market_value_per_vol
+                        # Buy-Side dünner → Market SELL auf buy-ex (market_ex)
+                        actual_market_ex = market_ex
+                        actual_limit_ex = limit_ex
+                        actual_market_side = 'SELL'
+                
+                    # === WALLET-CHECK (EFFEKTIVE PREISE) ===
+                    # Market-Seite: braucht USDT (BUY) oder Coins (SELL)
                     if actual_market_side == 'BUY':
-                        # limit ist SELL, need coins
-                        wallet_limit_coin = wallets[actual_limit_ex][coin]
-                        avg_limit_price = avg_sell_price  # limit is sell side here
+                        wallet_market_usdt = wallets[actual_market_ex]['USDT']
+                        max_from_market = wallet_market_usdt / avg_buy_price if avg_buy_price > 0 else 0
+                    else:  # SELL market
+                        wallet_market_coin = wallets[actual_market_ex][coin]
+                        max_from_market = wallet_market_coin
+                
+                    # Limit-Seite: braucht Coins (SELL) oder USDT (BUY), je nach Strategie
+                    if strategy == 'coins':
+                        # 'coins': gleicher USDT-Wert auf beiden Seiten
+                        # Market-Value = avg_market_price * orderbook_vol
+                        # Limit-qty = market_value / avg_limit_price
+                        if actual_market_side == 'BUY':
+                            # BUY market: market_value = avg_sell_price * orderbook_vol
+                            #            (avg_sell_price ist der Preis auf der Market-Exchange für BUY)
+                            market_value_per_vol = avg_sell_price
+                        else:
+                            # SELL market: market_value = avg_buy_price * orderbook_vol
+                            market_value_per_vol = avg_buy_price
+                    
+                        # Limit-qty pro trade_vol:
+                        #   limit_qty = market_value / avg_limit_price
+                        #   = orderbook_vol * market_value_per_vol / avg_limit_price
+                    
+                        # Need: limit_qty <= wallet_limit (coins für SELL-limit, USDT für BUY-limit)
+                        # → orderbook_vol * market_value_per_vol / avg_limit_price <= wallet_limit
+                        # → orderbook_vol <= wallet_limit * avg_limit_price / market_value_per_vol
+                        if actual_market_side == 'BUY':
+                            # limit ist SELL, need coins
+                            wallet_limit_coin = wallets[actual_limit_ex][coin]
+                            avg_limit_price = avg_sell_price  # limit is sell side here
+                        else:
+                            # limit ist BUY, need USDT
+                            wallet_limit_usdt = wallets[actual_limit_ex]['USDT']
+                            avg_limit_price = avg_buy_price  # limit is buy side here
+                            max_from_limit = wallet_limit_usdt / avg_limit_price if avg_limit_price > 0 else 0
+                    
+                        if actual_market_side == 'BUY':
+                            max_from_limit = wallet_limit_coin * avg_limit_price / market_value_per_vol if market_value_per_vol > 0 else 0
                     else:
-                        # limit ist BUY, need USDT
-                        wallet_limit_usdt = wallets[actual_limit_ex]['USDT']
-                        avg_limit_price = avg_buy_price  # limit is buy side here
-                        max_from_limit = wallet_limit_usdt / avg_limit_price if avg_limit_price > 0 else 0
-                    
+                        # 'usdt': gleiche Qty auf beiden Seiten
+                        if actual_market_side == 'BUY':
+                            # limit SELL: need X coins
+                            max_from_limit = wallets[actual_limit_ex][coin]
+                        else:
+                            # limit BUY: need X * avg_buy_price USDT
+                            wallet_limit_usdt = wallets[actual_limit_ex]['USDT']
+                            avg_limit_price = avg_buy_price
+                            max_from_limit = wallet_limit_usdt / avg_limit_price if avg_limit_price > 0 else 0
+                
+                    # === TRADE VOLUME = MIN(orderbook, wallet) ===
+                    orderbook_vol = min(cum_sell, cum_buy)
+                    effective_vol = min(orderbook_vol, max_from_market, max_from_limit)
+                
+                    if effective_vol < min_trade_qty:
+                        continue  # wallet/fees zu klein, weiter akkumulieren
+                
+                    # === GEFUNDEN: Trade-Plan bauen ===
+                    profit_usdt = spread * effective_vol
+                    profit_mpc = profit_usdt / avg_buy_price if avg_buy_price > 0 else 0
+                
+                    # Buy/Sell exchanges bestimmen
                     if actual_market_side == 'BUY':
-                        max_from_limit = wallet_limit_coin * avg_limit_price / market_value_per_vol if market_value_per_vol > 0 else 0
-                else:
-                    # 'usdt': gleiche Qty auf beiden Seiten
-                    if actual_market_side == 'BUY':
-                        # limit SELL: need X coins
-                        max_from_limit = wallets[actual_limit_ex][coin]
+                        buy_ex, sell_ex = actual_market_ex, actual_limit_ex
                     else:
-                        # limit BUY: need X * avg_buy_price USDT
-                        wallet_limit_usdt = wallets[actual_limit_ex]['USDT']
-                        avg_limit_price = avg_buy_price
-                        max_from_limit = wallet_limit_usdt / avg_limit_price if avg_limit_price > 0 else 0
+                        buy_ex, sell_ex = actual_limit_ex, actual_market_ex
                 
-                # === TRADE VOLUME = MIN(orderbook, wallet) ===
-                orderbook_vol = min(cum_sell, cum_buy)
-                effective_vol = min(orderbook_vol, max_from_market, max_from_limit)
-                
-                if effective_vol < min_trade_qty:
-                    continue  # wallet/fees zu klein, weiter akkumulieren
-                
-                # === GEFUNDEN: Trade-Plan bauen ===
-                profit_usdt = spread * effective_vol
-                profit_mpc = profit_usdt / avg_buy_price if avg_buy_price > 0 else 0
-                
-                # Buy/Sell exchanges bestimmen
-                if actual_market_side == 'BUY':
-                    buy_ex, sell_ex = actual_market_ex, actual_limit_ex
-                else:
-                    buy_ex, sell_ex = actual_limit_ex, actual_market_ex
-                
-                candidate = {
-                    # Kompatibilitaet: main() erwartet 'dir'/'buy'/'sell'/'pct'.
-                    # Beim Refactor auf calculate_best_trade -> prepare_trade wurden
-                    # diese Schluessel nicht mituebernommen (nur direction/buy_price/...).
-                    'dir': direction,
-                    'buy': avg_buy_price,
-                    'sell': avg_sell_price,
-                    'pct': spread_pct,
-                    'vol': effective_vol,
-                    'buy_ex': buy_ex, 'sell_ex': sell_ex,
-                    'market_ex': actual_market_ex, 'limit_ex': actual_limit_ex,
-                    'market_side': actual_market_side,
-                    'buy_price': avg_buy_price, 'sell_price': avg_sell_price,
-                    'spread_pct': spread_pct,
-                    'profit_usdt': profit_usdt, 'profit_mpc': profit_mpc,
-                    'thinner_side': 'SELL' if cum_sell <= cum_buy else 'BUY',
-                    'cum_sell': cum_sell, 'cum_buy': cum_buy,
-                    'direction': direction, 'strategy': strategy,
-                }
-                if best_trade is None or profit_usdt > best_trade['profit_usdt']:
-                    best_trade = candidate
-                break  # pro sell_level ein Kandidat (oder weiter)
+                    candidate = {
+                        # Kompatibilitaet: main() erwartet 'dir'/'buy'/'sell'/'pct'.
+                        # Beim Refactor auf calculate_best_trade -> prepare_trade wurden
+                        # diese Schluessel nicht mituebernommen (nur direction/buy_price/...).
+                        'dir': direction,
+                        'buy': avg_buy_price,
+                        'sell': avg_sell_price,
+                        'pct': spread_pct,
+                        'vol': effective_vol,
+                        'buy_ex': buy_ex, 'sell_ex': sell_ex,
+                        'market_ex': actual_market_ex, 'limit_ex': actual_limit_ex,
+                        'market_side': actual_market_side,
+                        'buy_price': avg_buy_price, 'sell_price': avg_sell_price,
+                        'spread_pct': spread_pct,
+                        'profit_usdt': profit_usdt, 'profit_mpc': profit_mpc,
+                        'thinner_side': 'SELL' if cum_sell <= cum_buy else 'BUY',
+                        'cum_sell': cum_sell, 'cum_buy': cum_buy,
+                        'direction': direction, 'strategy': strategy,
+                    }
+                    if best_trade is None or profit_usdt > best_trade['profit_usdt']:
+                        best_trade = candidate
+                    break  # pro sell_level ein Kandidat (oder weiter)
     
-    # 4. Beide Richtungen prüfen
-    sweep(kucoin_bids, mexc_asks, 'M→K', 'KUCOIN', 'MEXC')
-    sweep(mexc_bids, kucoin_asks, 'K→M', 'MEXC', 'KUCOIN')
+        # 4. Beide Richtungen prüfen
+        sweep(kucoin_bids, mexc_asks, 'M→K', 'KUCOIN', 'MEXC')
+        sweep(mexc_bids, kucoin_asks, 'K→M', 'MEXC', 'KUCOIN')
     
-    return best_trade
+        return best_trade
+    except Exception as e:
+        # Fehler loggen und 'kein Trade' zurueckgeben. Der Aufrufer
+        # (main()) entscheidet dann ueber den naechsten Zyklus.
+        log(f"prepare_trade: unexpected error: {type(e).__name__}: {e}", "ERROR")
+        try:
+            import traceback as _tb
+            for _t in _tb.format_exc().splitlines()[-6:]:
+                log(f"    | {_t}", "ERROR")
+        except Exception:
+            pass
+        return None
 
 
 
