@@ -2437,7 +2437,14 @@ def execute_trade_market_buy_limit_sell(exchange_market, exchange_limit, qty, bu
     log(f"Cost: ${cost:.4f} | Revenue: ${revenue:.4f}{profit_note}")
     log(f"Gross Profit: ${gross_profit:.4f} | Fees: ${fee_taker + fee_maker:.4f}")
     coin = COIN_SYMBOL.split('-')[0]
-    log(f"{profit_label} Net Profit: ${net_profit:.4f} | {coin} Gain: {mpc_gain:.4f}{profit_note}")
+    # net_profit/mpc_gain wurden beim Refactor auf *_actual/*_expected umbenannt.
+    # Ersetzt durch die tatsaechlich berechneten Werte, je nach Fill-Status.
+    if actual_revenue > 0:
+        _net_profit_shown = net_profit_actual
+    else:
+        _net_profit_shown = profit_usdt_expected
+    _mpc_gain_shown = profit_mpc_expected
+    log(f"{profit_label} Net Profit: ${_net_profit_shown:.4f} | {coin} Gain: {_mpc_gain_shown:.4f}{profit_note}")
 
     # CRITICAL FIX 2026-10-14 (Jonas): Return False if any error occurred during trade execution.
     # Without this, a failed limit sell was reported as success, leaving bought coins on
@@ -2626,7 +2633,7 @@ def check_limit_order_fills():
                                             # Ensures we check against fresh balances, not stale cache
                                             invalidate_wallet_cache()
                                             _kc_balances = get_kucoin_balances()
-                                            _kc_available = _kc_balances.get(coin, {}).get('free', 0) if _kc_balances else 0
+                                            _kc_available = _kc_balances.get(COIN_SYMBOL.split('-')[0], {}).get('free', 0) if _kc_balances else 0
                                             if _kc_available < new_qty:
                                                 log(f"⚠️ Replacement skipped: wallet {_kc_available:.4f} < qty {new_qty:.4f}")
                                                 continue
@@ -3199,7 +3206,7 @@ def prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strat
                     max_from_market = wallet_market_coin
                 
                 # Limit-Seite: braucht Coins (SELL) oder USDT (BUY), je nach Strategie
-                if current_strategy == 'coins':
+                if strategy == 'coins':
                     # 'coins': gleicher USDT-Wert auf beiden Seiten
                     # Market-Value = avg_market_price * orderbook_vol
                     # Limit-qty = market_value / avg_limit_price
@@ -3259,6 +3266,13 @@ def prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strat
                     buy_ex, sell_ex = actual_limit_ex, actual_market_ex
                 
                 candidate = {
+                    # Kompatibilitaet: main() erwartet 'dir'/'buy'/'sell'/'pct'.
+                    # Beim Refactor auf calculate_best_trade -> prepare_trade wurden
+                    # diese Schluessel nicht mituebernommen (nur direction/buy_price/...).
+                    'dir': direction,
+                    'buy': avg_buy_price,
+                    'sell': avg_sell_price,
+                    'pct': spread_pct,
                     'vol': effective_vol,
                     'buy_ex': buy_ex, 'sell_ex': sell_ex,
                     'market_ex': actual_market_ex, 'limit_ex': actual_limit_ex,
@@ -3268,7 +3282,7 @@ def prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strat
                     'profit_usdt': profit_usdt, 'profit_mpc': profit_mpc,
                     'thinner_side': 'SELL' if cum_sell <= cum_buy else 'BUY',
                     'cum_sell': cum_sell, 'cum_buy': cum_buy,
-                    'direction': direction, 'strategy': current_strategy,
+                    'direction': direction, 'strategy': strategy,
                 }
                 if best_trade is None or profit_usdt > best_trade['profit_usdt']:
                     best_trade = candidate
