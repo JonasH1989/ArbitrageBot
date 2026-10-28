@@ -21,12 +21,16 @@ services:
       - TZ=Europe/Berlin
       # API-Keys kommen bevorzugt aus ENV (siehe .env / env_file).
       # Leere Werte fallen automatisch auf config.yaml zurueck.
+      # Der Key-Loader laedt sie beim Start aus config.yaml in die ENV
+      # des Kindprozesses - die Werte werden dabei NIE ausgegeben.
       - KUCOIN_KEY=${KUCOIN_KEY:-}
       - KUCOIN_SECRET=${KUCOIN_SECRET:-}
       - KUCOIN_PASSPHRASE=${KUCOIN_PASSPHRASE:-}
       - MEXC_KEY=${MEXC_KEY:-}
       - MEXC_SECRET=${MEXC_SECRET:-}
-    command: ["python", "arb_autotrade.py"]
+    # Der Key-Loader liest config.yaml im Container und legt die Keys in die
+    # ENV des Kindprozesses - die Werte werden NIE ausgegeben.
+    command: ["python3", "/app/scripts/load_keys_to_env.py", "python", "arb_autotrade.py"]
     healthcheck:
       # WICHTIG (Fix 2026-10-28): wget ist in python:3.11-slim NICHT vorhanden.
       # Der Healthcheck "CMD wget ..." schlug deshalb IMMER fehl (exit 127) ->

@@ -15,8 +15,12 @@ COPY trade_logger_service.py .
 # Copy settings_sync for config access
 COPY config/settings_sync.py /app/settings_sync.py
 
+# Key-Loader: liest config.yaml im Container und legt die Keys in die ENV
+# des Kindprozesses. Der Operator/Assistent sieht die Werte NIE.
+COPY scripts/load_keys_to_env.py /app/scripts/load_keys_to_env.py
+
 # DO NOT copy config/ - API keys come from mounted volume
 RUN mkdir -p /app/config
 
-# Run bot (logs to mounted volume)
-CMD ["python3", "arb_autotrade.py"]
+# Run bot via the key loader (logs to mounted volume)
+CMD ["python3", "/app/scripts/load_keys_to_env.py", "python3", "arb_autotrade.py"]

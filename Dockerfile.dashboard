@@ -22,11 +22,15 @@ COPY arb_autotrade.py .
 # Copy static assets (logos)
 COPY static/ ./static/
 
+# Key-Loader: liest config.yaml im Container und legt die Keys in die ENV
+# des Kindprozesses. Der Operator/Assistent sieht die Werte NIE.
+COPY scripts/load_keys_to_env.py /app/scripts/load_keys_to_env.py
+
 # Create config directory for volume mount
 RUN mkdir -p /app/config
 
 # Expose Streamlit port
 EXPOSE 8501
 
-# Run dashboard
-CMD ["streamlit", "run", "dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Run dashboard via the key loader
+CMD ["python3", "/app/scripts/load_keys_to_env.py", "streamlit", "run", "dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]
