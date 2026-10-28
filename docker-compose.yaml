@@ -9,13 +9,23 @@ services:
     container_name: arbitrage-bot
     restart: unless-stopped
     ports:
-      - "192.168.113.14:18888:8505"
+      # BIND_IP erlaubt die Wahl zwischen Produktion (192.168.113.14) und
+      # Dev-Host. Default ist die Produktions-IP -> Verhalten unveraendert.
+      # Fuer den Dev-Host wird BIND_IP per .env auf 0.0.0.0 gesetzt.
+      - "${BIND_IP:-192.168.113.14}:18888:8505"
     volumes:
       - ./config:/app/config
       - ./logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=Europe/Berlin
+      # API-Keys kommen bevorzugt aus ENV (siehe .env / env_file).
+      # Leere Werte fallen automatisch auf config.yaml zurueck.
+      - KUCOIN_KEY=${KUCOIN_KEY:-}
+      - KUCOIN_SECRET=${KUCOIN_SECRET:-}
+      - KUCOIN_PASSPHRASE=${KUCOIN_PASSPHRASE:-}
+      - MEXC_KEY=${MEXC_KEY:-}
+      - MEXC_SECRET=${MEXC_SECRET:-}
     command: ["python", "arb_autotrade.py"]
     healthcheck:
       # WICHTIG (Fix 2026-10-28): wget ist in python:3.11-slim NICHT vorhanden.
@@ -36,11 +46,20 @@ services:
     container_name: arbitrage-dashboard
     restart: unless-stopped
     ports:
-      - "8501:8501"
-      - "192.168.113.14:8502:8501"
+      - "${DASHBOARD_PORT:-8501}:8501"
+      - "${BIND_IP:-192.168.113.14}:${DASHBOARD_PORT2:-8502}:8501"
     volumes:
       - ./config:/app/config
       - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Europe/Berlin
+      # Dashboard liest die Keys ebenfalls aus ENV (mit Fallback auf config.yaml)
+      - KUCOIN_KEY=${KUCOIN_KEY:-}
+      - KUCOIN_SECRET=${KUCOIN_SECRET:-}
+      - KUCOIN_PASSPHRASE=${KUCOIN_PASSPHRASE:-}
+      - MEXC_KEY=${MEXC_KEY:-}
+      - MEXC_SECRET=${MEXC_SECRET:-}
     healthcheck:
       # Gleiches Problem: wget fehlt im python:3.11-slim -> Healthcheck
       # schlug immer fehl -> Container unhealthy -> Neustart -> Streamlit-

@@ -210,19 +210,46 @@ def set_alert_settings(enabled: bool = None, volume: float = None):
         set_setting('alert.volume', volume)
 
 def get_api_keys(exchange: str) -> Dict[str, str]:
-    """Get API keys for exchange"""
+    """Get API keys for exchange.
+
+    Environment variables take precedence over config.yaml, so that the
+    credentials do not have to be stored in a readable file. Empty env vars
+    are ignored and fall back to the config file.
+    """
+    import os
+
+    env_map = {
+        'kucoin': {
+            'api_key': 'KUCOIN_KEY',
+            'api_secret': 'KUCOIN_SECRET',
+            'api_passphrase': 'KUCOIN_PASSPHRASE',
+        },
+        'mexc': {
+            'api_key': 'MEXC_KEY',
+            'api_secret': 'MEXC_SECRET',
+        },
+    }
+
     if exchange == 'kucoin':
-        return {
+        keys = {
             'api_key': get_setting('kucoin.api_key', ''),
             'api_secret': get_setting('kucoin.api_secret', ''),
             'api_passphrase': get_setting('kucoin.api_passphrase', ''),
         }
     elif exchange == 'mexc':
-        return {
+        keys = {
             'api_key': get_setting('mexc.api_key', ''),
             'api_secret': get_setting('mexc.api_secret', ''),
         }
-    return {}
+    else:
+        return {}
+
+    for field, env_name in env_map.get(exchange, {}).items():
+        val = (os.environ.get(env_name) or '').strip()
+        if val:
+            keys[field] = val
+
+    return keys
 
 def set_api_keys(exchange: str, **keys):
     """Set API keys for exchange"""

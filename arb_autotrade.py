@@ -121,6 +121,32 @@ def _mask_key(v: str) -> str:
     return "gesetzt"
 
 
+# Namen der Environment-Variablen fuer die API-Keys.
+# Wird bevorzugt gegenueber config.yaml verwendet: so muessen die
+# Credentials nicht in einer lesbaren Datei liegen, sondern koennen direkt
+# als ENV in den Container gesetzt werden (docker compose / Coolify).
+# Leere ENV-Variablen fallen auf config.yaml zurueck.
+ENV_KEY_NAMES = (
+    'KUCOIN_KEY',
+    'KUCOIN_SECRET',
+    'KUCOIN_PASSPHRASE',
+    'MEXC_KEY',
+    'MEXC_SECRET',
+)
+
+
+def _read_api_keys_from_env() -> dict:
+    """Read API keys from environment variables. Empty vars are ignored."""
+    keys = {}
+    for name in ENV_KEY_NAMES:
+        try:
+            val = (os.environ.get(name) or '').strip()
+        except Exception:
+            val = ''
+        keys[name] = val
+    return keys
+
+
 def _read_api_keys_from_config() -> dict:
     """Read API keys from config.yaml. Returns dict of raw key values."""
     try:
@@ -155,19 +181,30 @@ def reload_api_keys(force: bool = False, quiet: bool = False) -> bool:
     global KUCOIN_KEY, KUCOIN_SECRET, KUCOIN_PASSPHRASE
     global MEXC_KEY, MEXC_SECRET, _api_keys_fingerprint
 
+    # ENV-Variablen haben Vorrang. Sie werden bei JEDEM Aufruf neu gelesen,
+    # damit ein Env-Wechsel (Container-Restart mit neuem ENV) sofort wirkt.
+    env_keys = _read_api_keys_from_env()
+
+    file_keys = {}
+    mtime = None
     try:
         mtime = os.path.getmtime(_config_path)
     except OSError:
-        return False
+        mtime = None
 
-    if not force and mtime == getattr(reload_api_keys, '_last_mtime', None):
-        return False
-
-    keys = _read_api_keys_from_config()
-    if not keys:
-        # Datei nicht lesbar oder leer - vorhandene Keys beibehalten,
-        # sonst wuerde ein transienter Lesefehler die Credentials loeschen.
+    if force or mtime != getattr(reload_api_keys, '_last_mtime', None):
+        file_keys = _read_api_keys_from_config()
         reload_api_keys._last_mtime = mtime
+
+    # config.yaml als Basis, ENV ueberschreibt nicht-leere Werte.
+    keys = dict(file_keys)
+    for name, val in env_keys.items():
+        if val:
+            keys[name] = val
+
+    if not any(keys.values()):
+        # Keine Datei lesbar/keine ENV gesetzt - vorhandene Keys behalten,
+        # sonst wuerde ein transienter Lesefehler die Credentials loeschen.
         return False
 
     fingerprint = hashlib.sha256(
