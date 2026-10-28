@@ -113,12 +113,21 @@ _api_keys_fingerprint = None
 
 
 def _mask_key(v: str) -> str:
-    """Mask an API key for safe logging (never log the full key)."""
+    """Mask an API key for safe logging (never log the full key).
+
+    WICHTIG (Fix 2026-10-28): Frueher stand hier ``v[:4]...v[-4:]`` - also
+    8 Klartext-Zeichen pro Key im Log. Sobald echte Keys im Einsatz sind,
+    landen diese Fragmente in jedem Log, das jemand ausliest. Jetzt wird
+    nur noch die Laenge verraten, plus ein stabiler Fingerprint (Hash-
+    Praefix), damit verschiedene Keys am Log unterscheidbar sind, ohne
+    dass sich ihr Inhalt daraus ableiten laesst.
+    """
     if not v:
         return "LEER"
-    if len(v) > 10:
-        return f"{v[:4]}...{v[-4:]}"
-    return "gesetzt"
+    if len(v) <= 10:
+        return "gesetzt"
+    digest = hashlib.sha256(v.encode()).hexdigest()[:4]
+    return f"gesetzt, {len(v)} Zeichen, #{digest}"
 
 
 # Namen der Environment-Variablen fuer die API-Keys.
@@ -230,7 +239,8 @@ def reload_api_keys(force: bool = False, quiet: bool = False) -> bool:
 
     if changed:
         def _mask(v):
-            return f"{v[:4]}...{v[-4:]}" if v and len(v) > 10 else ("gesetzt" if v else "LEER")
+            # Gleiche Regel wie _mask_key(): keine Klartext-Fragmente.
+            return _mask_key(v)
         # log() und invalidate_wallet_cache() sind beim Modul-Import noch
         # nicht definiert - der Initial-Load darf sie deshalb nicht nutzen.
         _log = globals().get('log')
