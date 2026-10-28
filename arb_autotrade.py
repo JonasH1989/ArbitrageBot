@@ -538,7 +538,7 @@ def start_http_log_server(port: int = 8503):
             'cpu_percent': cpu_pct,
             'thread_count': threading.active_count(),
             'active_flag': ACTIVE_FLAG_FILE.exists(),
-            'config_hash': last_config_hash
+            'config_hash': globals().get('last_config_hash'),
         })
 
     @app.route('/config/changelog', methods=['GET'])
@@ -1218,6 +1218,14 @@ pair_enabled = False
 hysteresis_armed = False
 threshold_start = 1.0
 threshold_stop = 0.5
+
+# last_config_hash (Module-Scope, Fix 2026-10-28).
+# Das /status-Endpoint - und damit der Docker-Healthcheck - las diese
+# Variable. Sie war aber nur in main() als lokale Variable definiert
+# (dort via 'global' deklariert), also war sie vor dem ersten
+# main()-Durchlauf nicht definiert und /status antwortete mit
+# HTTP 500 (NameError). Der Healthcheck schlug dadurch dauerhaft fehl.
+last_config_hash = None
 
 # trade_in_progress (Module-Scope, damit /state sie lesen kann).
 # Kategorie 3 der GUI: "laeuft gerade ein Trade" - von der Bot-an/aus-

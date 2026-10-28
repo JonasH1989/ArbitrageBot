@@ -18,7 +18,11 @@ services:
       - TZ=Europe/Berlin
     command: ["python", "arb_autotrade.py"]
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8505/status"]
+      # WICHTIG (Fix 2026-10-28): wget ist in python:3.11-slim NICHT vorhanden.
+      # Der Healthcheck "CMD wget ..." schlug deshalb IMMER fehl (exit 127) ->
+      # Container dauerhaft unhealthy -> Neustart -> SAFETY-Block setzt
+      # enabled=False -> "Bot hat sich abgeschaltet". python ist im Image da.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8505/health', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -38,7 +42,10 @@ services:
       - ./config:/app/config
       - ./logs:/app/logs
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8501/_stcore/health"]
+      # Gleiches Problem: wget fehlt im python:3.11-slim -> Healthcheck
+      # schlug immer fehl -> Container unhealthy -> Neustart -> Streamlit-
+      # Session weg -> Dashboard springt zurueck ins Hauptmenue.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=5)"]
       interval: 10s
       timeout: 5s
       retries: 3
