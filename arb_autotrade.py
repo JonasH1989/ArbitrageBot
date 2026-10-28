@@ -1169,23 +1169,54 @@ def start_http_log_server(port: int = 8503):
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
-    def run_server():
-        app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
-        @app.route('/api/files', methods=['GET'])
-        def list_files():
-            import os
-            log_dir = str(LOG_DIR)
-            if os.path.exists(log_dir):
-                files = os.listdir(log_dir)
-            else:
-                files = []
-            return jsonify({'log_dir': log_dir, 'files': files})
+    @app.route('/api/files', methods=['GET'])
+    def list_files():
+        import os
+        log_dir = str(LOG_DIR)
+        if os.path.exists(log_dir):
+            files = os.listdir(log_dir)
+        else:
+            files = []
+        return jsonify({'log_dir': log_dir, 'files': files})
 
+    def run_server():
+        # Bind-Fehler abfangen (Fix 2026-10-28):
+        # app.run() laeuft in einem DAEMON-Thread. Ohne try/except beendet ein
+        # "Address already in use" den Thread still - der Bot-Prozess lebt
+        # weiter, aber /health, /status, /state, /balances sind alle tot.
+        # Genau das war das Symptom "alive=..., http_plain=000":
+        # Prozess lebt, HTTP-Ports antworten nicht.
+        #
+        # WICHTIG: KEIN Portwechsel! Im Docker-Container zeigt das Port-Mapping
+        # (18888:8505) auf genau diese 8505. Ein Ausweichen auf 8506 wuerde
+        # den Healthcheck und den externen Zugriff unerreichbar machen.
+        # Stattdessen: sichtbar loggen und den SELBEN Port erneut binden
+        # (TIME_WAIT / Restart-Race), mit Backoff.
+        for attempt in range(10):
+            try:
+                app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+                return
+            except OSError as e:
+                if e.errno in (98, 48):  # EADDRINUSE (Linux / macOS)
+                    wait = min(2 + attempt, 10)
+                    msg = (f"HTTP-Server: Port {port} belegt ({e.strerror}) - "
+                           f"Versuch {attempt + 1}/10, neuer Versuch in {wait}s")
+                    log(msg, "ERROR")
+                    print(f"[ERROR] {msg}", flush=True)
+                    time.sleep(wait)
+                    continue
+                log(f"HTTP-Server: Start fehlgeschlagen: {e}", "ERROR")
+                print(f"[ERROR] HTTP log server failed to start: {e}", flush=True)
+                return
+            except Exception as e:
+                log(f"HTTP-Server: unerwarteter Fehler beim Start: {e}", "ERROR")
+                print(f"[ERROR] HTTP log server failed to start: {e}", flush=True)
+                return
 
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
     _http_server = thread
-    print(f"HTTP Logging server started on port {port}")
+    print(f"HTTP Logging server started on port {port}", flush=True)
     return thread
 
 # Balance check functions
