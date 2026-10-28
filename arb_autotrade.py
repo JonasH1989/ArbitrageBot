@@ -1550,19 +1550,36 @@ def check_balances_for_trade(direction: str, qty: float, buy_price: float, sell_
 
     return True, "", qty
 
+def _read_active_intent() -> bool:
+    """True, wenn der Nutzer den Bot ausdruecklich aktiviert hat.
+
+    Die Flag-Datei enthaelt dann einen Zeitstempel (also NICHT leer).
+    Eine leere Datei bedeutet "kein gespeicherter Aktivierungs-Wunsch" -
+    das ist der Normalfall nach einem frischen Clone/Deploy.
+    """
+    try:
+        if not ACTIVE_FLAG_FILE.exists():
+            return False
+        return len(ACTIVE_FLAG_FILE.read_text().strip()) > 0
+    except Exception:
+        return False
+
+
 def is_active():
-    # Check config.yaml 'enabled' setting (dashboard sets this!)
+    """Bot aktiv? Quelle der Wahrheit ist config.yaml (setzt das Dashboard).
+
+    Die Flag-Datei merkt sich die explizite Nutzer-Entscheidung ueber
+    Neustarts hinweg; beim Bot-Start wird sie in die Config uebernommen.
+    Ist in der Config ausdruecklich 'enabled: False' gesetzt, bleibt der
+    Bot inaktiv - die Flag-Datei wird dann NICHT als Ersatz herangezogen.
+    """
     try:
         if get_setting is not None:
             config_enabled = get_setting(f"trading.pairs.{TRADING_PAIR}.enabled", False)
-            if config_enabled:
-                return True
-    except:
+            return bool(config_enabled)
+    except Exception:
         pass
-    
-    # Fallback: check flag file
-    """Check if bot is marked as active"""
-    return os.path.exists(ACTIVE_FLAG_FILE)
+    return _read_active_intent()
 
 def set_active(flag):
     """Enable or disable trading"""
@@ -3743,13 +3760,26 @@ def main():
     pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
     log(f"Pair {TRADING_PAIR} enabled in config: {pair_enabled}")
 
-    # SAFETY: On every startup, bot starts DISABLED
-    # User must manually enable via Dashboard after redeploy
-    # This is the proven approach that works reliably
-    log(f"SAFETY: Setting pair_enabled=False on startup (bot must be enabled via Dashboard)", "CONFIG")
-    set_pair_settings(TRADING_PAIR, enabled=False)
-    pair_enabled = False
-    log(f"SAFETY: Bot started in disabled state", "CONFIG")
+    # SAFETY + PERSISTENCE (Fix 2026-10-28):
+    # Der Bot darf sich nach einem Neustart (Crash, Deploy, Healthcheck)
+    # NICHT selbst abschalten - das war die Ursache fuer "Bot hat sich nach
+    # dem Trade abgeschaltet".
+    #
+    # Die explizite Nutzer-Entscheidung "Bot aktiv" wird vom Dashboard in der
+    # Flag-Datei gespeichert. Existiert sie (mit Inhalt), bleibt der Bot
+    # aktiv. Fehlt sie, startet der Bot deaktiviert (Safety first).
+    #
+    # WICHTIG: Eine LEERE Flag-Datei zaehlt nicht als Aktivierung - nur so
+    # startet der Bot nach einem frischen Deploy garantiert aus.
+    if _read_active_intent():
+        log(f"SAFETY: Aktiv-Zustand aus Flag-Datei wiederhergestellt (Nutzer-Entscheidung)", "CONFIG")
+        set_pair_settings(TRADING_PAIR, enabled=True)
+        pair_enabled = True
+    else:
+        log(f"SAFETY: Setting pair_enabled=False on startup (kein gespeicherter Aktivierungs-Wunsch)", "CONFIG")
+        set_pair_settings(TRADING_PAIR, enabled=False)
+        pair_enabled = False
+        log(f"SAFETY: Bot started in disabled state", "CONFIG")
 
     while True:
         # Nach einem Fehler war der State ERROR. Damit die State-Machine

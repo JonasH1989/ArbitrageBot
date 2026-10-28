@@ -806,13 +806,33 @@ pairs_config = config.get('trading', {}).get('pairs', {})
 if isinstance(pairs_config, list):
     # Convert list to dict format
     pairs_config = {p: {'enabled': True, 'strategy': 'usdt', 'threshold_start': 1.0, 'threshold_stop': 0.5, 'alert_enabled': True} for p in pairs_config}
-# ENFORCE INAKTIV on redeploy - ALWAYS start disabled for safety!
-# The active flag is NOT used to enable the bot - user must enable manually in dashboard
-# This prevents the bot from auto-starting after a crash/restart
-if os.path.exists('/app/logs/arb_active.flag'):
-    # Flag exists but DON'T use it to enable - just log it
-    # The flag was set when user last enabled via dashboard, but bot should still start disabled
-    pass  # Do nothing with the flag - bot always starts disabled
+# BOT-AKTIV-INTENT (Fix 2026-10-28):
+# Der Bot darf sich nach einem Neustart (Crash, Deploy, Healthcheck-Restart)
+# nicht selbst abschalten. Deshalb speichert das Dashboard die ausdrueckliche
+# Nutzer-Entscheidung "Bot AKTIV" in einer Flag-Datei. Der Bot uebernimmt sie
+# beim Start wieder in die Config.
+#
+# Die Datei enthaelt einen Zeitstempel. Eine LEERE Datei bedeutet "kein
+# gespeicherter Aktivierungs-Wunsch" -> der Bot startet dann deaktiviert
+# (Safety first, gerade nach einem frischen Deploy).
+ACTIVE_FLAG_FILE = Path('/app/logs/arb_active.flag')
+
+
+def _set_active_intent(enabled: bool):
+    """Speichert die Bot-Aktivierungs-Entscheidung fuer Neustarts."""
+    try:
+        ACTIVE_FLAG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        if enabled:
+            ACTIVE_FLAG_FILE.write_text(str(datetime.now()))
+        else:
+            try:
+                ACTIVE_FLAG_FILE.unlink()
+            except FileNotFoundError:
+                pass
+    except Exception as e:
+        print(f"Flag-Datei konnte nicht geschrieben werden: {e}", file=sys.stderr)
+
+
 # Ensure config is INAKTIV on redeploy (SAFETY FIRST)
 for p in pairs_config:
     pairs_config[p]['enabled'] = False
@@ -1194,6 +1214,9 @@ else:
         new_enabled = st.checkbox("Bot AKTIV", value=pair_enabled, key="bot_enable_checkbox")
         if new_enabled != pair_enabled:
             set_pair_settings(pair, enabled=new_enabled)
+            # Entscheidung auch ueber Neustarts hinweg merken, damit der Bot
+            # nach einem Crash/Deploy nicht wieder von selbst abschaltet.
+            _set_active_intent(new_enabled)
             _safe_rerun('bot_toggle')
     
     # Get data
