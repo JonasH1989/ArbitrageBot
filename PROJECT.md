@@ -217,7 +217,7 @@ Der Bot laeuft auf CoolifyDev als Coolify-Application, nicht per Hand:
 | Compose | `/docker-compose.coolify.yaml` (absolute Pfade, Bind-IP `0.0.0.0`) |
 | Bot-API | http://192.168.13.57:18888 |
 | Dashboard | http://192.168.13.57:8501 und :8502 |
-| Daten | `/opt/arb/ArbitrageBot/config` + `/logs` (Bind-Mount) |
+| Daten | `/data/coolify/applications/6vqgknob3trgvpxiulcqtymu/config` + `/logs` (Bind-Mount) |
 
 **Regeln:**
 - Container nur ueber Coolify erstellen, deployen, neustarten, Logs lesen.
