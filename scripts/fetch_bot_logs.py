@@ -10,7 +10,7 @@ erkennbar sind.
 Erwartet:
   ARB_LOG_SSH_HOST   z.B. root@192.168.13.57
   ARB_LOG_SSH_KEY    Pfad zum SSH-Key
-  ARB_LOG_REMOTE_DIR  z.B. /opt/arb/ArbitrageBot/logs
+  ARB_LOG_REMOTE_DIR  Default: /data/coolify/applications/<app-uuid>/logs
   ARB_LOG_DEST       lokales Zielverzeichnis
 
 Alle Pfade haben Defaults, die der aktuellen Umgebung entsprechen.
@@ -25,7 +25,9 @@ from pathlib import Path
 
 SSH_HOST = os.environ.get('ARB_LOG_SSH_HOST', 'root@192.168.13.57')
 SSH_KEY = os.environ.get('ARB_LOG_SSH_KEY', str(Path.home() / '.ssh/id_coolifydev'))
-REMOTE_DIR = os.environ.get('ARB_LOG_REMOTE_DIR', '/opt/arb/ArbitrageBot/logs')
+REMOTE_DIR = os.environ.get(
+    'ARB_LOG_REMOTE_DIR',
+    '/data/coolify/applications/6vqgknob3trgvpxiulcqtymu/logs')
 DEST = Path(os.environ.get(
     'ARB_LOG_DEST',
     '/home/openclaw/.openclaw/workspace/trading/arbitrage-bot-history/logs'))

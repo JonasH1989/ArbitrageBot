@@ -1,8 +1,9 @@
 services:
   # Variante fuer die Coolify-Verwaltung auf CoolifyDev.
   # Unterschiede zum Standard-Compose:
-  # - absolute Pfade fuer config/ und logs/ (Coolify klont das Repo in ein
-  #   eigenes Arbeitsverzeichnis; relative Pfade zeigten sonst ins Clone)
+  # - Daten liegen im Coolify-Anwendungsverzeichnis der Application
+  #   (/data/coolify/applications/<uuid>/). Relative Pfade wuerden ins Repo-Clone
+  #   zeigen und die Daten bei jedem Deploy verlieren.
   # - Bind-IP fest auf 0.0.0.0 (der Default 192.168.113.14 ist im 13er-VLAN
   #   nicht erreichbar)
   arbitrage-bot:
@@ -13,8 +14,8 @@ services:
     ports:
       - "0.0.0.0:18888:8505"
     volumes:
-      - /opt/arb/ArbitrageBot/config:/app/config
-      - /opt/arb/ArbitrageBot/logs:/app/logs
+      - /data/coolify/applications/6vqgknob3trgvpxiulcqtymu/config:/app/config
+      - /data/coolify/applications/6vqgknob3trgvpxiulcqtymu/logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=Europe/Berlin
@@ -44,8 +45,8 @@ services:
       - "0.0.0.0:8501:8501"
       - "0.0.0.0:8502:8501"
     volumes:
-      - /opt/arb/ArbitrageBot/config:/app/config
-      - /opt/arb/ArbitrageBot/logs:/app/logs
+      - /data/coolify/applications/6vqgknob3trgvpxiulcqtymu/config:/app/config
+      - /data/coolify/applications/6vqgknob3trgvpxiulcqtymu/logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=Europe/Berlin
