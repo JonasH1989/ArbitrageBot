@@ -18,6 +18,15 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=Europe/Berlin
+      # API-Keys kommen bevorzugt aus ENV (Coolify-UI oder env_file).
+      # Leere Werte fallen automatisch auf config.yaml zurueck.
+      # Der Key-Loader laedt sie beim Start aus config.yaml in die ENV
+      # des Kindprozesses - die Werte werden dabei NIE ausgegeben.
+      - KUCOIN_KEY=${KUCOIN_KEY:-}
+      - KUCOIN_SECRET=${KUCOIN_SECRET:-}
+      - KUCOIN_PASSPHRASE=${KUCOIN_PASSPHRASE:-}
+      - MEXC_KEY=${MEXC_KEY:-}
+      - MEXC_SECRET=${MEXC_SECRET:-}
     command: ["python3", "/app/scripts/load_keys_to_env.py", "python", "arb_autotrade.py"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8505/health', timeout=5)"]
@@ -40,6 +49,15 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=Europe/Berlin
+      # API-Keys kommen bevorzugt aus ENV (Coolify-UI oder env_file).
+      # Leere Werte fallen automatisch auf config.yaml zurueck.
+      # Der Key-Loader laedt sie beim Start aus config.yaml in die ENV
+      # des Kindprozesses - die Werte werden dabei NIE ausgegeben.
+      - KUCOIN_KEY=${KUCOIN_KEY:-}
+      - KUCOIN_SECRET=${KUCOIN_SECRET:-}
+      - KUCOIN_PASSPHRASE=${KUCOIN_PASSPHRASE:-}
+      - MEXC_KEY=${MEXC_KEY:-}
+      - MEXC_SECRET=${MEXC_SECRET:-}
     command: ["python3", "/app/scripts/load_keys_to_env.py", "streamlit", "run", "dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=5)"]
