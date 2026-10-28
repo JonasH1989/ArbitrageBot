@@ -204,3 +204,24 @@ tail -f /home/openclaw/.openclaw/logs/arb_autotrade.log
 ---
 
 *Stand: 2026-05-30*
+
+## Betrieb: Coolify ist die einzige Instanz
+
+Der Bot laeuft auf CoolifyDev als Coolify-Application, nicht per Hand:
+
+| | |
+|---|---|
+| Projekt | Trading (`s7zjinhdkfxocaqaxwodr1py`) |
+| Environment | production (`rhmph7rpop3phedzg3wm5uh0`) |
+| Application | `6vqgknob3trgvpxiulcqtymu` (Name `arbitrage-bot`) |
+| Compose | `/docker-compose.coolify.yaml` (absolute Pfade, Bind-IP `0.0.0.0`) |
+| Bot-API | http://192.168.13.57:18888 |
+| Dashboard | http://192.168.13.57:8501 und :8502 |
+| Daten | `/opt/arb/ArbitrageBot/config` + `/logs` (Bind-Mount) |
+
+**Regeln:**
+- Container nur ueber Coolify erstellen, deployen, neustarten, Logs lesen.
+- Kein manuelles `docker compose up` / `docker run` / systemd-Unit / cron-Start auf einem Host.
+- `docker-compose.yaml` (Standard-Variante, Default-Bind-IP `192.168.113.14`) ist NICHT der
+  Betriebspfad auf Dev - sie dient dem Prod-Host. Auf Dev nutzt Coolify die `.coolify.yaml`.
+- `config.yaml` wird ausschliesslich im Container ueber `scripts/load_keys_to_env.py` gelesen.
