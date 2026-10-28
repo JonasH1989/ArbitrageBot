@@ -116,6 +116,29 @@ Der Bot polled regelmäßig offene Limit Orders:
 
 ---
 
+## API Keys — Zugriffsregel (Jonas, 2026-10-28)
+
+`config/config.yaml` enthaelt echte Exchange-Keys und ist **tabu** fuer jeden, dessen
+Kontext protokolliert werden kann (KI-Assistent, Chat, Logs). Verbindliche Regel:
+
+- **Nicht direkt lesen.** Kein `read`, `cat`, `grep`, `sed`, kein Ausgeben von Datei-Inhalten.
+- **Ausschliesslich ueber ENV.** `KUCOIN_KEY`, `KUCOIN_SECRET`, `KUCOIN_PASSPHRASE`,
+  `MEXC_KEY`, `MEXC_SECRET`.
+- **Wer liest, ist der Container.** `scripts/load_keys_to_env.py` laeuft als Entry-Point
+  in `arbitrage-bot` und `arbitrage-dashboard`. Es liest `config.yaml`, legt die Werte in
+  die ENV des Kindprozesses und startet per `exec()` den eigentlichen Prozess.
+- **Erlaubte Ausgabe nur maskiert:** gesetzt/nicht gesetzt, Laenge, Quelle. Kein Klartext,
+  kein Prefix/Suffix, kein Base64. <!-- project: path:/home/openclaw/.openclaw/workspace -->
+- **Vorrang:** ENV aus `docker-compose`/`env_file` schlaegt `config.yaml`; die Datei fuellt
+  nur leere Werte auf.
+
+Nutzung ausserhalb der Container (z.B. lokaler Test):
+```bash
+python3 scripts/load_keys_to_env.py python3 arb_autotrade.py
+```
+
+---
+
 ## Docker Deployment
 
 ### Bauen
