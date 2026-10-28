@@ -284,12 +284,31 @@ def render_best_direction():
         if not (mexc_bids and mexc_asks and kucoin_bids and kucoin_asks):
             return
         # Fresh balances from bot cache
+        # WICHTIG (Fix 2026-10-28): Der Bot-Cache meldet echte 0-Balances
+        # und API-Fehler jetzt unterschiedlich. Vorher wurde jeder Fehler
+        # still zu 0 -> das Dashboard zeigte 'KEINE USDT!', obwohl im
+        # Wallet Geld lag (Bot lief mit falschen/veralteten API-Keys).
+        balances_error = None
         try:
-            bal = requests.get(f"{BOT_CACHE_URL}/balances", timeout=2).json()
-            k_usdt = float(bal.get('kucoin', {}).get('USDT', {}).get('free', 0))
-            m_usdt = float(bal.get('mexc', {}).get('USDT', {}).get('free', 0))
-        except Exception:
+            _resp = requests.get(f"{BOT_CACHE_URL}/balances", timeout=2)
+            if _resp.status_code == 503:
+                _d = _resp.json()
+                balances_error = _d.get('error', 'Balances nicht abrufbar (Auth-/API-Fehler)')
+            else:
+                bal = _resp.json()
+                if bal.get('status') == 'error':
+                    balances_error = bal.get('error') or bal.get('message') or 'Balances nicht abrufbar'
+                k_usdt = float(bal.get('kucoin', {}).get('USDT', {}).get('free', 0))
+                m_usdt = float(bal.get('mexc', {}).get('USDT', {}).get('free', 0))
+        except Exception as e:
+            balances_error = f"Bot nicht erreichbar ({type(e).__name__})"
             k_usdt = m_usdt = 0
+        if balances_error:
+            st.error(f"⚠️ Wallet-Balances vom Bot nicht abrufbar: {balances_error}")
+            st.caption("Der Bot sieht dadurch 0 USDT und führt keinen Trade aus. "
+                       "Ursache meist: API-Keys im Dashboard geändert - der Bot lädt sie "
+                       "jetzt automatisch neu, ggf. Bot neu starten.")
+            return
         # Config from session_state (written by main flow)
         cfg = st.session_state.get('bot_pair_config', {})
         strategy = cfg.get('strategy', 'usdt')

@@ -82,16 +82,143 @@ ACTIVE_FLAG_FILE = LOG_DIR / 'arb_active.flag'
 
 # Exchange API credentials
 # Load API keys from config.yaml - use same path as settings_sync (dashboard)
+#
+# WICHTIG (Fix 2026-10-28): Die Keys werden NICHT mehr nur einmalig beim
+# Prozessstart gelesen. Frueher las der Bot die Keys genau einmal in den
+# Modul-Globals. Wurden die Keys danach im Dashboard geaendert (oder waren
+# sie beim Start noch leer), lief der Bot mit veralteten bzw. leeren
+# Credentials weiter. Folge: die Buerse antwortete mit Auth-Fehlern,
+# get_mexc_balances() lieferte {} und der Bot sah 0 USDT - der Trade wurde
+# deshalb NIE ausgefuehrt, waehrend das Dashboard (das live abfragt) die
+# echten Balances anzeigte.
+#
+# Jetzt: reload_api_keys() laedt die Keys bei jeder Aenderung neu aus
+# config.yaml (gleiche Quelle wie das Dashboard). Der Main-Loop ruft die
+# Funktion pro Zyklus auf; wird eine Aenderung erkannt, werden die
+# Globals aktualisiert UND der Wallet-Cache invalidiert, damit die neuen
+# Credentials sofort wirken.
 from pathlib import Path
 _config_dir = Path('/app/config') if Path('/app/config').exists() else Path(__file__).parent / 'config'
 _config_path = _config_dir / 'config.yaml'
-with open(_config_path, 'r') as _f:
-    _cfg = yaml.safe_load(_f)
-KUCOIN_KEY = _cfg.get('kucoin', {}).get('api_key', '')
-KUCOIN_SECRET = _cfg.get('kucoin', {}).get('api_secret', '')
-KUCOIN_PASSPHRASE = _cfg.get('kucoin', {}).get('api_passphrase', '')
-MEXC_KEY = _cfg.get('mexc', {}).get('api_key', '')
-MEXC_SECRET = _cfg.get('mexc', {}).get('api_secret', '')
+
+# Aktuelle Credentials (werden von reload_api_keys() befuellt)
+KUCOIN_KEY = ''
+KUCOIN_SECRET = ''
+KUCOIN_PASSPHRASE = ''
+MEXC_KEY = ''
+MEXC_SECRET = ''
+
+# Fingerprint der zuletzt geladenen Keys - nur bei Aenderung wird geloggt
+_api_keys_fingerprint = None
+
+
+def _mask_key(v: str) -> str:
+    """Mask an API key for safe logging (never log the full key)."""
+    if not v:
+        return "LEER"
+    if len(v) > 10:
+        return f"{v[:4]}...{v[-4:]}"
+    return "gesetzt"
+
+
+def _read_api_keys_from_config() -> dict:
+    """Read API keys from config.yaml. Returns dict of raw key values."""
+    try:
+        with open(_config_path, 'r') as _f:
+            _cfg = yaml.safe_load(_f) or {}
+    except Exception:
+        return {}
+    if not isinstance(_cfg, dict):
+        return {}
+    _kucoin = _cfg.get('kucoin') or {}
+    _mexc = _cfg.get('mexc') or {}
+    return {
+        'KUCOIN_KEY': _kucoin.get('api_key', '') or '',
+        'KUCOIN_SECRET': _kucoin.get('api_secret', '') or '',
+        'KUCOIN_PASSPHRASE': _kucoin.get('api_passphrase', '') or '',
+        'MEXC_KEY': _mexc.get('api_key', '') or '',
+        'MEXC_SECRET': _mexc.get('api_secret', '') or '',
+    }
+
+
+def reload_api_keys(force: bool = False, quiet: bool = False) -> bool:
+    """Reload API keys from config.yaml if they changed.
+
+    Returns True if credentials changed. Safe to call every cycle - the
+    file is only re-read when the mtime changed (or force=True).
+
+    Called from the main loop so that keys entered/changed in the
+    dashboard take effect without a bot restart.
+
+    quiet=True unterdrueckt das Log (fuer den Initial-Load beim Start).
+    """
+    global KUCOIN_KEY, KUCOIN_SECRET, KUCOIN_PASSPHRASE
+    global MEXC_KEY, MEXC_SECRET, _api_keys_fingerprint
+
+    try:
+        mtime = os.path.getmtime(_config_path)
+    except OSError:
+        return False
+
+    if not force and mtime == getattr(reload_api_keys, '_last_mtime', None):
+        return False
+
+    keys = _read_api_keys_from_config()
+    if not keys:
+        # Datei nicht lesbar oder leer - vorhandene Keys beibehalten,
+        # sonst wuerde ein transienter Lesefehler die Credentials loeschen.
+        reload_api_keys._last_mtime = mtime
+        return False
+
+    fingerprint = hashlib.sha256(
+        '|'.join(keys[k] for k in
+                 ('KUCOIN_KEY', 'KUCOIN_SECRET', 'KUCOIN_PASSPHRASE', 'MEXC_KEY', 'MEXC_SECRET')
+                 ).encode()
+    ).hexdigest()[:12]
+
+    reload_api_keys._last_mtime = mtime
+
+    if fingerprint == _api_keys_fingerprint:
+        return False
+
+    changed = []
+    for name in ('KUCOIN_KEY', 'KUCOIN_SECRET', 'KUCOIN_PASSPHRASE', 'MEXC_KEY', 'MEXC_SECRET'):
+        old = globals().get(name, '')
+        new = keys[name]
+        if old != new:
+            changed.append(name)
+        globals()[name] = new
+
+    _api_keys_fingerprint = fingerprint
+
+    if changed:
+        def _mask(v):
+            return f"{v[:4]}...{v[-4:]}" if v and len(v) > 10 else ("gesetzt" if v else "LEER")
+        # log() und invalidate_wallet_cache() sind beim Modul-Import noch
+        # nicht definiert - der Initial-Load darf sie deshalb nicht nutzen.
+        _log = globals().get('log')
+        if _log and not quiet:
+            _log(
+                f"🔑 API-Keys neu geladen: {', '.join(changed)} | "
+                f"KuCoin={_mask(KUCOIN_KEY)} MEXC={_mask(MEXC_KEY)}",
+                "DECISION"
+            )
+        # Neue Credentials -> Wallet-Cache muss sofort neu geholt werden,
+        # sonst wuerde der Bot bis zu 60s alte (falsche) Balances nutzen.
+        _invalidate = globals().get('invalidate_wallet_cache')
+        if _invalidate and not quiet:
+            try:
+                _invalidate()
+            except Exception:
+                pass
+
+    return True
+
+
+# Initialer Load beim Start (fuer die erste Signatur/Nutzung).
+# Wird zwingend VOR dem ersten API-Call gebraucht - die Signaturen
+# (kucoin_sig, MEXC-HMAC) verwenden die Modul-Globals.
+reload_api_keys(force=True, quiet=True)
 
 MEXC_MIN_USDT = 1.0
 
@@ -441,6 +568,14 @@ def start_http_log_server(port: int = 8503):
                 'error_count': _error_count,
                 'consecutive_errors': _consecutive_errors,
                 'last_error': _last_error,
+                # Fix 2026-10-28: konkreter Blocker, warum kein Trade lief
+                'prepare_diag': _last_prepare_diag,
+                'api_keys': {
+                    'kucoin_set': bool(KUCOIN_KEY and KUCOIN_SECRET and KUCOIN_PASSPHRASE),
+                    'mexc_set': bool(MEXC_KEY and MEXC_SECRET),
+                    'kucoin_key': _mask_key(KUCOIN_KEY),
+                    'mexc_key': _mask_key(MEXC_KEY),
+                },
             })
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)})
@@ -470,19 +605,49 @@ def start_http_log_server(port: int = 8503):
 
     @app.route('/balances', methods=['GET'])
     def get_balances():
-        """Get current MPC and USDT balances from both exchanges"""
+        """Get current MPC and USDT balances from both exchanges.
+
+        WICHTIG (Fix 2026-10-28): Unterscheidet 'echt 0 USDT' von
+        'Balances nicht abrufbar (Auth-/API-Fehler)'. Vorher wurden
+        fehlende Balances still zu 0 ersetzt und mit status: ok
+        gemeldet - das Dashboard zeigte daraufhin 'KEINE USDT!',
+        obwohl das Wallet-Geld hatte.
+        """
         try:
             coin = COIN_SYMBOL.split('-')[0]
             mexc_bal = get_mexc_balances()
             kucoin_bal = get_kucoin_balances()
-            
+
+            # Fehlerhafte/leere Antworten als solche kennzeichnen.
+            # 'leer' ist nur dann ein echtes Wallet-Feature, wenn der
+            # Abruf erfolgreich war (_balance_fetch_error ist None).
+            mexc_err = _balance_fetch_error.get('mexc')
+            kucoin_err = _balance_fetch_error.get('kucoin')
+            mexc_ok = bool(mexc_bal) or mexc_err is None
+            kucoin_ok = bool(kucoin_bal) or kucoin_err is None
+
             mexc_mpc = mexc_bal.get(coin, {'free': 0, 'locked': 0, 'total': 0})
             mexc_usdt = mexc_bal.get('USDT', {'free': 0, 'locked': 0, 'total': 0})
             kucoin_mpc = kucoin_bal.get(coin, {'free': 0, 'locked': 0, 'total': 0})
             kucoin_usdt = kucoin_bal.get('USDT', {'free': 0, 'locked': 0, 'total': 0})
-            
+
+            if not mexc_ok or not kucoin_ok:
+                _bad = []
+                if not mexc_ok:
+                    _bad.append(f"MEXC ({mexc_err})")
+                if not kucoin_ok:
+                    _bad.append(f"KuCoin ({kucoin_err})")
+                return jsonify({
+                    'status': 'error',
+                    'error': "Balances nicht abrufbar (Auth-/API-Fehler): " + ", ".join(_bad),
+                    'balances_available': False,
+                    'failed_exchanges': [n for n, ok in (('mexc', mexc_ok), ('kucoin', kucoin_ok)) if not ok],
+                    'pair': TRADING_PAIR,
+                }), 503
+
             return jsonify({
                 'status': 'ok',
+                'balances_available': True,
                 'pair': TRADING_PAIR,
                 'mexc': {
                     'MPC': {'free': mexc_mpc['free'], 'locked': mexc_mpc['locked'], 'total': mexc_mpc['total']},
@@ -810,8 +975,18 @@ def start_http_log_server(port: int = 8503):
         - orderbook_*: last get_orderbook_levels() call info
         - last_iteration_ts: when loop last completed (0 = never)
         - last_loop_error: any unhandled exception in main loop
+        - prepare_diag: why no trade plan was built (Fix 2026-10-28)
+        - api_keys: which credentials the bot is currently using
         """
-        return jsonify(_diag)
+        _out = dict(_diag)
+        _out['prepare_diag'] = _last_prepare_diag
+        _out['api_keys'] = {
+            'kucoin_key': _mask_key(KUCOIN_KEY),
+            'mexc_key': _mask_key(MEXC_KEY),
+            'kucoin_set': bool(KUCOIN_KEY and KUCOIN_SECRET and KUCOIN_PASSPHRASE),
+            'mexc_set': bool(MEXC_KEY and MEXC_SECRET),
+        }
+        return jsonify(_out)
 
     @app.route('/debug/loop-status', methods=['GET'])
     def get_debug_loop_status():
@@ -986,6 +1161,11 @@ def start_http_log_server(port: int = 8503):
 _wallet_cache = {"kucoin": {"data": None, "ts": 0.0}, "mexc": {"data": None, "ts": 0.0}}
 CACHE_TTL_SEC = 60  # Max cache lifetime in seconds (even without trade invalidation)
 
+# Fix 2026-10-28: unterscheidet 'Balances leer, weil wirklich nichts da'
+# von 'Balances nicht abrufbar (Auth-/API-Fehler)'. Ohne das meldete der
+# Bot 0 USDT und das Dashboard zeigte 'KEINE USDT!'.
+_balance_fetch_error = {"kucoin": None, "mexc": None}
+
 def invalidate_wallet_cache():
     """Invalidate wallet cache after every successful trade."""
     _wallet_cache["kucoin"]["ts"] = 0.0
@@ -1027,6 +1207,18 @@ _last_error = None
 _error_count = 0
 _consecutive_errors = 0
 
+# State-Variablen auf Module-Ebene (Fix 2026-10-28).
+# Vorher wurden sie nur in main() per 'global' gesetzt - vor dem ersten
+# main()-Durchlauf las /state dadurch None und das Dashboard zeigte
+# unbrauchbare Werte. Jetzt sind sie vorbelegt.
+STATE_WAITING = 'WAITING'
+STATE_RUNNING = 'RUNNING'
+state = STATE_WAITING
+pair_enabled = False
+hysteresis_armed = False
+threshold_start = 1.0
+threshold_stop = 0.5
+
 # trade_in_progress (Module-Scope, damit /state sie lesen kann).
 # Kategorie 3 der GUI: "laeuft gerade ein Trade" - von der Bot-an/aus-
 # Anzeige (Checkbox) und vom Spread-Band zu unterscheiden (Jonas).
@@ -1060,6 +1252,9 @@ def get_mexc_balances() -> dict:
     result = _get_mexc_balances_raw()
     if result:  # Only cache successful (non-empty) results
         _wallet_cache["mexc"] = {"data": result, "ts": time.time()}
+    elif _balance_fetch_error['mexc'] is None:
+        # Abruf OK, aber Wallet ist wirklich leer
+        _balance_fetch_error['mexc'] = None
     return result
 
 def get_kucoin_balances(wallet_type: str = None) -> dict:
@@ -1080,7 +1275,13 @@ def get_kucoin_balances(wallet_type: str = None) -> dict:
     return result
 
 def _get_mexc_balances_raw() -> dict:
-    """Get ALL MEXC account balances with free and locked amounts."""
+    """Get ALL MEXC account balances with free and locked amounts.
+
+    WICHTIG (Fix 2026-10-28): Auth-Fehler werden nicht mehr stillschweigend
+    zu {} - das fuehrte dazu, dass der Bot 0 USDT sah und kein Trade
+    ausfuehrte, ohne dass irgendetwas im Log stand. Jetzt wird ein
+    Auth-/API-Fehler explizit geloggt.
+    """
     try:
         ts = str(int(time.time() * 1000))
         params = f'timestamp={ts}'
@@ -1101,9 +1302,23 @@ def _get_mexc_balances_raw() -> dict:
                 total = free + locked
                 if total > 0:
                     balances[asset] = {'free': free, 'locked': locked, 'total': total}
-        return balances
+            _balance_fetch_error['mexc'] = None
+            return balances
+
+        # Kein 'balances'-Key -> typisch fuer 401 (Auth-Fehler) oder
+        # ein nicht authorisierter Endpoint. Das muss sichtbar sein.
+        _msg = data.get('msg') if isinstance(data, dict) else str(data)[:200]
+        log(
+            f"MEXC balances API error (HTTP {resp.status_code}): {_msg} | "
+            f"Key={_mask_key(MEXC_KEY)} | "
+            f"-> Bot sieht KEINE Balances (0 USDT), Dashboard evtl. schon",
+            "ERROR"
+        )
+        _balance_fetch_error['mexc'] = f"HTTP {resp.status_code}: {_msg}"
+        return {}
     except Exception as e:
         log(f"Error getting MEXC balances: {e}", "ERROR")
+        _balance_fetch_error['mexc'] = str(e)
         return {}
 
 def _get_kucoin_balances_raw(wallet_type: str = None) -> dict:
@@ -1147,12 +1362,15 @@ def _get_kucoin_balances_raw(wallet_type: str = None) -> dict:
                 # Filter by wallet type if specified
                 if acc_type == wallet_type and total > 0:
                     balances[currency] = {'free': available, 'locked': locked, 'total': total}
+            _balance_fetch_error['kucoin'] = None
         else:
             log(f"KuCoin API error: {data}")
+            _balance_fetch_error['kucoin'] = f"API-Fehler: {data.get('msg', data)}"
 
         return balances
     except Exception as e:
         log(f"Error getting KuCoin balances: {e}")
+        _balance_fetch_error['kucoin'] = str(e)
         return {}
 
 
@@ -3126,6 +3344,24 @@ def poll_kucoin_market_order(order_id: str, orig_qty: float, max_wait_ms: int = 
     }
 
 
+# Diagnose des letzten prepare_trade()-Aufrufs (Fix 2026-10-28).
+# Wird von /debug/internal-state und /state ausgelesen, damit man sieht,
+# WEGEN WAS kein Trade ausgefuehrt wurde.
+_last_prepare_diag = {}
+
+
+def _diag_summary() -> str:
+    """Kurze, konkrete Beschreibung, warum kein Trade-Plan zustande kam.
+
+    Fix 2026-10-28: ersetzt das pauschale 'insufficient volume'.
+    """
+    d = _last_prepare_diag or {}
+    reasons = d.get('reasons') or {}
+    if not reasons:
+        return "kein Spread ueber der Schwelle"
+    return '; '.join(f"{k}: {v}" for k, v in reasons.items())
+
+
 def prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=False):
     """CRITICAL FIX 2026-10-18 (Jonas): Combined wallet + orderbook pre-trade check.
     
@@ -3170,12 +3406,33 @@ def prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strat
                 coin: mexc_bal.get(coin, {}).get('free', 0) if mexc_bal else 0,
             },
         }
-    
+
+        # Diagnose (Fix 2026-10-28): sammelt den konkreten Blocker, warum
+        # kein Trade-Plan zustande kommt. Vorher wurde das alles pauschal
+        # als 'insufficient volume' gemeldet - Wallet-Problem und echtes
+        # Volumenproblem waren nicht unterscheidbar.
+        _diag_reasons = {}
+
+        # Bester in dieser Richtung gesehener Spread (fuer die Diagnose)
+        _best_seen_spread = -999.0
+        _best_seen_dir = ''
+
+        def _note(reason, detail):
+            if reason not in _diag_reasons:
+                _diag_reasons[reason] = detail
+
+        # Balance-Status pruefen (leer = API-/Auth-Fehler, nicht 'echt 0')
+        if not kucoin_bal:
+            _note('wallet_api_error', 'KuCoin-Balances nicht abrufbar (Auth-/API-Fehler)')
+        if not mexc_bal:
+            _note('wallet_api_error', 'MEXC-Balances nicht abrufbar (Auth-/API-Fehler)')
+
         best_trade = None
-    
+
         # 3. Sweep mit Wallet-Check pro Iteration
         def sweep(sell_levels, buy_levels, direction, limit_ex, market_ex):
             nonlocal best_trade
+            nonlocal _best_seen_spread, _best_seen_dir
             if not sell_levels or not buy_levels:
                 return
         
@@ -3200,6 +3457,10 @@ def prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strat
                     spread = sell_level['price'] - buy_level['price']
                     spread_pct = (spread / buy_level['price']) * 100 if buy_level['price'] > 0 else 0
                     if spread_pct < threshold:
+                        # Besten Spread dieser Richtung merken (Fix 2026-10-28)
+                        if spread_pct > _best_seen_spread:
+                            _best_seen_spread = spread_pct
+                            _best_seen_dir = direction
                         break  # nächstes buy_level hat evtl. besseren spread
                 
                     # Dünnere Seite = Market-Order
@@ -3271,6 +3532,17 @@ def prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strat
                     effective_vol = min(orderbook_vol, max_from_market, max_from_limit)
                 
                     if effective_vol < min_trade_qty:
+                        # Konkreten Blocker festhalten (Fix 2026-10-28)
+                        if max_from_market <= 0:
+                            _need = 'USDT' if actual_market_side == 'BUY' else coin
+                            _note('wallet_empty', f"{actual_market_ex} hat 0 {_need} (Market-Seite)")
+                        elif max_from_limit <= 0:
+                            _need = coin if actual_market_side == 'BUY' else 'USDT'
+                            _note('wallet_empty', f"{actual_limit_ex} hat 0 {_need} (Limit-Seite)")
+                        elif orderbook_vol < min_trade_qty:
+                            _note('volume_too_small', f"Orderbuch-Volumen {orderbook_vol:.2f} < min {min_trade_qty}")
+                        else:
+                            _note('volume_too_small', f"effektives Volumen {effective_vol:.2f} < min {min_trade_qty}")
                         continue  # wallet/fees zu klein, weiter akkumulieren
                 
                     # === GEFUNDEN: Trade-Plan bauen ===
@@ -3309,7 +3581,34 @@ def prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strat
         # 4. Beide Richtungen prüfen
         sweep(kucoin_bids, mexc_asks, 'M→K', 'KUCOIN', 'MEXC')
         sweep(mexc_bids, kucoin_asks, 'K→M', 'MEXC', 'KUCOIN')
-    
+
+        # Diagnose fuer den Aufrufer (Fix 2026-10-28): konkreten Blocker
+        # melden statt 'insufficient volume'.
+        global _last_prepare_diag
+        _last_prepare_diag = {
+            'reasons': dict(_diag_reasons),
+            'threshold_used': threshold,
+            'min_trade_qty': min_trade_qty,
+            'wallets': {
+                'KUCOIN': dict(wallets['KUCOIN']),
+                'MEXC': dict(wallets['MEXC']),
+            },
+            'balances_ok': {'kucoin': bool(kucoin_bal), 'mexc': bool(mexc_bal)},
+        }
+
+        if best_trade is None and not _diag_reasons and _best_seen_spread > -999.0:
+            _note('spread_below_threshold',
+                  f"bester Spread {_best_seen_spread:.3f}% ({_best_seen_dir}) < Schwelle {threshold:.2f}%")
+
+        if best_trade is None and _diag_reasons:
+            _parts = '; '.join(f"{k}: {v}" for k, v in _diag_reasons.items())
+            log(
+                f"prepare_trade: kein Plan | {_parts} | "
+                f"min_qty={min_trade_qty} threshold={threshold:.2f}% | "
+                f"Wallet KUCOIN={wallets['KUCOIN']} MEXC={wallets['MEXC']}",
+                "WARNING"
+            )
+
         return best_trade
     except Exception as e:
         # Fehler loggen und 'kein Trade' zurueckgeben. Der Aufrufer
@@ -3434,6 +3733,10 @@ def main():
                 log(f"HEARTBEAT alive=30s | mem={mem_mb:.1f}MB | cpu={cpu_pct:.1f}% | threads={threading.active_count()}", "INFO")
         
             # Re-read all settings from config each cycle
+            # API-Keys mitladen (Fix 2026-10-28): sie wurden vorher nur
+            # einmalig beim Start gelesen. Aenderungen im Dashboard
+            # wirkten erst nach einem Bot-Neustart.
+            reload_api_keys()
             pair_enabled = get_setting(f'trading.pairs.{TRADING_PAIR}.enabled', False)
             # Einheitlicher Name fuer die Strategie: 'strategy' (Werte: 'usdt' | 'coins')
             strategy = get_trading_strategy(TRADING_PAIR)
@@ -3537,7 +3840,7 @@ def main():
                         coin = COIN_SYMBOL.split('-')[0]
                         log(f"  Best: {best_trade['dir']} @ {best_trade['pct']:.3f}% | Vol={best_trade['vol']:.0f} {coin} | profit_usdt=${best_trade['profit_usdt']:.4f} | profit_{coin}={best_trade['profit_mpc']:.4f}")
                     else:
-                        log(f"  No tradeable spread found (spread below thresholds or insufficient volume)")
+                        log(f"  Kein Trade-Plan moeglich | {_diag_summary()}")
 
             # Log volume check every 15s
             if int(time.time()) % 15 == 0 and ob_data:
@@ -3671,7 +3974,7 @@ def main():
                         # ACHTUNG: 'return' wuerde main() BEENDEN (Prozess-Exit ->
                         # Docker-Neustart -> SAFETY-Block). BUG-FIX: nur diese
                         # Iteration ueberspringen, der Bot laeuft weiter.
-                        log(f"No viable trade plan despite spread >= threshold_start - skipping cycle", "WARNING")
+                        log(f"Kein Trade-Plan trotz Spread >= threshold_start - Zyklus uebersprungen | {_diag_summary()}", "WARNING")
                         state = STATE_WAITING
                         trade_in_progress = False
                         continue
@@ -3800,7 +4103,7 @@ def main():
                 best_trade = prepare_trade(ob_data, min_trade_qty, threshold_start, threshold_stop, strategy, for_follow_up_trade=_plan_as_follow_up)
             
                 if not best_trade:
-                    log(f"No tradeable spread found (spread below thresholds or insufficient volume)")
+                    log(f"Kein Trade-Plan moeglich | {_diag_summary()}")
                     state = STATE_WAITING
                     trade_in_progress = False
                     continue
