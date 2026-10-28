@@ -93,3 +93,6 @@ venv-*/
 # CODE GRAPH INDEX — generated artifact, never commit
 # ============================================================================
 .codebase-memory/
+
+# Bot-Aktivierungs-Flag (Laufzeit-State, NIE committen)
+logs/arb_active.flag
