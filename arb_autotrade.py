@@ -80,6 +80,14 @@ LOG_FILE = LOG_DIR / 'arb_autotrade.log'
 CONFIG_FILE = '/app/config/config.yaml'
 ACTIVE_FLAG_FILE = LOG_DIR / 'arb_active.flag'
 
+# Log-Rotation: die Datei darf nicht unbegrenzt wachsen. Im 0,2-s-Hauptloop
+# schreibt der Bot mehrere Zeilen pro Iteration - ohne Rotation erreichte
+# die Datei ueber 1 GB (siehe _rotate_log_if_needed).
+MAX_LOG_BYTES = int(os.environ.get('ARB_LOG_MAX_BYTES', 64 * 1024 * 1024))
+MAX_LOG_ARCHIVES = int(os.environ.get('ARB_LOG_MAX_ARCHIVES', 3))
+# Zaehler fuer die Rotationspruefung (nicht bei jedem Schreibvorgang stat()).
+_log_writes_since_check = 0
+
 # Exchange API credentials
 # Load API keys from config.yaml - use same path as settings_sync (dashboard)
 #
@@ -1632,6 +1640,34 @@ def set_active(flag):
         except:
             pass
 
+def _rotate_log_if_needed():
+    """Rotiert die Log-Datei, wenn sie MAX_LOG_BYTES ueberschreitet.
+
+    OHNE diese Rotation wuchs arb_autotrade.log unbegrenzt: der Bot
+    schreibt im 0,2-s-Hauptloop mehrere Zeilen pro Iteration, dadurch
+    erreichte die Datei ueber 1 GB. Die Datei wird dann nach
+    arb_autotrade.log.1 verschoben, die Generationen .1 bis .3 werden
+    aufbewahrt, aeltere werden entfernt.
+    """
+    try:
+        if not LOG_FILE.exists():
+            return
+        if LOG_FILE.stat().st_size < MAX_LOG_BYTES:
+            return
+        for i in range(MAX_LOG_ARCHIVES, 0, -1):
+            src = LOG_FILE.with_suffix(LOG_FILE.suffix + f'.{i}')
+            dst = LOG_FILE.with_suffix(LOG_FILE.suffix + f'.{i + 1}')
+            if i == MAX_LOG_ARCHIVES:
+                if src.exists():
+                    src.unlink()
+            elif src.exists():
+                src.rename(dst)
+        LOG_FILE.rename(LOG_FILE.with_suffix(LOG_FILE.suffix + '.1'))
+    except Exception:
+        # Rotation darf den Bot nie zum Absturz bringen.
+        pass
+
+
 def log(msg, level="INFO"):
     """Enhanced logging with optional level - logs to file and HTTP server"""
     ts = datetime.now().strftime('%H:%M:%S.%f')[:-3]
@@ -1648,6 +1684,13 @@ def log(msg, level="INFO"):
 
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
+        # Rotation pruefen - aber nur alle paar Schreibvorgaenge, damit
+        # nicht bei jeder Zeile ein stat() auf die Datei erfolgt.
+        global _log_writes_since_check
+        _log_writes_since_check += 1
+        if _log_writes_since_check >= 100:
+            _log_writes_since_check = 0
+            _rotate_log_if_needed()
         with open(LOG_FILE, 'a') as f:
             f.write(line + '\n')
     except Exception:

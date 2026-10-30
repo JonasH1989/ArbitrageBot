@@ -121,6 +121,30 @@ def to_float(val):
 DEBUG_LOG_FILE = LOG_DIR / "trade_logger_debug.log"
 LOG_FILE = LOG_DIR / "arb_autotrade.log"  # Shared with arb_autotrade.py
 
+# Log-Rotation: dieselbe Datei wird auch von arb_autotrade.py beschrieben.
+# Ohne Rotation waechst sie unbegrenzt (der Bot schreibt im 0,2-s-Loop).
+MAX_LOG_BYTES = int(os.environ.get("ARB_LOG_MAX_BYTES", 64 * 1024 * 1024))
+MAX_LOG_ARCHIVES = int(os.environ.get("ARB_LOG_MAX_ARCHIVES", 3))
+
+
+def _rotate_log_if_needed(path: Path) -> None:
+    """Rotiert die Log-Datei, wenn sie MAX_LOG_BYTES ueberschreitet."""
+    try:
+        if not path.exists() or path.stat().st_size < MAX_LOG_BYTES:
+            return
+        for i in range(MAX_LOG_ARCHIVES, 0, -1):
+            src = path.with_suffix(path.suffix + f".{i}")
+            dst = path.with_suffix(path.suffix + f".{i + 1}")
+            if i == MAX_LOG_ARCHIVES:
+                if src.exists():
+                    src.unlink()
+            elif src.exists():
+                src.rename(dst)
+        path.rename(path.with_suffix(path.suffix + ".1"))
+    except Exception:
+        pass  # Rotation darf nie den Bot zum Absturz bringen.
+
+
 def debug_log(message: str, level: str = "INFO"):
     """Log debug messages to both stderr, debug file AND the main bot log"""
     if not LOGGING_ENABLED:
@@ -132,6 +156,7 @@ def debug_log(message: str, level: str = "INFO"):
     # Also write to main bot log file (same as log() function)
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
+        _rotate_log_if_needed(LOG_FILE)
         with open(LOG_FILE, 'a') as f:
             f.write(log_line + "\n")
     except Exception as e:
@@ -139,6 +164,7 @@ def debug_log(message: str, level: str = "INFO"):
 
     # Also write to debug file
     try:
+        _rotate_log_if_needed(DEBUG_LOG_FILE)
         with open(DEBUG_LOG_FILE, 'a') as f:
             f.write(log_line + "\n")
     except Exception as e:
