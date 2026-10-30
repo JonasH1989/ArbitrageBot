@@ -222,3 +222,32 @@ Test 4: ARM → DISARM → WAIT → ARM
 5. **Container-Restarts beobachten** (Server-Crashes-Problem)
 
 **Bei neuen Bugs:** Log schicken, ich diagnostiziere.
+
+## 11. Stand 2026-10-30 — Log-Rotation, Deploy auf Dev-Host, Monitor-Cron
+
+**Anlass:** Der Bot schrieb 44 GB Logs auf die VM (99 % voll). Ursache: `arb_autotrade.log` ohne Rotation plus
+`scripts/fetch_bot_logs.py`, das die komplette Datei alle 15 Min als Snapshot kopierte (quadratisches Wachstum).
+Details: `memory/2026-10-30.md`.
+
+**Fix:** PR #2 (Repo `JonasH1989/ArbitrageBot`, Branch `fix/log-growth-und-rotation`, Commit `5a52070`):
+`_rotate_log_if_needed()` in `arb_autotrade.py` (`ARB_LOG_MAX_BYTES` 64 MB, `ARB_LOG_MAX_ARCHIVES` 3),
+`trade_logger.py` schreibt in dieselbe Datei, Fetch-Skript nur noch Deltas.
+
+**Deploy:** via Coolify-API Container `arbitrage-bot-...-20261030T012337`, 0 Restarts. Die Coolify-Anwendung
+`6vqgknob3trgvpxiulcqtymu` steht bewusst auf `fix/log-growth-und-rotation`, damit die Rotation live bleibt.
+Nach dem Merge von PR #2 auf `main` zurueckstellen.
+
+**Monitor-Cron (`arb_monitor`, Minutencron in der User-Crontab):** laeuft wieder — `config/config.yaml` existiert
+seit 2026-10-28 10:16, letzter Lauf 2026-10-30 04:08 mit MEXC/KuCoin-Preisen. Der fruehere YAML-ScannerError
+(`mapping values are not allowed here`, Zeile 1) ist damit ueberholt.
+
+**Offen:** Rotation fuer `~/.openclaw/logs/arb_monitor.log` (2,3 MB, wächst weiter) ergänzen.
+
+## Aus MEMORY.md verschoben (Dreaming-Routine Tag 2, 2026-10-30)
+
+Quelle: `MEMORY.md` (/home/openclaw/.openclaw/workspace), entfernt am 2026-10-30. Text wörtlich:
+
+> | **Trading — Arbitrage Bot** | `trading/arbitrage-bot/` | 🟡 Läuft nicht auf diesem Host (Bot auf MPC) — Monitor-Cron defekt, `config/config.yaml` fehlt — Details `trading/arbitrage-bot/STATUS.md` <!-- project: path:/home/openclaw/.openclaw/workspace --> |
+
+> - 🔴 **`arb_monitor`-Cron kaputt** — Minutencron scheitert an fehlendem `trading/arbitrage-bot/config/config.yaml` (nur `.example` vorhanden); Log wächst (1,9 MB). Reparieren oder abschalten — Details `memory/2026-10-28.md` <!-- project: path:/home/openclaw/.openclaw/workspace -->
+<!-- project: path:/home/openclaw/.openclaw/workspace -->
