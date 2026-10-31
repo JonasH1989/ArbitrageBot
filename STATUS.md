@@ -243,6 +243,30 @@ seit 2026-10-28 10:16, letzter Lauf 2026-10-30 04:08 mit MEXC/KuCoin-Preisen. De
 
 **Offen:** Rotation fuer `~/.openclaw/logs/arb_monitor.log` (2,3 MB, wächst weiter) ergänzen.
 
+## 12. Stand 2026-10-31 — PR #2 gemergt, App zurück auf `main`, Monitor-Log 2,7 MB
+
+**PR #2 ist gemergt:** Merge-Commit `4010a58` ("Merge pull request #2 from JonasH1989/fix/log-growth-und-rotation",
+2026-10-30 09:19:46 +0100). `main` enthält damit die Log-Rotation (`_rotate_log_if_needed()`,
+`ARB_LOG_MAX_BYTES` 64 MB, `ARB_LOG_MAX_ARCHIVES` 3) und den inkrementellen Log-Fetch.
+
+**Coolify-Anwendung zurück auf `main`:** `6vqgknob3trgvpxiulcqtymu` (Projekt "Trading", Host
+192.168.13.57) steht jetzt auf `git_branch = main` (`updated_at` 2026-10-31T03:05:03Z), Status
+`running:healthy`. Der bewusste Fix-Branch-Parkplatz aus Abschnitt 11 ist damit aufgehoben.
+
+**Monitor-Cron:** Minutencron läuft, letzter Lauf 2026-10-31 04:03, Log
+`~/.openclaw/logs/arb_monitor.log` inzwischen **2,7 MB** (2.724.490 B).
+
+**Offen:** Rotation für `~/.openclaw/logs/arb_monitor.log` ergänzen (unverändert offen).
+
+## Aus MEMORY.md verschoben (Dreaming-Routine Tag 3, 2026-10-31)
+
+Quelle: `MEMORY.md` (/home/openclaw/.openclaw/workspace), geändert am 2026-10-31 im Memory-Hygiene-Lauf
+(Dreaming-Routine 04:00). Text wörtlich (vor dem Lauf):
+
+> | **Trading — Arbitrage Bot** | `trading/arbitrage-bot/` | 🟡 Läuft auf Dev-Host via Coolify — Log-Rotation gefixt (PR #2 offen) — Details `trading/arbitrage-bot/STATUS.md` <!-- project: path:/home/openclaw/.openclaw/workspace --> |
+
+> - 🟡 **`arb_monitor`-Monitor-Log rotiert nicht** (2,3 MB) — Cron läuft wieder (`config.yaml` existiert seit 2026-10-28, letzter Lauf 2026-10-30 04:08); Rotation für `~/.openclaw/logs/arb_monitor.log` ergänzen — Details `trading/arbitrage-bot/STATUS.md` <!-- project: path:/home/openclaw/.openclaw/workspace -->
+
 ## Aus MEMORY.md verschoben (Dreaming-Routine Tag 2, 2026-10-30)
 
 Quelle: `MEMORY.md` (/home/openclaw/.openclaw/workspace), entfernt am 2026-10-30. Text wörtlich:
